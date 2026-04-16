@@ -30,6 +30,10 @@
       addLabels: ["renovate/github-release"],
     },
     {
+      matchManagers: ["gomod"],
+      addLabels: ["renovate/gomod"],
+    },
+    {
       matchManagers: ["mise"],
       addLabels: ["renovate/mise"],
     },

@@ -43,5 +43,10 @@
       semanticCommitScope: "mise",
       commitMessageTopic: "tool {{depName}}",
     },
+    {
+      matchManagers: ["gomod"],
+      semanticCommitScope: "gomod",
+      commitMessageTopic: "module {{depName}}",
+    },
   ],
 }
