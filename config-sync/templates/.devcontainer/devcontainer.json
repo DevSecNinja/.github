@@ -1,0 +1,22 @@
+{
+  "name": "devcontainer",
+  "image": "mcr.microsoft.com/devcontainers/base:debian-12",
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "remoteEnv": {
+    "PATH": "${containerEnv:PATH}:/home/vscode/.local/bin"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "blueglassblock.better-json5",
+        "dprint.dprint",
+        "foxundermoon.shell-format",
+        "redhat.vscode-yaml",
+        "timonwong.shellcheck"
+      ],
+      "settings": {
+        "git.postCommitCommand": "none"
+      }
+    }
+  }
+}
