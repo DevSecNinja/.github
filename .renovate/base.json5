@@ -11,4 +11,6 @@
   ignorePaths: [
     '**/*.sops.*',
   ],
+  assigneesFromCodeOwners: true,
+  reviewersFromCodeOwners: true,
 }
