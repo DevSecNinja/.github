@@ -1,0 +1,42 @@
+---
+# Base labels shared across all DevSecNinja repositories.
+# Repo-specific labels (e.g. area/* labels) should be defined in each repo's
+# .github/labels.yaml file.
+
+# Renovate Types
+- name: renovate/container
+  color: "027fa0"
+- name: renovate/github-action
+  color: "027fa0"
+- name: renovate/github-release
+  color: "027fa0"
+- name: renovate/gomod
+  color: "027fa0"
+- name: renovate/mise
+  color: "027fa0"
+
+# Semantic Types
+- name: type/digest
+  color: "ffeC19"
+- name: type/patch
+  color: "ffeC19"
+- name: type/minor
+  color: "ff9800"
+- name: type/major
+  color: "f6412d"
+
+# Automation
+- name: automerge
+  color: "0075ca"
+- name: config-sync
+  color: "0075ca"
+
+# Uncategorized
+- name: bug
+  color: "d73a4a"
+- name: enhancement
+  color: "a2eeef"
+- name: hold
+  color: "ee0701"
+- name: stale-dependency
+  color: "e4e669"
