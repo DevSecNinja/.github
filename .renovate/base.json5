@@ -13,4 +13,13 @@
   ],
   assigneesFromCodeOwners: true,
   reviewersFromCodeOwners: true,
+  vulnerabilityAlerts: {
+    labels: ["security"],
+    minimumReleaseAge: "0",
+  },
+  lockFileMaintenance: {
+    enabled: true,
+    automerge: true,
+    automergeType: "branch",
+  },
 }
