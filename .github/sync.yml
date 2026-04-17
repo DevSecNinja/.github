@@ -1,0 +1,25 @@
+# Sync config files from this central repository to all managed repos.
+# Used by BetaHuhn/repo-file-sync-action.
+# Docs: https://github.com/BetaHuhn/repo-file-sync-action
+#
+# To add a new repo: append it to the repos list below.
+# To exclude a file from a specific repo: use the 'exclude' key.
+
+group:
+  - files:
+      - source: config-sync/files/.editorconfig
+        dest: .editorconfig
+      - source: config-sync/files/.markdownlint.yaml
+        dest: .markdownlint.yaml
+      - source: config-sync/files/.yamllint.yaml
+        dest: .yamllint.yaml
+      - source: config-sync/files/.yamlfmt.yaml
+        dest: .yamlfmt.yaml
+      - source: config-sync/files/.gitleaks.toml
+        dest: .gitleaks.toml
+      - source: config-sync/files/.shellcheckrc
+        dest: .shellcheckrc
+      - source: config-sync/files/dprint.json
+        dest: dprint.json
+    repos: |
+      DevSecNinja/truenas-apps
