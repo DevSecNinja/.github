@@ -1,0 +1,7 @@
+# Common ignores — adapt per repo
+
+# Secrets
+*.key
+secret.env
+.env
+.decrypted~*
