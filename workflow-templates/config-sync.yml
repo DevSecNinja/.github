@@ -1,0 +1,21 @@
+---
+name: Config Sync
+
+on:
+  schedule:
+    - cron: "0 0 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    uses: DevSecNinja/.github/.github/workflows/config-sync.yml@main
+    permissions:
+      contents: write
+      pull-requests: write
+    # Uncomment to also bootstrap template files for new repos:
+    # with:
+    #   sync-templates: true

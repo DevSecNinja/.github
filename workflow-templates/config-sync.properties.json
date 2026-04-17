@@ -1,0 +1,5 @@
+---
+name: Config Sync
+description: Pull-based config sync from the central DevSecNinja/.github repository. Opens PRs when config files have changed. No PAT required.
+categories:
+  - Utilities

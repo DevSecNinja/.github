@@ -1,0 +1,5 @@
+---
+name: Label Sync
+description: Sync GitHub labels from a labels.yaml config file. Runs daily and on push.
+categories:
+  - Utilities

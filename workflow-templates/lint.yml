@@ -1,0 +1,33 @@
+---
+name: Lint
+
+on:
+  pull_request:
+  push:
+    branches:
+      - $default-branch
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    uses: DevSecNinja/.github/.github/workflows/lint.yml@main
+    permissions:
+      contents: read
+      security-events: write
+    with:
+      # renovate: datasource=github-releases depName=jdx/mise
+      mise-version: "2026.4.3"
+      # Toggle linters on/off (all default to true):
+      # lint-dprint: true
+      # lint-yamlfmt: true
+      # lint-yamllint: true
+      # lint-actionlint: true
+      # lint-gitleaks: true
+      # lint-shellcheck: true
+      # lint-shfmt: true
+      # lint-checkov: true
+      # lint-trivy: true
+      # lint-zizmor: true
+      # lint-config-drift: false
