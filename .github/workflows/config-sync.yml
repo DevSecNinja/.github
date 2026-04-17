@@ -1,0 +1,91 @@
+---
+name: Reusable — Config Sync
+
+# Pull-based config sync: each repo calls this workflow to pull the latest
+# config files from the public DevSecNinja/.github repo and open a PR if
+# anything changed. Only requires the default GITHUB_TOKEN (no PAT needed).
+
+on:
+  workflow_call:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    name: Sync config from central repo
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Pull config files from central repo
+        id: pull
+        run: |-
+          BASE_URL="https://raw.githubusercontent.com/DevSecNinja/.github/main/config-sync/files"
+          API_URL="https://api.github.com/repos/DevSecNinja/.github/contents/config-sync/files"
+          updated=0
+
+          # Dynamically discover files from the central repo
+          files=$(curl -sf "${API_URL}" | grep '"name"' | sed 's/.*"name": "\(.*\)".*/\1/')
+
+          for file in ${files}; do
+            echo "Fetching ${file}..."
+            if curl -sf "${BASE_URL}/${file}" -o "/tmp/${file}"; then
+              if [ -f "${file}" ]; then
+                if ! diff -q "${file}" "/tmp/${file}" > /dev/null 2>&1; then
+                  cp "/tmp/${file}" "${file}"
+                  echo "  ⬆ Updated ${file}"
+                  updated=1
+                else
+                  echo "  ✓ ${file} is up to date"
+                fi
+              else
+                cp "/tmp/${file}" "${file}"
+                echo "  ➕ Added ${file}"
+                updated=1
+              fi
+            else
+              echo "  ⚠ Failed to fetch ${file} (skipping)"
+            fi
+          done
+
+          echo "updated=${updated}" >> "${GITHUB_OUTPUT}"
+
+      - name: Create PR if configs changed
+        if: steps.pull.outputs.updated == '1'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |-
+          BRANCH="chore/config-sync-$(date +%Y%m%d)"
+
+          # Check if branch already exists (from a previous run today)
+          if git ls-remote --exit-code --heads origin "${BRANCH}" > /dev/null 2>&1; then
+            echo "Branch ${BRANCH} already exists — updating it"
+            git fetch origin "${BRANCH}"
+            git checkout "${BRANCH}"
+          else
+            git checkout -b "${BRANCH}"
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore: sync config files from DevSecNinja/.github" || {
+            echo "No changes to commit"
+            exit 0
+          }
+          git push -u origin "${BRANCH}" --force-with-lease
+
+          # Open PR if one doesn't exist yet
+          existing_pr=$(gh pr list --head "${BRANCH}" --state open --json number --jq '.[0].number // empty')
+          if [ -z "${existing_pr}" ]; then
+            gh pr create \
+              --title "chore: sync config files from central repo" \
+              --body "Automated PR — config files pulled from [DevSecNinja/.github](https://github.com/DevSecNinja/.github/tree/main/config-sync/files)." \
+              --label "config-sync" \
+              --head "${BRANCH}"
+          else
+            echo "PR #${existing_pr} already open — updated branch"
+          fi

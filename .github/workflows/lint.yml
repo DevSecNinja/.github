@@ -58,6 +58,11 @@ on:
         required: false
         type: boolean
         default: true
+      lint-config-drift:
+        description: "Check local config files match central DevSecNinja/.github repo"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -283,3 +288,48 @@ jobs:
         with:
           sarif_file: zizmor.sarif
           category: zizmor
+
+  config-drift:
+    name: config drift
+    if: ${{ inputs.lint-config-drift }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Check config drift against central repo
+        run: |-
+          BASE_URL="https://raw.githubusercontent.com/DevSecNinja/.github/main/config-sync/files"
+          API_URL="https://api.github.com/repos/DevSecNinja/.github/contents/config-sync/files"
+          drifted=0
+
+          # Dynamically discover files from the central repo
+          files=$(curl -sf "${API_URL}" | grep '"name"' | sed 's/.*"name": "\(.*\)".*/\1/')
+
+          for file in ${files}; do
+            if [ ! -f "${file}" ]; then
+              echo "::warning::${file} exists in central repo but not locally (skipping)"
+              continue
+            fi
+
+            echo "Checking ${file}..."
+            if ! curl -sf "${BASE_URL}/${file}" | diff -u "${file}" - > /tmp/diff_output 2>&1; then
+              echo "::error::${file} has drifted from central config"
+              cat /tmp/diff_output
+              drifted=1
+            else
+              echo "  ✓ ${file} matches"
+            fi
+          done
+
+          if [ "${drifted}" -eq 1 ]; then
+            echo ""
+            echo "Config files have drifted from DevSecNinja/.github/config-sync/files/"
+            echo "Run the config-sync workflow or manually update the files."
+            exit 1
+          fi
+
+          echo ""
+          echo "All config files match the central repository."
