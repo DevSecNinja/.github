@@ -9,6 +9,10 @@
 - **Shell scripts**: Bash dialect, 4-space indent, lint with shellcheck, format with shfmt.
 - **GitHub Actions**: Pin all action refs to full commit SHAs with a version comment.
   Example: `uses: actions/checkout@<sha> # v4.2.0`
+- **Reusable workflows**: Reusable workflows in `DevSecNinja/.github` MUST NOT
+  default package / tool version inputs — declare them `required: true` so the
+  calling repository owns the version (see
+  [ADR 0001](https://github.com/DevSecNinja/.github/blob/main/docs/design-decisions/0001-reusable-workflow-version-inputs.md)).
 - **Security**: Never commit plaintext secrets. Use SOPS, Vault, or GitHub Secrets.
 
 ## Tool Chain
