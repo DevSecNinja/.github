@@ -13,9 +13,12 @@
     {
       customType: "regex",
       description: "Process tool versions in GitHub Actions workflows",
-      managerFilePatterns: ["/.github/workflows/.+\\.ya?ml$/"],
+      managerFilePatterns: [
+        "/.github/workflows/.+\\.ya?ml$/",
+        "/workflow-templates/.+\\.ya?ml$/",
+      ],
       matchStrings: [
-        "# renovate: datasource=github-releases depName=(?<depName>\\S+)\\n\\s+version: (?<currentValue>[^\\s]+)",
+        "# renovate: datasource=github-releases depName=(?<depName>\\S+)\\n\\s+[\\w-]*version: \"?(?<currentValue>[^\\s\"]+)\"?",
       ],
       datasourceTemplate: "github-releases",
     },
