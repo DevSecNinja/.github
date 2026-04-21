@@ -31,5 +31,16 @@
       ],
       datasourceTemplate: "github-releases",
     },
+    {
+      customType: "regex",
+      description: "Process versions in Ansible inventory YAML files",
+      managerFilePatterns: [
+        "/ansible/inventory/.+\\.ya?ml$/",
+      ],
+      matchStrings: [
+        "# renovate: datasource=github-releases depName=(?<depName>\\S+)\\n\\s*[\\w-]*version:\\s*\"?(?<currentValue>[^\\s\"]+)\"?",
+      ],
+      datasourceTemplate: "github-releases",
+    },
   ],
 }
