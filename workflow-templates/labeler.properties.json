@@ -1,5 +1,5 @@
----
-name: PR Labeler
-description: Auto-label pull requests based on changed file paths.
-categories:
-  - Utilities
+{
+    "name": "PR Labeler",
+    "description": "Auto-label pull requests based on changed file paths.",
+    "categories": ["Utilities"]
+}

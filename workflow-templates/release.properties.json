@@ -1,5 +1,5 @@
----
-name: Release
-description: Create a GitHub Release with git-cliff changelog when a version tag is pushed.
-categories:
-  - Continuous integration
+{
+    "name": "Release",
+    "description": "Create a GitHub Release with git-cliff changelog when a version tag is pushed.",
+    "categories": ["Continuous integration"]
+}
