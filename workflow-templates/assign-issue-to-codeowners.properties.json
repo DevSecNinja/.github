@@ -1,0 +1,5 @@
+{
+    "name": "Assign issue to CODEOWNERS",
+    "description": "Auto-assign newly opened issues to users listed in the CODEOWNERS file.",
+    "categories": ["Utilities"]
+}
