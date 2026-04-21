@@ -127,7 +127,7 @@ jobs:
               }
 
               const assignees = [...owners];
-              core.info(`Assigning issue #${issue.number} to: ${assignees.join(', ')}`);
+              core.info(`Assigning issue #${issue.number} "${issue.title}" to: ${assignees.join(', ')}`);
 
               await github.rest.issues.addAssignees({
                 owner: context.repo.owner,
