@@ -1,0 +1,75 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+## [1.0.0] - 2026-04-21
+
+### Bug Fixes
+
+- Update devcontainer image to use the latest version from DevSecNinja ([`3690eec`](https://github.com/DevSecNinja/.github/commit/3690eecaef2987ec2c78be17243d21178fab299f))
+- Include issue title in assignment log for CODEOWNERS workflow ([`67c91ca`](https://github.com/DevSecNinja/.github/commit/67c91ca89bb02fcd8cb0be748f85bef6625cd6a8))
+- Set default issue number to 0 in CODEOWNERS assignment workflow ([`864019e`](https://github.com/DevSecNinja/.github/commit/864019e0a1f7c40f34c139a810075077edbc0570))
+- Set default value for issue number input in CODEOWNERS workflow ([`dd2a9be`](https://github.com/DevSecNinja/.github/commit/dd2a9be318e8d99d5af46009ed75dbdf3c554721))
+- Update workflow reference for issue assignment ([`e6ad720`](https://github.com/DevSecNinja/.github/commit/e6ad720e4a00a5b1563d0f20e9c08435389146f6))
+- Validate issue number input for manual assignment in CODEOWNERS workflow ([`07093eb`](https://github.com/DevSecNinja/.github/commit/07093eb3b8525e0b6dc8165a1e3230e4ccd4bccc))
+- Update workflow reference to main commit ([`39481d1`](https://github.com/DevSecNinja/.github/commit/39481d121b64ed09c8e44d291c2948510262bcd2))
+- Refactor workflow template properties to use JSON format for consistency ([`23f2f2a`](https://github.com/DevSecNinja/.github/commit/23f2f2a58297fbad9de8b8eed84217e99ba9f4f1))
+- **github-release**: Update release jdx/mise ( v2026.4.3 ➔ v2026.4.5 ) ([`0a26e00`](https://github.com/DevSecNinja/.github/commit/0a26e0036ff47b1c45108a583f26aa71a6c033cf))
+- **renovate**: Match mise-version input in workflows custom manager ([`9dec6d6`](https://github.com/DevSecNinja/.github/commit/9dec6d696e89ea3f56a5afa505d6a0365cd736b3))
+- Remove filter_commits in cog.toml ([`ce60b28`](https://github.com/DevSecNinja/.github/commit/ce60b28bdc291c58ab62ce2838f85a1fe3a955bb))
+- Ignore 'Initial commit' in cliff.toml and cog.toml templates ([`c6aae32`](https://github.com/DevSecNinja/.github/commit/c6aae32bab483af61d6622da87aca9e69c8cfcb3))
+- Rename README.md to profile/README.md ([`8f8e434`](https://github.com/DevSecNinja/.github/commit/8f8e43411d66cf781fcb53de0ee39ccea6a4971c))
+
+### CI/CD
+
+- **github-action**: Pin action actions/github-script to 3a2844b ([`7480cde`](https://github.com/DevSecNinja/.github/commit/7480cded15399153cefdcf4d9203379cd7cd2f93))
+- **github-action**: Update action github/codeql-action ( v4.35.1 ➔ v4.35.2 ) ([`ad09cc2`](https://github.com/DevSecNinja/.github/commit/ad09cc2a8d88afc7e653d53bcd895c02a5b39d9b))
+- **github-action**: Pin action devsecninja/.github to 195660c ([`2a12818`](https://github.com/DevSecNinja/.github/commit/2a12818f2dcaaef0b366ce42911bbb49b0d4576d))
+
+### Documentation
+
+- Add ADR requiring caller-owned versions for reusable workflows ([`ca4dc5a`](https://github.com/DevSecNinja/.github/commit/ca4dc5aca0d606951f6ae6d0424c750458294724))
+
+### Features
+
+- Add guide for writing Conventional Commit messages and release process ([`78e85e5`](https://github.com/DevSecNinja/.github/commit/78e85e5c91dd19a51ffba3e912aa928f412c1c21))
+- Add issue number input for manual assignment in CODEOWNERS workflow ([`d70256f`](https://github.com/DevSecNinja/.github/commit/d70256f00b8cd2fabca5d80abe0621e010111eb6))
+- Add reusable workflow for auto-assigning issues to CODEOWNERS ([`2978f7f`](https://github.com/DevSecNinja/.github/commit/2978f7f87d39870cb8193069a2f1f01d55dfc6ea))
+- Add basic devcontainer configuration ([`82da39f`](https://github.com/DevSecNinja/.github/commit/82da39ff9a11d2f48caa9295d85e6cf30c438900))
+- Add label-sync caller workflow for .github repo itself ([`a5d8515`](https://github.com/DevSecNinja/.github/commit/a5d8515325b15f5a5c744b2b1de92f4526b77650))
+- Add vulnerabilityAlerts and lockFileMaintenance to base config ([`34679b0`](https://github.com/DevSecNinja/.github/commit/34679b04bb28aad4310d7d9138201015692ca281))
+- Add assigneesFromCodeOwners and reviewersFromCodeOwners to base config ([`c799d8d`](https://github.com/DevSecNinja/.github/commit/c799d8dcb94f35c63e8f60ac12c91cdf24aa80a9))
+- Add renovate.json5 to config-sync files and devcontainer template ([`5f5d5e6`](https://github.com/DevSecNinja/.github/commit/5f5d5e62490152525df9a5b979da2cb50a07ce87))
+- Add cliff.toml, cog.toml, and .gitignore to config-sync templates ([`0b71da2`](https://github.com/DevSecNinja/.github/commit/0b71da279304b018d564fe36a359bfef08110451))
+- Add sync-templates support to config-sync and workflow templates ([`e744bc0`](https://github.com/DevSecNinja/.github/commit/e744bc05bb096d6356cc913900ff62482e656046))
+- Add pull-based config-sync workflow and config-drift lint check ([`57ab8ec`](https://github.com/DevSecNinja/.github/commit/57ab8ec508bdf5f3e5f17f22b6ee154137ee42ac))
+- Add org-level GitHub defaults and base labels ([`e665ddd`](https://github.com/DevSecNinja/.github/commit/e665dddd3ae923443196ecbb322a8fd938b7bfb9))
+- Add config-sync files, templates, and sync workflow ([`8beef0b`](https://github.com/DevSecNinja/.github/commit/8beef0b783bc25681ce3b87d2eb04cbcf5eabb6c))
+- Add reusable lint and utility workflows ([`642f2ff`](https://github.com/DevSecNinja/.github/commit/642f2ff1c398d036f0f93338aaf429a98551057d))
+- Add support for gomod in Renovate configuration ([`913b2a6`](https://github.com/DevSecNinja/.github/commit/913b2a66c537fde1783c1b245c41c581184651c2))
+- Add Renovate base config ([`6ba8f69`](https://github.com/DevSecNinja/.github/commit/6ba8f698b1525c7c934f0e5471735ebfd92e9926))
+- Include Renovate configs ([`95fb09c`](https://github.com/DevSecNinja/.github/commit/95fb09c4295dd957205b9c9cdae79968c2655561))
+- Revise README to include personal and professional details ([`49aba34`](https://github.com/DevSecNinja/.github/commit/49aba34aefe5a38a617f4838016ae2ba2c8df9fc))
+
+### Miscellaneous
+
+- Add dprint config for changelog formatting ([`ba7a40c`](https://github.com/DevSecNinja/.github/commit/ba7a40c1f37c996b7c9de09d51ea795c719c3624))
+- Add mise, cog, and git-cliff config for releases ([`84a6f06`](https://github.com/DevSecNinja/.github/commit/84a6f06c6e3de939e7b95bff58c0af85a84fddd4))
+- Standardize to central Renovate config ([`195660c`](https://github.com/DevSecNinja/.github/commit/195660c2cde322b4f9402a20be4b2dac2fef77e0))
+- Remove .gitignore from config-sync templates ([`bfd54a0`](https://github.com/DevSecNinja/.github/commit/bfd54a05facff426e416622da1e786e6fe998dc0))
+- Remove lint-zizmor.yml (consolidated into lint.yml) ([`9d70999`](https://github.com/DevSecNinja/.github/commit/9d70999b12a121517fcc40c0e3839479b9bd7b49))
+- Remove lint-trivy-fs.yml (consolidated into lint.yml) ([`b4d416a`](https://github.com/DevSecNinja/.github/commit/b4d416a1f145368b2b3778cf5d6b5638daf9df0f))
+- Remove lint-checkov.yml (consolidated into lint.yml) ([`5b34118`](https://github.com/DevSecNinja/.github/commit/5b341185275663d5f3eb36cf129adcdc8fb7f827))
+- Remove lint-shfmt.yml (consolidated into lint.yml) ([`790c99e`](https://github.com/DevSecNinja/.github/commit/790c99e257d97e0944d5bc8587290b7c37de4180))
+- Remove sync.yml config (no longer using repo-file-sync-action) ([`eb5f870`](https://github.com/DevSecNinja/.github/commit/eb5f87019dcb7ae68c1a6cea6b7756e974b669d0))
+- Remove config-sync workflow (BetaHuhn/repo-file-sync-action is unmaintained) ([`43c932c`](https://github.com/DevSecNinja/.github/commit/43c932c734cd240b4012b851a6b33a38f96c9655))
+- Remove lint-shellcheck.yml (consolidated into lint.yml) ([`b2b4a87`](https://github.com/DevSecNinja/.github/commit/b2b4a8770a131adbfa93e17e35217195f3ede7fa))
+- Remove lint-gitleaks.yml (consolidated into lint.yml) ([`86e0fac`](https://github.com/DevSecNinja/.github/commit/86e0facf4784e18c768ddc5cf5238083d6cff419))
+- Remove lint-actionlint.yml (consolidated into lint.yml) ([`c2e91f7`](https://github.com/DevSecNinja/.github/commit/c2e91f7b12eda40a2575cae54549ba3ac40170bf))
+- Remove lint-yamllint.yml (consolidated into lint.yml) ([`d671d36`](https://github.com/DevSecNinja/.github/commit/d671d3605677bc489f27dc62422f671e3ca9a6e6))
+- Remove lint-yamlfmt.yml (consolidated into lint.yml) ([`ff22335`](https://github.com/DevSecNinja/.github/commit/ff22335d9809d42eca2565dfe82f1e8d06c8a8f8))
+- Remove lint-dprint.yml (consolidated into lint.yml) ([`a7e0d3a`](https://github.com/DevSecNinja/.github/commit/a7e0d3a7c65e367d9659fedc9591a0aa50a436b7))
+
+### Refactoring
+
+- Consolidate 10 lint workflows into single reusable workflow ([`1746a42`](https://github.com/DevSecNinja/.github/commit/1746a429e5aa102dc7a69eb4da1cc4af21b557f7))
