@@ -86,7 +86,7 @@ jobs:
             if (context.payload.issue) {
               // Triggered by an issue event
               issues = [context.payload.issue];
-            } else if (issueNumberInput) {
+            } else if (issueNumberInput && Number(issueNumberInput) > 0) {
               // Manual run with a specific issue number
               const { data: issue } = await github.rest.issues.get({
                 owner: context.repo.owner,
