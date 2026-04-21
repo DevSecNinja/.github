@@ -9,6 +9,10 @@ on:
         required: false
         type: boolean
         default: true
+      issue-number:
+        description: "Issue number to assign. Leave empty to assign all open issues (workflow_dispatch only)."
+        required: false
+        type: number
 
 permissions:
   contents: read
@@ -25,14 +29,9 @@ jobs:
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         env:
           ALLOW_SELF_ASSIGN: ${{ inputs.allow-self-assign }}
+          ISSUE_NUMBER: ${{ inputs.issue-number }}
         with:
           script: |
-            const issue = context.payload.issue;
-            if (!issue) {
-              core.info('No issue found in event payload');
-              return;
-            }
-
             // Try to read CODEOWNERS from common locations
             const paths = ['.github/CODEOWNERS', 'CODEOWNERS', 'docs/CODEOWNERS'];
             let content = null;
@@ -58,7 +57,7 @@ jobs:
             }
 
             // Parse CODEOWNERS — extract owners from the global (*) pattern
-            const owners = new Set();
+            const codeowners = new Set();
             for (const line of content.split('\n')) {
               const trimmed = line.trim();
               if (!trimmed || trimmed.startsWith('#')) continue;
@@ -69,34 +68,70 @@ jobs:
                   const owner = parts[i];
                   // Only include individual users — teams cannot be assigned to issues
                   if (owner.startsWith('@') && !owner.includes('/')) {
-                    owners.add(owner.substring(1));
+                    codeowners.add(owner.substring(1));
                   }
                 }
               }
             }
 
-            if (owners.size === 0) {
+            if (codeowners.size === 0) {
               core.warning('No assignable users found in CODEOWNERS global pattern');
               return;
             }
 
-            // Optionally remove issue author to avoid self-assignment
-            if (process.env.ALLOW_SELF_ASSIGN !== 'true') {
-              const author = issue.user.login;
-              owners.delete(author);
+            // Collect target issues
+            let issues = [];
+            const issueNumberInput = process.env.ISSUE_NUMBER;
 
-              if (owners.size === 0) {
-                core.info('No assignees remaining after excluding issue author');
-                return;
-              }
+            if (context.payload.issue) {
+              // Triggered by an issue event
+              issues = [context.payload.issue];
+            } else if (issueNumberInput) {
+              // Manual run with a specific issue number
+              const { data: issue } = await github.rest.issues.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: Number(issueNumberInput),
+              });
+              issues = [issue];
+            } else {
+              // Manual run without issue number — assign all open issues
+              core.info('No issue number provided — fetching all open issues');
+              issues = await github.paginate(github.rest.issues.listForRepo, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+              });
+              // Filter out pull requests (they also appear in the issues endpoint)
+              issues = issues.filter(i => !i.pull_request);
+              core.info(`Found ${issues.length} open issue(s)`);
             }
 
-            const assignees = [...owners];
-            core.info(`Assigning issue #${issue.number} to: ${assignees.join(', ')}`);
+            if (issues.length === 0) {
+              core.info('No issues to process');
+              return;
+            }
 
-            await github.rest.issues.addAssignees({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issue.number,
-              assignees: assignees,
-            });
+            for (const issue of issues) {
+              const owners = new Set(codeowners);
+
+              // Optionally remove issue author to avoid self-assignment
+              if (process.env.ALLOW_SELF_ASSIGN !== 'true') {
+                owners.delete(issue.user.login);
+
+                if (owners.size === 0) {
+                  core.info(`Issue #${issue.number}: no assignees after excluding author`);
+                  continue;
+                }
+              }
+
+              const assignees = [...owners];
+              core.info(`Assigning issue #${issue.number} to: ${assignees.join(', ')}`);
+
+              await github.rest.issues.addAssignees({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                assignees: assignees,
+              });
+            }
