@@ -18,7 +18,7 @@ jobs:
   assign:
     uses: DevSecNinja/.github/.github/workflows/assign-issue-to-codeowners.yml@d70256f00b8cd2fabca5d80abe0621e010111eb6 # main
     with:
-      issue-number: ${{ inputs.issue-number }}
+      issue-number: ${{ inputs.issue-number || 0 }}
     permissions:
       contents: read
       issues: write
