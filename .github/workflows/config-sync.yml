@@ -97,9 +97,13 @@ jobs:
           if git ls-remote --exit-code --heads origin "${BRANCH}" > /dev/null 2>&1; then
             echo "Branch ${BRANCH} already exists — updating it"
             git fetch origin "${BRANCH}"
-            git stash --include-untracked
-            git checkout "${BRANCH}"
-            git stash pop
+            # Capture pending files before switching — stash pop fails when the
+            # branch already has those files committed, so restore from /tmp instead
+            changed_files=$(git status --porcelain | awk '{print $2}')
+            git checkout -f "${BRANCH}"
+            for f in ${changed_files}; do
+              cp "/tmp/$(basename "${f}")" "${f}" 2>/dev/null || true
+            done
           else
             git checkout -b "${BRANCH}"
           fi
