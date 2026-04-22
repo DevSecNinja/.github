@@ -6,6 +6,8 @@ on:
   pull_request:
     branches:
       - $default-branch
+  issues:
+    types: [opened, edited]
 
 permissions:
   contents: read
@@ -16,3 +18,4 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+      issues: write

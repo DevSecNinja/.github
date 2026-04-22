@@ -1,21 +1,26 @@
 ---
-name: Reusable — PR Labeler
+name: Reusable — Labeler
 
 on:
   workflow_call:
     inputs:
       config-path:
-        description: "Path to labeler config file"
+        description: "Path to PR labeler config file"
         required: false
         type: string
-        default: ".github/labeler.yaml"
+        default: ".github/pr-labeler.yaml"
+      issue-config-path:
+        description: "Path to issue labeler config file"
+        required: false
+        type: string
+        default: ".github/issue-labeler.yaml"
 
 permissions:
   contents: read
 
 jobs:
-  labeler:
-    name: Labeler
+  pr-labeler:
+    name: PR Labeler
     runs-on: ubuntu-24.04
     if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
     permissions:
@@ -27,8 +32,24 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Labeler
+      - name: PR Labeler
         uses: actions/labeler@634933edcd8ababfe52f92936142cc22ac488b1b # v6.0.1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           configuration-path: ${{ inputs.config-path }}
+
+  issue-labeler:
+    name: Issue Labeler
+    runs-on: ubuntu-24.04
+    if: ${{ github.event_name == 'issues' }}
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Issue Labeler
+        uses: github/issue-labeler@c1b0f9f52a63158c4adc09425e858e87b32e9685 # v3.4
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          configuration-path: ${{ inputs.issue-config-path }}
+          enable-versioned-regex: 0
+          include-title: 1
