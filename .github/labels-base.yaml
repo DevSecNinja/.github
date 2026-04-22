@@ -30,6 +30,8 @@
   color: "0075ca"
 - name: config-sync
   color: "0075ca"
+- name: todo-to-issue
+  color: "0075ca"
 
 # Uncategorized
 - name: bug

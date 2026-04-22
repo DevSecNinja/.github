@@ -16,3 +16,6 @@ jobs:
     permissions:
       contents: read
       issues: write
+    with:
+      auto_assign: false
+      label: "todo-to-issue"

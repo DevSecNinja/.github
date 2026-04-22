@@ -3,6 +3,17 @@ name: Reusable — TODO to Issue
 
 on:
   workflow_call:
+    inputs:
+      auto_assign:
+        description: "Automatically assign new issues to the user who triggered the action"
+        required: false
+        type: boolean
+        default: false
+      label:
+        description: "Label to apply to issues created by this action"
+        required: false
+        type: string
+        default: "todo-to-issue"
 
 permissions:
   contents: read
@@ -21,4 +32,5 @@ jobs:
       - name: TODO to Issue
         uses: alstr/todo-to-issue-action@64aca8fda7023259aada83ba44ad988c4c443657 # v5
         with:
-          AUTO_ASSIGN: "false"
+          AUTO_ASSIGN: "${{ inputs.auto_assign }}"
+          IDENTIFIERS: ${{ inputs.label != '' && format('[{{"name": "TODO", "labels": ["{0}"]}}]', inputs.label) || '[{"name": "TODO", "labels": []}]' }}
