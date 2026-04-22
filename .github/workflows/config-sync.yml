@@ -108,6 +108,12 @@ jobs:
           }
           git push -u origin "${BRANCH}" --force-with-lease
 
+          # Ensure the label exists before opening a PR
+          gh label create "config-sync" \
+            --color "0075ca" \
+            --description "Automated config sync PR" \
+            --force 2>/dev/null || true
+
           # Open PR if one doesn't exist yet
           existing_pr=$(gh pr list --head "${BRANCH}" --state open --json number --jq '.[0].number // empty')
           if [ -z "${existing_pr}" ]; then
