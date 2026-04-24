@@ -3,5 +3,5 @@ min_version = "2026.4.5"
 
 [tools]
 cocogitto = "6.4.0"
-dprint = "0.53.2"
+dprint = "0.54.0"
 git-cliff = "2.8.0"
