@@ -131,6 +131,7 @@ It does **not** apply to:
 
 - `lint.yml` — `mise-version` required ✅
 - `release.yml` — `mise-version` required ✅
+- `autofix.yml` — `mise-version` required ✅
 - `config-sync.yml`, `label-sync.yml`, `labeler.yml`, `todo-to-issue.yml` —
   no tool version inputs (compliant by construction) ✅
 
