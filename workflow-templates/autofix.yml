@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   autofix:
-    uses: DevSecNinja/.github/.github/workflows/autofix.yml@main
+    uses: DevSecNinja/.github/.github/workflows/autofix.yml@42b7c72b7ea3a1ba0002e0bec84a86cb8a8f896a # main
     permissions:
       contents: write
     with:
