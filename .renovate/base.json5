@@ -3,6 +3,8 @@
   dependencyDashboardTitle: "Renovate Dashboard 🤖",
   suppressNotifications: ["prEditedNotification", "prIgnoreNotification"],
   pinDigests: true,
+  labels: ["dependencies"],
+  osvVulnerabilityAlerts: true,
   timezone: 'Europe/Amsterdam',
   schedule: [
     'every weekend',
