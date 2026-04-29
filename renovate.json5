@@ -1,10 +1,6 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
   extends: [
-    "config:recommended",
-    "helpers:pinGitHubActionDigests",
-    ":dependencyDashboard",
-    ":semanticCommits",
     "github>DevSecNinja/.github//.renovate/autoMerge.json5",
     "github>DevSecNinja/.github//.renovate/base.json5",
     "github>DevSecNinja/.github//.renovate/customManagers.json5",
