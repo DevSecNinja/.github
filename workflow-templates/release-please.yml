@@ -1,0 +1,30 @@
+---
+name: Release Please
+
+# Drives semver bumping via release-please. On every push to main this
+# workflow opens (or updates) a release PR with the next version's
+# CHANGELOG bump. Merging that PR creates the `vX.Y.Z` tag, which
+# triggers this repo's existing tag-triggered release workflow.
+#
+# Per-repo config:
+#   - release-please-config.json
+#   - .release-please-manifest.json
+#
+# See the reusable for details:
+# https://github.com/DevSecNinja/.github/blob/main/.github/workflows/release-please.yml
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release-please:
+    uses: DevSecNinja/.github/.github/workflows/release-please.yml@v1.0.0
+    permissions:
+      contents: write
+      pull-requests: write
