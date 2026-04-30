@@ -1,0 +1,7 @@
+{
+  "name": "Release Please",
+  "description": "Open / update release-PRs and create tags from Conventional Commits via release-please. Replaces local cog bump.",
+  "iconName": "release-please",
+  "categories": ["Automation", "Release"],
+  "filePatterns": [".release-please-manifest.json", "release-please-config.json"]
+}

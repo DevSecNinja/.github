@@ -1,0 +1,81 @@
+---
+name: Reusable — Release Please
+
+# Drives semver bumping and CHANGELOG.md generation via release-please.
+# On every push to the target branch, this workflow either:
+#
+#   1. Opens (or force-updates) a release PR titled
+#      `chore(<scope>): release <version>` containing the chore commit
+#      and CHANGELOG.md update for the next semver derived from
+#      Conventional Commits since the last tag.
+#
+#   2. When that release PR is merged, creates the `vX.Y.Z` git tag
+#      pointing at the merge commit. **It does NOT create a GitHub
+#      Release** (skip-github-release: true is set in each consumer's
+#      release-please-config.json) — publishing is owned by the
+#      consumer's existing tag-triggered `release.yml`.
+#
+# Branch protection is fully respected: the chore commit always lands
+# via PR through normal CI. No bypass actor is needed.
+#
+# See: https://github.com/googleapis/release-please-action
+
+on:
+  workflow_call:
+    inputs:
+      target-branch:
+        description: "Branch to track (defaults to main)."
+        required: false
+        type: string
+        default: main
+      config-file:
+        description: "Path to release-please-config.json (relative to repo root)."
+        required: false
+        type: string
+        default: release-please-config.json
+      manifest-file:
+        description: "Path to .release-please-manifest.json (relative to repo root)."
+        required: false
+        type: string
+        default: .release-please-manifest.json
+    outputs:
+      releases_created:
+        description: "`true` when this run created at least one new tag."
+        value: ${{ jobs.release-please.outputs.releases_created }}
+      tag_name:
+        description: "Tag created by release-please (e.g. `v1.2.0`), if any."
+        value: ${{ jobs.release-please.outputs.tag_name }}
+      pr:
+        description: "PR JSON for the open release-PR, if any."
+        value: ${{ jobs.release-please.outputs.pr }}
+
+permissions:
+  contents: read
+
+jobs:
+  release-please:
+    name: Open or update release PR
+    runs-on: ubuntu-24.04
+    permissions:
+      # release-please needs to push the chore-release branch and tag.
+      contents: write
+      # …and to open / update the release PR.
+      pull-requests: write
+    outputs:
+      releases_created: ${{ steps.release-please.outputs.releases_created }}
+      tag_name: ${{ steps.release-please.outputs.tag_name }}
+      pr: ${{ steps.release-please.outputs.pr }}
+    steps:
+      - name: Run release-please
+        id: release-please
+        # renovate: datasource=github-releases depName=googleapis/release-please-action
+        uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4.4.1
+        with:
+          target-branch: ${{ inputs.target-branch }}
+          config-file: ${{ inputs.config-file }}
+          manifest-file: ${{ inputs.manifest-file }}
+          # GITHUB_TOKEN is sufficient when the workflow has
+          # contents: write + pull-requests: write (set at job level
+          # above). Repos that need cross-branch labels or
+          # extra-files updates outside the manifest can pass a PAT
+          # via `secrets.token` and we'll wire it up here.
