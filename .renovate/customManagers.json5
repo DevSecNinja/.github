@@ -42,5 +42,15 @@
       ],
       datasourceTemplate: "github-releases",
     },
+    {
+      customType: "regex",
+      description: "Update DevSecNinja/dotfiles log.sh release pin",
+      managerFilePatterns: ["/(^|/)scripts/lib/log\\.sh$/", "/\\.sh$/", "/\\.sh\\.tmpl$/"],
+      matchStrings: [
+        "DevSecNinja/dotfiles/releases/download/(?<currentValue>v[^/]+)/log\\.sh",
+      ],
+      depNameTemplate: "DevSecNinja/dotfiles",
+      datasourceTemplate: "github-releases",
+    },
   ],
 }
