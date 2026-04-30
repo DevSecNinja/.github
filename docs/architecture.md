@@ -256,6 +256,64 @@ by individual repositories via their `renovate.json5`.
 | `customManagers.json5`  | Custom regex managers (e.g. `mise-version` in workflow files) |
 | `semanticCommits.json5` | Conventional Commits for Renovate PRs                         |
 
+### Auto-merge strategy
+
+PRs that Renovate can auto-merge are tagged with the **`automerge`** label.
+PRs **without** this label require manual review and merge.
+
+**What auto-merges (minor + patch, via GitHub platform automerge):**
+
+| Ecosystem | Scope | Condition |
+| --------- | ----- | --------- |
+| GitHub Actions | `actions/*`, `docker/*`, `github/*` | All versions |
+| Docker images | All | Current version ≥ 1.0 |
+| GitHub releases | All | Current version ≥ 1.0 |
+| Mise tools | All | Current version ≥ 1.0 |
+| npm | All | Current version ≥ 1.0 |
+| pip | All | Current version ≥ 1.0 |
+| Go modules | All | Current version ≥ 1.0 |
+| Lock file maintenance | All | Always (branch merge, no PR) |
+
+**What does NOT auto-merge:**
+
+-   Major version updates (all ecosystems)
+-   Pre-1.0 packages (`0.x` — semver minor can introduce breaking changes)
+-   GitHub Actions from untrusted organisations
+-   Digest-only updates (disabled entirely for supply-chain safety)
+
+### Safety nets
+
+-   **14-day `minimumReleaseAge`** on Docker images, GitHub releases, mise
+    tools, and all major updates — ensures community vetting before adoption.
+-   **CI must pass** — `platformAutomerge: true` uses GitHub's native
+    auto-merge, which respects required status checks.
+-   **OSV vulnerability alerts** bypass `minimumReleaseAge` (set to `0`) so
+    security fixes merge immediately.
+-   **Schedule** — Renovate only runs on weekends and Fridays.
+-   **Digest updates disabled** — prevents merging potentially hijacked tags.
+
+### Consuming the preset
+
+Repositories import the shared fragments in their `renovate.json5`:
+
+```json5
+{
+  extends: [
+    "config:recommended",
+    "helpers:pinGitHubActionDigests",
+    ":dependencyDashboard",
+    ":semanticCommits",
+    "github>DevSecNinja/.github//.renovate/autoMerge.json5",
+    "github>DevSecNinja/.github//.renovate/base.json5",
+    "github>DevSecNinja/.github//.renovate/customManagers.json5",
+    "github>DevSecNinja/.github//.renovate/groups.json5",
+    "github>DevSecNinja/.github//.renovate/labels.json5",
+    "github>DevSecNinja/.github//.renovate/packageRules.json5",
+    "github>DevSecNinja/.github//.renovate/semanticCommits.json5",
+  ],
+}
+```
+
 ---
 
 ## Design decisions
