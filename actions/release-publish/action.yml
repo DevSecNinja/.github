@@ -1,0 +1,130 @@
+---
+name: Release publish
+description: |
+  Generate Conventional-Commit release notes via git-cliff and create an
+  immutable GitHub Release. Optionally attach assets and append a preset
+  notes block describing how to consume them.
+
+  This is a composite action so that any preceding `actions/attest-build-provenance`
+  step in the caller's job stays bound to the caller's OIDC subject.
+  See: https://docs.github.com/actions/security-guides/using-artifact-attestations-to-establish-provenance-for-builds
+
+inputs:
+  mise-version:
+    description: "mise version to install (used to provision git-cliff)"
+    required: true
+  tag:
+    description: "Git tag to release (e.g. v1.2.0). Usually github.ref_name."
+    required: true
+  assets:
+    description: |
+      Newline-delimited list of file paths to attach to the release.
+      Empty for a notes-only release. Glob patterns are NOT expanded —
+      pass concrete paths so that the upload set is auditable.
+    required: false
+    default: ""
+  extra-notes:
+    description: |
+      Optional preset key whose canned notes block is appended to the
+      auto-generated changelog. Supported values:
+        - ""       (default — no extra notes)
+        - log-sh   (appends the standard log.sh consumption +
+                    attestation-verification snippet)
+    required: false
+    default: ""
+  github-token:
+    description: "Token for gh CLI. Defaults to the workflow's GITHUB_TOKEN."
+    required: false
+    default: ${{ github.token }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install mise
+      # renovate: datasource=github-tags depName=jdx/mise-action
+      uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+      with:
+        install: true
+        cache: false
+        version: ${{ inputs.mise-version }}
+
+    - name: Generate release notes
+      shell: bash
+      env:
+        TAG: ${{ inputs.tag }}
+        REPO: ${{ github.repository }}
+        EXTRA: ${{ inputs.extra-notes }}
+      run: |
+        set -euo pipefail
+        # Always: --latest (just this tag's slice) + --strip all (no header,
+        # no footer, no version heading — pure body suitable for a Release).
+        mise exec -- git-cliff --latest --strip all > /tmp/release-notes.md
+
+        case "${EXTRA}" in
+          "")
+            ;;
+          log-sh)
+            {
+              printf '\n---\n\n'
+              printf '## log.sh distribution\n\n'
+              printf 'This release includes a vendorable copy of `log.sh`. See '
+              printf '[docs/logging.md](https://github.com/%s/blob/%s/docs/logging.md#consuming-logsh-from-other-repositories) ' \
+                "${REPO}" "${TAG}"
+              printf 'for the consumption snippet.\n\n'
+              printf '```sh\n'
+              printf 'curl -fsSL https://github.com/%s/releases/download/%s/log.sh -o scripts/lib/log.sh\n' \
+                "${REPO}" "${TAG}"
+              printf 'curl -fsSL https://github.com/%s/releases/download/%s/log.sh.sha256 -o scripts/lib/log.sh.sha256\n' \
+                "${REPO}" "${TAG}"
+              printf '( cd scripts/lib && sha256sum -c log.sh.sha256 )\n'
+              printf '```\n\n'
+              printf '### Verifying provenance\n\n'
+              printf 'Each binary asset is attested via [GitHub Artifact Attestations](https://docs.github.com/actions/security-guides/using-artifact-attestations-to-establish-provenance-for-builds). '
+              printf 'Verify with the GitHub CLI:\n\n'
+              printf '```sh\n'
+              printf 'gh attestation verify ./log.sh --repo %s\n' "${REPO}"
+              printf 'gh attestation verify ./log-sh-%s.tar.gz --repo %s\n' "${TAG}" "${REPO}"
+              printf '```\n'
+            } >> /tmp/release-notes.md
+            ;;
+          *)
+            printf 'Unknown extra-notes preset: %s\n' "${EXTRA}" >&2
+            exit 1
+            ;;
+        esac
+
+    - name: Create immutable GitHub Release
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        TAG: ${{ inputs.tag }}
+        REPO: ${{ github.repository }}
+        ASSETS: ${{ inputs.assets }}
+      run: |
+        set -euo pipefail
+
+        # Convert newline-delimited assets into a bash array, stripping
+        # blank/whitespace-only lines (so trailing newlines in YAML don't
+        # turn into spurious "" arguments to gh).
+        asset_args=()
+        while IFS= read -r line; do
+          trimmed="${line#"${line%%[![:space:]]*}"}"
+          trimmed="${trimmed%"${trimmed##*[![:space:]]}"}"
+          [ -n "${trimmed}" ] && asset_args+=("${trimmed}")
+        done <<< "${ASSETS}"
+
+        # Single-shot upload: notes, title, and assets in one call so the
+        # release is compatible with the repo's Immutable-Releases setting
+        # (no later `gh release upload --clobber` / `gh release edit`).
+        if [ ${#asset_args[@]} -gt 0 ]; then
+          gh release create "${TAG}" \
+            --repo "${REPO}" \
+            --title "${TAG}" \
+            --notes-file /tmp/release-notes.md \
+            "${asset_args[@]}"
+        else
+          gh release create "${TAG}" \
+            --repo "${REPO}" \
+            --title "${TAG}" \
+            --notes-file /tmp/release-notes.md
+        fi
