@@ -1,14 +1,81 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
   packageRules: [
+    // --- GitHub Actions (trusted orgs only) ---
     {
-      description: "Auto-merge official actions/* minor/patch after 14 days",
+      description: "Auto-merge trusted GitHub Actions minor/patch via PR",
       matchManagers: ["github-actions"],
-      matchPackageNames: ["/^actions\//"],
-      automerge: true,
-      automergeType: "branch",
+      matchPackageNames: ["/^actions\\//", "/^docker\\//", "/^github\\//"],
       matchUpdateTypes: ["minor", "patch"],
-      minimumReleaseAge: "14 days",
+      automerge: true,
+      automergeType: "pr",
+      platformAutomerge: true,
+    },
+
+    // --- Docker / container images ---
+    {
+      description: "Auto-merge Docker image minor/patch via PR",
+      matchDatasources: ["docker"],
+      matchUpdateTypes: ["minor", "patch"],
+      matchCurrentVersion: "!/^0\\./",
+      automerge: true,
+      automergeType: "pr",
+      platformAutomerge: true,
+    },
+
+    // --- GitHub releases (mise tools, etc.) ---
+    {
+      description: "Auto-merge GitHub releases minor/patch via PR",
+      matchDatasources: ["github-releases"],
+      matchUpdateTypes: ["minor", "patch"],
+      matchCurrentVersion: "!/^0\\./",
+      automerge: true,
+      automergeType: "pr",
+      platformAutomerge: true,
+    },
+
+    // --- Mise tool manager ---
+    {
+      description: "Auto-merge mise tool minor/patch via PR",
+      matchManagers: ["mise"],
+      matchUpdateTypes: ["minor", "patch"],
+      matchCurrentVersion: "!/^0\\./",
+      automerge: true,
+      automergeType: "pr",
+      platformAutomerge: true,
+    },
+
+    // --- npm ---
+    {
+      description: "Auto-merge npm minor/patch via PR",
+      matchManagers: ["npm"],
+      matchUpdateTypes: ["minor", "patch"],
+      matchCurrentVersion: "!/^0\\./",
+      automerge: true,
+      automergeType: "pr",
+      platformAutomerge: true,
+    },
+
+    // --- pip ---
+    {
+      description: "Auto-merge pip minor/patch via PR",
+      matchManagers: ["pip_requirements", "pip-compile", "pipenv", "poetry", "setup-cfg"],
+      matchUpdateTypes: ["minor", "patch"],
+      matchCurrentVersion: "!/^0\\./",
+      automerge: true,
+      automergeType: "pr",
+      platformAutomerge: true,
+    },
+
+    // --- Go modules ---
+    {
+      description: "Auto-merge gomod minor/patch via PR",
+      matchManagers: ["gomod"],
+      matchUpdateTypes: ["minor", "patch"],
+      matchCurrentVersion: "!/^0\\./",
+      automerge: true,
+      automergeType: "pr",
+      platformAutomerge: true,
     },
   ],
 }
