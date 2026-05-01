@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0](https://github.com/DevSecNinja/.github/compare/v1.1.0...v1.2.0) (2026-05-01)
+
+
+### Features
+
+* **actions:** add notify-irm composite action ([#51](https://github.com/DevSecNinja/.github/issues/51)) ([a877d35](https://github.com/DevSecNinja/.github/commit/a877d35266a54e54ef043e60a290ed76b4d7b34e))
+* **labels:** rename automerge to `merge: auto` and add release-please labels ([#45](https://github.com/DevSecNinja/.github/issues/45)) ([fa92001](https://github.com/DevSecNinja/.github/commit/fa92001d3877b58e3c8f8b0fa2f6f9230fbb0792))
+* **mise:** update tool zizmor ( 1.23.1 ➔ 1.24.1 ) ([9e3203f](https://github.com/DevSecNinja/.github/commit/9e3203f70c12fe4b918fa0cd26238b553964a413))
+* **mise:** update tool zizmor ( 1.23.1 ➔ 1.24.1 ) ([#39](https://github.com/DevSecNinja/.github/issues/39)) ([e3291b1](https://github.com/DevSecNinja/.github/commit/e3291b1e914c6930a726cbcdc56ccab4fcbdb61a))
+* **open-pr:** add composite action to open or update PRs from working tree ([#49](https://github.com/DevSecNinja/.github/issues/49)) ([6764c0f](https://github.com/DevSecNinja/.github/commit/6764c0fb5ffc25207571b159dc255c8f77922c62))
+* **renovate:** add `merge: manual` label rules ([#46](https://github.com/DevSecNinja/.github/issues/46)) ([f447e9e](https://github.com/DevSecNinja/.github/commit/f447e9eeefdcfc24fba0b4b600be4c321fa8f208))
+
 ## [1.1.0](https://github.com/DevSecNinja/.github/compare/v1.0.0...v1.1.0) (2026-05-01)
 
 
