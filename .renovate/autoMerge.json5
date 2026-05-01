@@ -1,12 +1,11 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
   packageRules: [
-    // --- GitHub Actions (trusted orgs only) ---
+    // --- GitHub Actions ---
     {
-      description: "Auto-merge trusted GitHub Actions minor/patch via PR",
+      description: "Auto-merge GitHub Actions (pin/minor/patch) — SHA pinning + soak time covers supply-chain risk regardless of publisher",
       matchManagers: ["github-actions"],
-      matchPackageNames: ["/^actions\\//", "/^docker\\//", "/^github\\//"],
-      matchUpdateTypes: ["minor", "patch"],
+      matchUpdateTypes: ["pinDigest", "minor", "patch"],
       automerge: true,
       automergeType: "pr",
       platformAutomerge: true,
