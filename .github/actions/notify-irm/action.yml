@@ -1,0 +1,141 @@
+---
+name: Notify Grafana IRM
+description: |
+  POST an alert state (alerting/ok) to a Grafana IRM Custom webhook integration.
+  Sends `state=alerting` when any prior job in the workflow failed or was
+  cancelled, and `state=ok` (with the same alert_uid) when all green so the
+  open incident auto-resolves. Silently skips when the webhook URL is empty,
+  so the workflow remains usable on forks and during initial bring-up.
+
+  alert_uid is keyed on `<repo>-<workflow>-<branch>` (no SHA) so re-runs and
+  follow-up commits collapse into the same alert group, and a green run on a
+  later commit resolves the incident from a previous failed commit.
+
+  Typical usage in a caller workflow:
+
+    notify-irm:
+      name: Notify Grafana IRM
+      needs: [job1, job2, ...]
+      if: ${{ always() && github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+      runs-on: ubuntu-24.04
+      permissions:
+        contents: read
+      steps:
+        - uses: DevSecNinja/.github/.github/actions/notify-irm@<sha> # main
+          with:
+            webhook-url: ${{ secrets.GRAFANA_IRM_WEBHOOK_URL }}
+            job-failed: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+
+inputs:
+  webhook-url:
+    description: Grafana IRM Custom webhook URL. Empty value disables the step.
+    required: true
+  job-failed:
+    description: |
+      Set to 'true' when any prior job failed or was cancelled, 'false' on a
+      full green run. Typically sourced from
+      `contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')`.
+    required: true
+  service:
+    description: Logical service tag for IRM routing/labelling.
+    required: false
+    default: ci
+  resolve-on-success:
+    description: |
+      When 'true' (default), a green run posts state=ok to auto-resolve the
+      open incident. Set to 'false' for workflows where every run has a unique
+      alert_uid (e.g. tag-push releases) and auto-resolve cannot match.
+    required: false
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - name: POST alert state to Grafana IRM webhook
+      shell: bash
+      env:
+        WEBHOOK_URL: ${{ inputs.webhook-url }}
+        JOB_FAILED: ${{ inputs.job-failed }}
+        SERVICE: ${{ inputs.service }}
+        RESOLVE_ON_SUCCESS: ${{ inputs.resolve-on-success }}
+        WORKFLOW_NAME: ${{ github.workflow }}
+        RUN_ID: ${{ github.run_id }}
+        REPOSITORY: ${{ github.repository }}
+        REF_NAME: ${{ github.ref_name }}
+        SHA: ${{ github.sha }}
+        ACTOR: ${{ github.actor }}
+        SERVER_URL: ${{ github.server_url }}
+      run: |-
+        set -euo pipefail
+        if [ -z "${WEBHOOK_URL}" ]; then
+          echo "::warning::GRAFANA_IRM_WEBHOOK_URL is empty — skipping IRM notification."
+          exit 0
+        fi
+        if [ "${JOB_FAILED}" != "true" ] && [ "${RESOLVE_ON_SUCCESS}" != "true" ]; then
+          echo "::notice::All jobs green and resolve-on-success=false — skipping IRM notification."
+          exit 0
+        fi
+        run_url="${SERVER_URL}/${REPOSITORY}/actions/runs/${RUN_ID}"
+
+        # Branch the payload by outcome.
+        # alert_uid is intentionally NOT keyed on SHA: a successful run on a
+        # later commit (different SHA) must resolve the open incident from the
+        # previous failed commit. Re-runs and follow-up commits on the same
+        # branch collapse into the same alert group.
+        if [ "${JOB_FAILED}" = "true" ]; then
+          state="alerting"
+          severity="critical"
+          title="CI failure on ${REF_NAME}: ${WORKFLOW_NAME}"
+          msg="Workflow '${WORKFLOW_NAME}' failed on ${REF_NAME} @ ${SHA} (actor: ${ACTOR})."
+        else
+          state="ok"
+          severity="info"
+          title="CI back to green on ${REF_NAME}: ${WORKFLOW_NAME}"
+          msg="Workflow '${WORKFLOW_NAME}' succeeded on ${REF_NAME} @ ${SHA} (actor: ${ACTOR}). Auto-resolving any open incident."
+        fi
+        echo "::notice::Posting state=${state} for ${WORKFLOW_NAME} on ${REF_NAME} @ ${SHA:0:7}"
+
+        # Grafana IRM "Custom" webhook payload — fields map to standard alert
+        # grouping keys. Both `service` and `service_name` are sent because IRM
+        # uses `service_name` for SLOs/alerts/synthetic checks but `service`
+        # for incident & dashboard tags; emitting both keeps every consumer
+        # happy without an integration-side rename.
+        payload=$(jq -n \
+          --arg uid "gha-${REPOSITORY}-${WORKFLOW_NAME}-${REF_NAME}" \
+          --arg title "${title}" \
+          --arg state "${state}" \
+          --arg severity "${severity}" \
+          --arg link "${run_url}" \
+          --arg msg "${msg}" \
+          --arg service "${SERVICE}" \
+          --arg source "github-actions" \
+          --arg repo "${REPOSITORY}" \
+          --arg workflow "${WORKFLOW_NAME}" \
+          --arg branch "${REF_NAME}" \
+          --arg sha_short "${SHA:0:7}" \
+          --arg actor "${ACTOR}" \
+          '{
+            alert_uid: $uid,
+            title: $title,
+            state: $state,
+            severity: $severity,
+            link_to_upstream_details: $link,
+            message: $msg,
+            labels: {
+              service: $service,
+              service_name: $service,
+              source: $source,
+              repo: $repo,
+              workflow: $workflow,
+              branch: $branch,
+              sha: $sha_short,
+              actor: $actor,
+              severity: $severity
+            }
+          }')
+        curl --silent --show-error --fail-with-body \
+          --max-time 30 \
+          --request POST \
+          --header 'Content-Type: application/json' \
+          --data "${payload}" \
+          "${WEBHOOK_URL}"
