@@ -34,7 +34,7 @@ jobs:
     # Self-reference: same repo, pinned to the SHA that introduced the
     # App-token wiring. Re-pin to the next vX.Y.Z tag once cut.
     # renovate: datasource=github-tags depName=DevSecNinja/.github
-    uses: DevSecNinja/.github/.github/workflows/release-please.yml@main
+    uses: DevSecNinja/.github/.github/workflows/release-please.yml@fa92001d3877b58e3c8f8b0fa2f6f9230fbb0792 # main
     permissions:
       contents: write
       pull-requests: write
