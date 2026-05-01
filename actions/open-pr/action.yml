@@ -1,0 +1,249 @@
+---
+name: Open pull request
+description: |
+  Open (or update) a pull request from the current working tree.
+
+  Stages, commits, and force-pushes any uncommitted changes in the
+  caller's checkout to a dedicated working branch, then opens a PR
+  against the target branch via the `gh` CLI. If a PR for that branch
+  already exists (e.g. a previous run that hasn't been merged yet), the
+  force-push updates its contents and the existing PR is reused.
+
+  This is a composite action so it can act on the caller's working tree
+  (a reusable workflow runs in its own job and would not see those
+  changes). Uses only the preinstalled `gh` CLI — no third-party action
+  dependency.
+
+  Designed for jobs like:
+    - signing artifacts then committing them back through PR review,
+    - auto-formatters that should land via PR rather than a direct push,
+    - generated-content updates (labels, configs, manifests).
+
+  Branch protection on the base branch stays fully enforced — the bot
+  opens a PR and a human (or auto-merge with required checks) merges it.
+  No bypass actor required.
+
+inputs:
+  branch:
+    description: |
+      Name of the working branch to create or force-push to. Choose a
+      stable per-purpose name (e.g. `chore/sign-powershell-scripts`) so
+      repeat runs reuse the same PR rather than opening duplicates.
+    required: true
+  base:
+    description: "Branch to merge into. Defaults to `main`."
+    required: false
+    default: main
+  title:
+    description: "Pull request title. Should be a Conventional Commit subject."
+    required: true
+  body:
+    description: |
+      Pull request body. Plain Markdown. Empty by default. The caller is
+      responsible for any context, links, or trigger metadata they want
+      shown in the PR description.
+    required: false
+    default: ""
+  commit-message:
+    description: |
+      Commit message for the staged changes. Defaults to `title` so the
+      commit and PR titles match. Provide a different value if the body
+      of the commit should differ from the PR description.
+    required: false
+    default: ""
+  paths:
+    description: |
+      Newline-delimited list of pathspecs to stage with `git add`. Glob
+      patterns are forwarded to `git add` literally. Defaults to `.`
+      (stage everything in the working tree).
+    required: false
+    default: "."
+  labels:
+    description: |
+      Newline-delimited list of labels to apply on PR creation. Labels
+      that don't yet exist on the repo are skipped by `gh` with a
+      warning. Empty by default.
+    required: false
+    default: ""
+  draft:
+    description: "Open the PR as a draft."
+    required: false
+    default: "false"
+  signoff:
+    description: "Add a `Signed-off-by` trailer to the commit."
+    required: false
+    default: "false"
+  if-no-changes:
+    description: |
+      What to do when there is nothing to commit:
+        - `skip` (default): exit 0 and set `changed=false`.
+        - `fail`: exit non-zero so the calling job fails loudly.
+    required: false
+    default: skip
+  git-user-name:
+    description: "Author name for the commit."
+    required: false
+    default: "github-actions[bot]"
+  git-user-email:
+    description: "Author email for the commit."
+    required: false
+    default: "41898282+github-actions[bot]@users.noreply.github.com"
+  github-token:
+    description: |
+      Token used by `gh` for the PR API call. Defaults to the workflow's
+      GITHUB_TOKEN, which is enough for same-repo PRs and intentionally
+      will NOT retrigger workflows on the bot's push (so this action is
+      safe to use inside loops like sign-on-push).
+
+      Pass a PAT or App token if you need cross-repo PRs or want the
+      bot's push to retrigger CI on the new branch.
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  changed:
+    description: "`true` when there were uncommitted changes and a PR was opened or updated."
+    value: ${{ steps.commit.outputs.changed }}
+  pr-number:
+    description: "Number of the PR that was opened or reused. Empty when changed=false."
+    value: ${{ steps.pr.outputs.pr-number }}
+  pr-url:
+    description: "URL of the PR that was opened or reused. Empty when changed=false."
+    value: ${{ steps.pr.outputs.pr-url }}
+  created:
+    description: |
+      `true` when a brand-new PR was opened by this run, `false` when
+      an existing PR for `branch` was reused (its contents updated via
+      force-push), or when changed=false.
+    value: ${{ steps.pr.outputs.created }}
+
+runs:
+  using: composite
+  steps:
+    - name: Stage and commit changes
+      id: commit
+      shell: bash
+      env:
+        GIT_USER_NAME: ${{ inputs.git-user-name }}
+        GIT_USER_EMAIL: ${{ inputs.git-user-email }}
+        BRANCH: ${{ inputs.branch }}
+        BASE: ${{ inputs.base }}
+        COMMIT_MESSAGE: ${{ inputs.commit-message }}
+        TITLE: ${{ inputs.title }}
+        PATHS: ${{ inputs.paths }}
+        SIGNOFF: ${{ inputs.signoff }}
+        IF_NO_CHANGES: ${{ inputs.if-no-changes }}
+        # Use the supplied token for the push so the bot identity is
+        # consistent with the gh CLI call below.
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: |
+        set -euo pipefail
+
+        git config user.name  "${GIT_USER_NAME}"
+        git config user.email "${GIT_USER_EMAIL}"
+
+        # Stash any unstaged changes onto a fresh branch rooted at the
+        # current commit so each run produces a clean, single-commit PR
+        # rather than accumulating history on top of a stale branch.
+        git checkout -B "${BRANCH}"
+
+        # Forward `paths` to `git add` as separate arguments. An empty
+        # element (e.g. trailing newline) is filtered out.
+        add_args=()
+        while IFS= read -r line; do
+          trimmed="${line#"${line%%[![:space:]]*}"}"
+          trimmed="${trimmed%"${trimmed##*[![:space:]]}"}"
+          [ -n "${trimmed}" ] && add_args+=("${trimmed}")
+        done <<< "${PATHS}"
+        if [ "${#add_args[@]}" -eq 0 ]; then
+          add_args=(".")
+        fi
+        git add -- "${add_args[@]}"
+
+        if git diff --cached --quiet; then
+          echo "No staged changes for ${BRANCH}."
+          echo "changed=false" >> "${GITHUB_OUTPUT}"
+          if [ "${IF_NO_CHANGES}" = "fail" ]; then
+            echo "::error::if-no-changes=fail and there is nothing to commit." >&2
+            exit 1
+          fi
+          exit 0
+        fi
+
+        msg="${COMMIT_MESSAGE:-${TITLE}}"
+        commit_args=(-m "${msg}")
+        if [ "${SIGNOFF}" = "true" ]; then
+          commit_args+=(--signoff)
+        fi
+        git commit "${commit_args[@]}"
+
+        # Push with --force-with-lease so we never clobber a branch that
+        # someone else moved between the local checkout and the push.
+        git push --force-with-lease origin "${BRANCH}"
+
+        echo "changed=true" >> "${GITHUB_OUTPUT}"
+
+    - name: Open or reuse pull request
+      id: pr
+      if: steps.commit.outputs.changed == 'true'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        BRANCH: ${{ inputs.branch }}
+        BASE: ${{ inputs.base }}
+        TITLE: ${{ inputs.title }}
+        BODY: ${{ inputs.body }}
+        LABELS: ${{ inputs.labels }}
+        DRAFT: ${{ inputs.draft }}
+      run: |
+        set -euo pipefail
+
+        # Build label flags from newline-delimited input.
+        label_args=()
+        while IFS= read -r line; do
+          trimmed="${line#"${line%%[![:space:]]*}"}"
+          trimmed="${trimmed%"${trimmed##*[![:space:]]}"}"
+          [ -n "${trimmed}" ] && label_args+=(--label "${trimmed}")
+        done <<< "${LABELS}"
+
+        draft_args=()
+        if [ "${DRAFT}" = "true" ]; then
+          draft_args+=(--draft)
+        fi
+
+        # Try to create. If a PR already exists for `head:branch -> base`,
+        # `gh pr create` exits non-zero — fall back to looking it up.
+        if gh pr create \
+            --base "${BASE}" \
+            --head "${BRANCH}" \
+            --title "${TITLE}" \
+            --body  "${BODY}" \
+            "${label_args[@]}" \
+            "${draft_args[@]}" \
+            > /tmp/gh-pr-create.out 2>&1; then
+          url=$(tail -n1 /tmp/gh-pr-create.out)
+          number=$(gh pr view "${BRANCH}" --json number --jq '.number')
+          echo "created=true" >> "${GITHUB_OUTPUT}"
+          echo "pr-url=${url}" >> "${GITHUB_OUTPUT}"
+          echo "pr-number=${number}" >> "${GITHUB_OUTPUT}"
+          echo "Opened PR #${number}: ${url}"
+        else
+          # Surface the original error for debuggability, then try reuse.
+          cat /tmp/gh-pr-create.out
+          existing=$(gh pr list \
+            --base "${BASE}" \
+            --head "${BRANCH}" \
+            --state open \
+            --json number,url \
+            --jq '.[0]')
+          if [ -z "${existing}" ] || [ "${existing}" = "null" ]; then
+            echo "::error::gh pr create failed and no existing open PR found for ${BRANCH} -> ${BASE}." >&2
+            exit 1
+          fi
+          number=$(printf '%s' "${existing}" | jq -r '.number')
+          url=$(printf '%s' "${existing}"    | jq -r '.url')
+          echo "created=false" >> "${GITHUB_OUTPUT}"
+          echo "pr-url=${url}" >> "${GITHUB_OUTPUT}"
+          echo "pr-number=${number}" >> "${GITHUB_OUTPUT}"
+          echo "Reused existing PR #${number}: ${url} (force-pushed updated contents)."
+        fi
