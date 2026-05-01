@@ -33,7 +33,7 @@ permissions:
 
 jobs:
   release-please:
-    uses: DevSecNinja/.github/.github/workflows/release-please.yml@v1.0.0
+    uses: DevSecNinja/.github/.github/workflows/release-please.yml@e7037884132e77504ca7f50a23e98f594d1c764b # v1.1.0
     permissions:
       contents: write
       pull-requests: write
