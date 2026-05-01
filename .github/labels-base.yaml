@@ -26,8 +26,20 @@
   color: "f6412d"
 
 # Automation
-- name: automerge
+- name: "merge: auto"
   color: "0075ca"
+  description: PR is eligible for automerge
+  aliases:
+    - automerge
+- name: "merge: manual"
+  color: "5319e7"
+  description: PR requires manual review and merge
+- name: "autorelease: pending"
+  color: "ededed"
+  description: Release Please — release pending
+- name: "autorelease: tagged"
+  color: "0e8a16"
+  description: Release Please — release tagged
 - name: config-sync
   color: "0075ca"
 - name: todo-to-issue

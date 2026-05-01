@@ -41,14 +41,20 @@
       description: "Label all PRs that will be auto-merged",
       matchUpdateTypes: ["minor", "patch"],
       matchCurrentVersion: "!/^0\\./",
-      addLabels: ["automerge"],
+      addLabels: ["merge: auto"],
     },
     {
       description: "Label trusted GitHub Actions auto-merge PRs (including 0.x)",
       matchManagers: ["github-actions"],
       matchPackageNames: ["/^actions\\//", "/^docker\\//", "/^github\\//"],
       matchUpdateTypes: ["minor", "patch"],
-      addLabels: ["automerge"],
+      addLabels: ["merge: auto"],
+    },
+    {
+      description: "Label GitHub Actions pinDigest PRs (auto-merged via SHA pinning)",
+      matchManagers: ["github-actions"],
+      matchUpdateTypes: ["pinDigest"],
+      addLabels: ["merge: auto"],
     },
   ],
 }
