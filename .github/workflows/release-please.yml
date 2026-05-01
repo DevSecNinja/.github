@@ -18,7 +18,18 @@ name: Reusable — Release Please
 # Branch protection is fully respected: the chore commit always lands
 # via PR through normal CI. No bypass actor is needed.
 #
-# See: https://github.com/googleapis/release-please-action
+# Authentication: pass `app-id` (input) + `app-private-key` (secret) so
+# release PRs are opened by a GitHub App identity — App-opened PRs
+# trigger `pull_request: opened` events, so required CI status checks
+# fire automatically. Without those, release-please falls back to
+# `GITHUB_TOKEN`, which by GitHub design does NOT trigger workflow runs
+# on the PRs it opens; under branch protection that means the PR cannot
+# satisfy required status checks. See:
+#   https://docs.github.com/en/actions/security-guides/automatic-token-authentication#using-the-github_token-in-a-workflow
+#
+# See also:
+#   - https://github.com/googleapis/release-please-action
+#   - DevSecNinja/.github docs/release-please-onboarding.md
 
 on:
   workflow_call:
@@ -38,6 +49,22 @@ on:
         required: false
         type: string
         default: .release-please-manifest.json
+      app-id:
+        description: |
+          GitHub App ID used to mint a short-lived token for opening the
+          release PR. When set, the App must be installed on the calling
+          repo with Contents: write + Pull requests: write permissions.
+          When unset, release-please falls back to GITHUB_TOKEN — release
+          PRs will open but won't trigger CI on `pull_request` events.
+        required: false
+        type: string
+        default: ""
+    secrets:
+      app-private-key:
+        description: |
+          PEM contents of the GitHub App's private key, paired with
+          `app-id`. Required when `app-id` is set.
+        required: false
     outputs:
       releases_created:
         description: "`true` when this run created at least one new tag."
@@ -58,6 +85,7 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       # release-please needs to push the chore-release branch and tag.
+      # Used as fallback when `app-id` is not provided.
       contents: write
       # …and to open / update the release PR.
       pull-requests: write
@@ -66,6 +94,15 @@ jobs:
       tag_name: ${{ steps.release-please.outputs.tag_name }}
       pr: ${{ steps.release-please.outputs.pr }}
     steps:
+      - name: Generate App token
+        id: app-token
+        if: inputs.app-id != ''
+        # renovate: datasource=github-releases depName=actions/create-github-app-token
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
+        with:
+          app-id: ${{ inputs.app-id }}
+          private-key: ${{ secrets.app-private-key }}
+
       - name: Run release-please
         id: release-please
         # renovate: datasource=github-releases depName=googleapis/release-please-action
@@ -74,8 +111,7 @@ jobs:
           target-branch: ${{ inputs.target-branch }}
           config-file: ${{ inputs.config-file }}
           manifest-file: ${{ inputs.manifest-file }}
-          # GITHUB_TOKEN is sufficient when the workflow has
-          # contents: write + pull-requests: write (set at job level
-          # above). Repos that need cross-branch labels or
-          # extra-files updates outside the manifest can pass a PAT
-          # via `secrets.token` and we'll wire it up here.
+          # Use the App token if available; otherwise fall back to
+          # GITHUB_TOKEN. Release PRs opened with GITHUB_TOKEN won't
+          # trigger CI — see top-of-file comment.
+          token: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}

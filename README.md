@@ -6,12 +6,14 @@ repositories.
 | What                       | Where                                                          |
 | -------------------------- | -------------------------------------------------------------- |
 | Reusable workflows         | [`.github/workflows/`](.github/workflows/)                     |
-| Workflow templates         | [`workflow-templates/`](workflow-templates/)                    |
+| Composite actions          | [`actions/`](actions/)                                         |
+| Workflow templates         | [`workflow-templates/`](workflow-templates/)                   |
 | Config sync (files)        | [`config-sync/files/`](config-sync/files/)                     |
 | Config sync (templates)    | [`config-sync/templates/`](config-sync/templates/)             |
 | Renovate presets           | [`.renovate/`](.renovate/)                                     |
 | Design decisions (ADRs)    | [`docs/design-decisions/`](docs/design-decisions/README.md)    |
 | Architecture & usage guide | [`docs/architecture.md`](docs/architecture.md)                 |
+| Release Please onboarding  | [`docs/release-please-onboarding.md`](docs/release-please-onboarding.md) |
 
 ## Development
 
@@ -21,8 +23,10 @@ mise exec -- lefthook run pre-commit  # run linters
 ```
 
 Commit with [Conventional Commits](https://www.conventionalcommits.org).
-See the [`commit-and-release`](.github/skills/commit-and-release/SKILL.md) skill
-for a step-by-step guide including releases with `cog bump`.
+Releases are automated via
+[release-please](docs/release-please-onboarding.md) — every push to
+`main` opens or updates a `chore(main): release vX.Y.Z` PR. Merge to
+ship.
 
 ## License
 
