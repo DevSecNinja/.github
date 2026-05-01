@@ -223,9 +223,11 @@ runs:
             > /tmp/gh-pr-create.out 2>&1; then
           url=$(tail -n1 /tmp/gh-pr-create.out)
           number=$(gh pr view "${BRANCH}" --json number --jq '.number')
-          echo "created=true" >> "${GITHUB_OUTPUT}"
-          echo "pr-url=${url}" >> "${GITHUB_OUTPUT}"
-          echo "pr-number=${number}" >> "${GITHUB_OUTPUT}"
+          {
+            echo "created=true"
+            echo "pr-url=${url}"
+            echo "pr-number=${number}"
+          } >> "${GITHUB_OUTPUT}"
           echo "Opened PR #${number}: ${url}"
         else
           # Surface the original error for debuggability, then try reuse.
@@ -242,8 +244,10 @@ runs:
           fi
           number=$(printf '%s' "${existing}" | jq -r '.number')
           url=$(printf '%s' "${existing}"    | jq -r '.url')
-          echo "created=false" >> "${GITHUB_OUTPUT}"
-          echo "pr-url=${url}" >> "${GITHUB_OUTPUT}"
-          echo "pr-number=${number}" >> "${GITHUB_OUTPUT}"
+          {
+            echo "created=false"
+            echo "pr-url=${url}"
+            echo "pr-number=${number}"
+          } >> "${GITHUB_OUTPUT}"
           echo "Reused existing PR #${number}: ${url} (force-pushed updated contents)."
         fi
