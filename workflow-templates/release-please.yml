@@ -10,8 +10,17 @@ name: Release Please
 #   - release-please-config.json
 #   - .release-please-manifest.json
 #
-# See the reusable for details:
-# https://github.com/DevSecNinja/.github/blob/main/.github/workflows/release-please.yml
+# IMPORTANT: configure the GitHub App credentials below so release PRs
+# trigger CI status checks. Without them, release PRs open under the
+# GITHUB_TOKEN identity, which (by GitHub design) does NOT trigger
+# `pull_request` events — required CI status checks will never fire and
+# the PR cannot satisfy branch protection.
+#
+# Onboarding guide:
+#   https://github.com/DevSecNinja/.github/blob/main/docs/release-please-onboarding.md
+#
+# Reusable workflow:
+#   https://github.com/DevSecNinja/.github/blob/main/.github/workflows/release-please.yml
 
 on:
   push:
@@ -28,3 +37,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+    with:
+      app-id: ${{ vars.RELEASE_PLEASE_APP_ID }}
+    secrets:
+      app-private-key: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
