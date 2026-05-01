@@ -17,6 +17,7 @@ repositories use it.
 │   ├── copilot-instructions.md   # Org-wide Copilot coding standards
 │   └── labels-base.yaml          # Base label set synced to all repos
 ├── .renovate/              # Renovate shared preset fragments
+├── actions/                # Composite actions (run inside the caller's job)
 ├── config-sync/
 │   ├── files/              # Files auto-synced to every repo (read-only)
 │   └── templates/          # Starting-point files — copy & adapt per repo
@@ -189,6 +190,98 @@ jobs:
       contents: read
       issues: write
 ```
+
+---
+
+## Composite actions
+
+Composite actions live in `actions/` and run **inside the caller's job**.
+Use them when the action needs to operate on the caller's working tree,
+OIDC subject, or pre-existing job state — things a reusable workflow
+(which runs on its own runner) cannot see.
+
+Pin the `uses:` ref to a full commit SHA with a version comment, just
+like reusable workflows.
+
+### Open PR (`actions/open-pr/`)
+
+Opens (or force-updates) a pull request from the current working tree.
+Use it whenever a job has produced changes that should land via PR
+review rather than a direct push to a protected branch — signing,
+formatting, generated-content updates.
+
+Key properties:
+
+- Uses only the preinstalled `gh` CLI; no third-party action.
+- Default `GITHUB_TOKEN` does not retrigger workflows on the bot's
+  push, so it is safe inside loops like sign-on-push.
+- Reuses the existing PR (force-pushes its branch) when one already
+  exists for the same `branch -> base` pair, so repeat runs do not
+  spam duplicate PRs.
+- Branch protection on the base branch stays fully enforced.
+
+| Input            | Required | Default                 | Description                                                                |
+| ---------------- | -------- | ----------------------- | -------------------------------------------------------------------------- |
+| `branch`         | yes      | —                       | Working branch to create or force-push to.                                 |
+| `title`          | yes      | —                       | PR title (also default commit message). Conventional Commit subject.       |
+| `base`           | no       | `main`                  | Branch to merge into.                                                      |
+| `body`           | no       | `""`                    | PR body (Markdown).                                                        |
+| `commit-message` | no       | `title`                 | Override the commit message.                                               |
+| `paths`          | no       | `.`                     | Newline-delimited pathspecs to `git add`.                                  |
+| `labels`         | no       | `""`                    | Newline-delimited labels.                                                  |
+| `draft`          | no       | `false`                 | Open as draft.                                                             |
+| `signoff`        | no       | `false`                 | Add `Signed-off-by` trailer.                                               |
+| `if-no-changes`  | no       | `skip`                  | `skip` = exit 0; `fail` = error when nothing to commit.                    |
+| `git-user-name`  | no       | `github-actions[bot]`   | Commit author name.                                                        |
+| `git-user-email` | no       | github-actions[bot] noreply | Commit author email.                                                   |
+| `github-token`   | no       | `${{ github.token }}`   | Token for `git push` and `gh`. Override with PAT/App for cross-repo PRs.   |
+
+Outputs: `changed`, `created`, `pr-number`, `pr-url`.
+
+**Example caller — sign artifacts and open a PR:**
+
+```yaml
+name: Sign Scripts
+on:
+  push:
+    branches: [main]
+    paths: ['**.ps1']
+
+jobs:
+  sign:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v6
+        with: { fetch-depth: 0 }
+
+      - name: Sign scripts
+        shell: pwsh
+        run: ./sign.ps1
+
+      - uses: DevSecNinja/.github/actions/open-pr@<sha>
+        with:
+          branch: chore/sign-scripts
+          title: 'chore: sign scripts'
+          paths: '**/*.ps1'
+          labels: |
+            automated
+            chore
+```
+
+See [`actions/open-pr/README.md`](../actions/open-pr/README.md) for full
+documentation and more examples.
+
+### Release publish (`actions/release-publish/`)
+
+Generates Conventional-Commit release notes via `git-cliff` and creates
+an immutable GitHub Release with optional asset upload and preset notes
+blocks. Composite (not reusable workflow) so any preceding
+`actions/attest-build-provenance` step in the caller's job stays bound
+to the caller's OIDC subject. See
+[`actions/release-publish/README.md`](../actions/release-publish/README.md).
 
 ---
 
