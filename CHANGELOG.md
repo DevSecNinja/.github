@@ -2,6 +2,47 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.0](https://github.com/DevSecNinja/.github/compare/v1.0.0...v1.1.0) (2026-05-01)
+
+
+### Features
+
+* add custom manager for Ansible inventory YAML files ([46eb1be](https://github.com/DevSecNinja/.github/commit/46eb1be9eba6a1e16b068f956880bedfe3900431))
+* add host rules and registry aliases for dhi.io ([641aa02](https://github.com/DevSecNinja/.github/commit/641aa0204e8cddbad9b515b6954221309307d841))
+* add labels and vulnerability alerts to Renovate configuration ([b9273f0](https://github.com/DevSecNinja/.github/commit/b9273f0e9f610757c8c6a0971218f1c0a7cc8d98))
+* **config-sync:** ensure label exists before opening a PR ([1cc371b](https://github.com/DevSecNinja/.github/commit/1cc371b697c812683b878d0e2201bb1f65718424))
+* **labeler:** add issue labeling via github/issue-labeler ([794bec0](https://github.com/DevSecNinja/.github/commit/794bec023309821156952f39b2ab000f5a438ce3))
+* **lint:** add auto-fix mode reusable workflow and template ([f163ca1](https://github.com/DevSecNinja/.github/commit/f163ca18a0a8644c916c8a034f39335f848de491))
+* **lint:** add shellcheck/shfmt exclude inputs ([17aa697](https://github.com/DevSecNinja/.github/commit/17aa6976bea066f1834c052e8da01fa19962ebfe))
+* **lint:** add shellcheck/shfmt exclude inputs to reusable lint workflow ([0c4551a](https://github.com/DevSecNinja/.github/commit/0c4551a1ebe5f5332511514e4d45a9bb4df2df09))
+* **mise:** update tool dprint ( 0.53.2 ➔ 0.54.0 ) ([963e1d1](https://github.com/DevSecNinja/.github/commit/963e1d1bdc261be68c68a632fe3f4dac84df43ae))
+* **release-please:** wire GitHub App token + onboarding doc ([217074e](https://github.com/DevSecNinja/.github/commit/217074ec255c5d73af534576479c34844667a2d1))
+* **release-please:** wire GitHub App token + onboarding doc ([e29c6a9](https://github.com/DevSecNinja/.github/commit/e29c6a934b4210dd13f909d5c5745914f584f020))
+* **release:** add release-please reusable workflow ([4890fa8](https://github.com/DevSecNinja/.github/commit/4890fa871a85bacb5a6f25e56415849d33652712))
+* **release:** add release-please reusable workflow ([7ed381a](https://github.com/DevSecNinja/.github/commit/7ed381a72cf3d86d34aa5db3818dd468968e46ce))
+* **release:** add release-publish composite action ([ee0804b](https://github.com/DevSecNinja/.github/commit/ee0804b737700aeecd6d1b1bc85ab57107c880e3))
+* **release:** add release-publish composite action ([1f5bcf2](https://github.com/DevSecNinja/.github/commit/1f5bcf20495c36c07f1040a4f79a8053a4649cdb))
+* **release:** onboard .github repo to release-please ([7d8ca17](https://github.com/DevSecNinja/.github/commit/7d8ca17e0611196f47e35113f25754e0d73e7994))
+* **release:** onboard .github repo to release-please ([0e0be6d](https://github.com/DevSecNinja/.github/commit/0e0be6da7f1bf0e0e331792e181417a55349e16d))
+* **renovate:** add custom manager for dotfiles log.sh release pin ([aab92ba](https://github.com/DevSecNinja/.github/commit/aab92ba8d190f80d2dce8393c37b3394ee078fb3))
+* **renovate:** expand auto-merge to all minor/patch updates ([78be78d](https://github.com/DevSecNinja/.github/commit/78be78dd79bc07729a7daa0bddd91ecf90c006a7))
+* **todo-to-issue:** add auto_assign and label inputs, fix todo-to-issue label ([f830665](https://github.com/DevSecNinja/.github/commit/f830665929b67060bac3a65d4cfc4dde3f81a82f))
+* update Renovate configuration to extend best practices and remove deprecated settings ([632d58e](https://github.com/DevSecNinja/.github/commit/632d58e4ec6b8b0d618b871d823c6f970f6bfc15))
+* **workflow-templates:** pin all template refs to v1.0.0 and add changelog category ([8b63cf9](https://github.com/DevSecNinja/.github/commit/8b63cf9fda6a2ea132593ff03755d90234a250ca))
+
+
+### Bug Fixes
+
+* **checkov:** filter skipped checks from SARIF before upload ([36b12c2](https://github.com/DevSecNinja/.github/commit/36b12c20b17e9ae1d596524928fae013cd9a4cbb))
+* **config-sync:** replace stash with force-checkout and restore from tmp ([26b001e](https://github.com/DevSecNinja/.github/commit/26b001eb16d0f67887e26dfab340573a6398efce))
+* **config-sync:** stash untracked files before branch checkout and auto-create label ([b9b199e](https://github.com/DevSecNinja/.github/commit/b9b199e6ef225c6e8da6ded4da2cf2c492f6d94e))
+* **github-release:** update release jdx/mise ( v2026.4.5 ➔ v2026.4.9 ) ([bb51292](https://github.com/DevSecNinja/.github/commit/bb51292e9a07d5e6d1a512047949bf07028388e1))
+* **mise:** update tool pipx:checkov ( 3.2.513 ➔ 3.2.521 ) ([48fd48b](https://github.com/DevSecNinja/.github/commit/48fd48b1d523ecd73bf1fa99a5d4dfcbb5b1b115))
+* **mise:** update tool shfmt ( 3.13.0 ➔ 3.13.1 ) ([f268d08](https://github.com/DevSecNinja/.github/commit/f268d0881372f838b16d32c3f92a14665237bbac))
+* **renovate:** auto-merge github-actions pinDigest updates ([5979dc3](https://github.com/DevSecNinja/.github/commit/5979dc3c548db482fd2fa730c312bec33caa6f00))
+* **workflow-templates:** update event types format in assign-issue-to-codeowners.yml ([edb5985](https://github.com/DevSecNinja/.github/commit/edb5985189b734443c2948205d52939cdc24a6e9))
+* **workflows:** quote IDENTIFIERS expression in todo-to-issue workflow ([27869fe](https://github.com/DevSecNinja/.github/commit/27869febccdd16c256414c265650ec3ba0aba04e))
+
 ## [1.0.0] - 2026-04-21
 
 ### Bug Fixes
