@@ -13,8 +13,7 @@ respected end-to-end — no bypass actor needed.**
 ## Prerequisites
 
 Before the first repo can adopt this, the org/account needs a **shared
-GitHub App**. This is a *one-time* setup. Skip ahead to [Per-repo
-adoption](#per-repo-adoption) if the App already exists (it does for
+GitHub App**. This is a _one-time_ setup. Skip ahead to [Per-repo adoption](#per-repo-adoption) if the App already exists (it does for
 DevSecNinja — see below).
 
 ### One-time: create the GitHub App
@@ -22,8 +21,8 @@ DevSecNinja — see below).
 > Personal accounts can use App credentials too — secrets just live at
 > the **repo level** instead of the org level.
 
-1. Go to <https://github.com/settings/apps/new> (or org-level: *Org
-   Settings → Developer settings → GitHub Apps → New GitHub App*).
+1. Go to <https://github.com/settings/apps/new> (or org-level: _Org
+   Settings → Developer settings → GitHub Apps → New GitHub App_).
 2. Fill in:
    - **Name**: `DevSecNinja Release Please` (or org equivalent).
    - **Homepage URL**: this repo's URL.
@@ -39,11 +38,11 @@ DevSecNinja — see below).
    - `Contents`: **Read and write** (push the release branch + tag).
    - `Pull requests`: **Read and write** (open / update the release PR).
    - `Metadata`: Read-only (auto-required).
-4. **Where can this GitHub App be installed?**: *Only on this account*.
+4. **Where can this GitHub App be installed?**: _Only on this account_.
 5. Create the App. From the App's settings page, capture the **App
    ID** (numeric, top of the page).
-6. **Generate a private key** ("Private keys" section → *Generate a
-   private key*). Save the downloaded `.pem` file securely — you'll
+6. **Generate a private key** ("Private keys" section → _Generate a
+   private key_). Save the downloaded `.pem` file securely — you'll
    only need it once per repo to copy into a secret.
 7. **Install the App** on the repos that will adopt release-please
    ("Install App" tab on the App's public page).
@@ -62,13 +61,13 @@ fail with `Bad credentials` instead of just falling back to
 
 ### 1. Install the App on the repo
 
-From the App's public page, *Install App → Configure*, and tick the
-repo. Or navigate to *Repo Settings → Integrations → GitHub Apps →
-Configure*.
+From the App's public page, _Install App → Configure_, and tick the
+repo. Or navigate to _Repo Settings → Integrations → GitHub Apps →
+Configure_.
 
 ### 2. Add the secret + variable
 
-In *Repo Settings → Secrets and variables → Actions*:
+In _Repo Settings → Secrets and variables → Actions_:
 
 - **Variables tab → New repository variable**
   - Name: `RELEASE_PLEASE_APP_ID`
@@ -77,7 +76,7 @@ In *Repo Settings → Secrets and variables → Actions*:
     for easier debugging.
 - **Secrets tab → New repository secret**
   - Name: `RELEASE_PLEASE_APP_PRIVATE_KEY`
-  - Value: the *full* contents of the `.pem` file generated in the
+  - Value: the _full_ contents of the `.pem` file generated in the
     one-time setup, including `-----BEGIN/END RSA PRIVATE KEY-----`
     lines.
 
@@ -86,7 +85,7 @@ In *Repo Settings → Secrets and variables → Actions*:
 
 ### 3. Enable Actions PR-creation
 
-*Repo Settings → Actions → General → Workflow permissions →*
+_Repo Settings → Actions → General → Workflow permissions →_
 **✅ "Allow GitHub Actions to create and approve pull requests"** →
 Save.
 
@@ -171,7 +170,7 @@ Immutable-Releases repos that's an unrecoverable error.
 
 #### `.release-please-manifest.json`
 
-Pin to the *current* released version (the one matching the latest
+Pin to the _current_ released version (the one matching the latest
 `v*` tag):
 
 ```json
@@ -212,6 +211,11 @@ On merge to `main`:
 5. release-please creates the `vX.Y.Z` tag on the merge commit.
 6. The tag-triggered `release.yml` publishes the GitHub Release.
 
+> Trigger downstream release workflows on `push: tags`, **not** on
+> `release: created` — see
+> [Release flow with release-please](workflow-trigger-conventions.md#release-flow-with-release-please)
+> for the rationale.
+
 ---
 
 ## Troubleshooting
@@ -232,10 +236,10 @@ Step 3 above wasn't done. Toggle the setting and re-run the workflow
 ### Release PR opens but no CI runs on it
 
 The PR was opened by `github-actions[bot]` instead of the App — step 2
-was skipped or `app-id` is empty. Verify in *Repo Settings → Variables
-→ Actions* that `RELEASE_PLEASE_APP_ID` exists and is non-empty.
+was skipped or `app-id` is empty. Verify in _Repo Settings → Variables
+→ Actions_ that `RELEASE_PLEASE_APP_ID` exists and is non-empty.
 
-Quick unblock for an already-open release PR: a *human user* closes
+Quick unblock for an already-open release PR: a _human user_ closes
 and reopens it (which fires `pull_request` events from a user identity,
 triggering CI). Then fix the underlying setting so future PRs don't
 need manual nudging.
@@ -269,4 +273,6 @@ to use that version.
 - [`.github/workflows/release-please.yml`](../.github/workflows/release-please.yml) — the reusable.
 - [`actions/release-publish/README.md`](../actions/release-publish/README.md) — the
   composite that publishes the GitHub Release on tag push.
+- [`docs/workflow-trigger-conventions.md`](workflow-trigger-conventions.md) —
+  org-wide rules for `on:`, concurrency, and IRM paging.
 - [`docs/architecture.md`](architecture.md) — fleet architecture overview.
