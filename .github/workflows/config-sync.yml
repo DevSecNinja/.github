@@ -83,52 +83,28 @@ jobs:
 
           echo "updated=${updated}" >> "${GITHUB_OUTPUT}"
 
-      - name: Create PR if configs changed
+      - name: Ensure config-sync label exists
         if: steps.pull.outputs.updated == '1'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |-
-          BRANCH="chore/config-sync-$(date +%Y%m%d)"
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          # Check if branch already exists (from a previous run today)
-          if git ls-remote --exit-code --heads origin "${BRANCH}" > /dev/null 2>&1; then
-            echo "Branch ${BRANCH} already exists — updating it"
-            git fetch origin "${BRANCH}"
-            # Capture pending files before switching — stash pop fails when the
-            # branch already has those files committed, so restore from /tmp instead
-            changed_files=$(git status --porcelain | awk '{print $2}')
-            git checkout -f "${BRANCH}"
-            for f in ${changed_files}; do
-              cp "/tmp/$(basename "${f}")" "${f}" 2>/dev/null || true
-            done
-          else
-            git checkout -b "${BRANCH}"
-          fi
-
-          git add -A
-          git commit -m "chore: sync config files from DevSecNinja/.github" || {
-            echo "No changes to commit"
-            exit 0
-          }
-          git push -u origin "${BRANCH}" --force-with-lease
-
-          # Ensure the label exists before opening a PR
           gh label create "config-sync" \
             --color "0075ca" \
             --description "Automated config sync PR" \
-            --force 2>/dev/null || true
+            --force
 
-          # Open PR if one doesn't exist yet
-          existing_pr=$(gh pr list --head "${BRANCH}" --state open --json number --jq '.[0].number // empty')
-          if [ -z "${existing_pr}" ]; then
-            gh pr create \
-              --title "chore: sync config files from central repo" \
-              --body "Automated PR — config files pulled from [DevSecNinja/.github](https://github.com/DevSecNinja/.github/tree/main/config-sync)." \
-              --label "config-sync" \
-              --head "${BRANCH}"
-          else
-            echo "PR #${existing_pr} already open — updated branch"
-          fi
+      - name: Create PR if configs changed
+        if: steps.pull.outputs.updated == '1'
+        # renovate: datasource=github-tags depName=DevSecNinja/.github
+        uses: DevSecNinja/.github/actions/open-pr@d5381d4da98c75b3c86c6b4699616d176090824f # v1.2.0
+        with:
+          branch: chore/config-sync
+          title: 'chore: sync config files from central repo'
+          commit-message: 'chore: sync config files from DevSecNinja/.github'
+          labels: config-sync
+          body: |-
+            Automated PR — config files pulled from
+            [DevSecNinja/.github](https://github.com/DevSecNinja/.github/tree/main/config-sync).
+
+            Triggered by `${{ github.workflow }}` on `${{ github.ref_name }}`
+            at commit `${{ github.sha }}`.
