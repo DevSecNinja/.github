@@ -11,20 +11,9 @@ description: |
   follow-up commits collapse into the same alert group, and a green run on a
   later commit resolves the incident from a previous failed commit.
 
-  Typical usage in a caller workflow:
-
-    notify-irm:
-      name: Notify Grafana IRM
-      needs: [job1, job2, ...]
-      if: ${{ always() && github.ref == 'refs/heads/main' && github.event_name == 'push' }}
-      runs-on: ubuntu-24.04
-      permissions:
-        contents: read
-      steps:
-        - uses: DevSecNinja/.github/.github/actions/notify-irm@<sha> # main
-          with:
-            webhook-url: ${{ secrets.GRAFANA_IRM_WEBHOOK_URL }}
-            job-failed: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+  See README.md in this directory for usage examples — kept out of this
+  description because GitHub Actions templates expressions inside action.yml
+  even within description blocks.
 
 inputs:
   webhook-url:
@@ -33,8 +22,8 @@ inputs:
   job-failed:
     description: |
       Set to 'true' when any prior job failed or was cancelled, 'false' on a
-      full green run. Typically sourced from
-      `contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')`.
+      full green run. Typically sourced from a contains() check on
+      needs.*.result for 'failure' or 'cancelled'.
     required: true
   service:
     description: Logical service tag for IRM routing/labelling.
