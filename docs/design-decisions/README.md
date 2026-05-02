@@ -14,3 +14,4 @@ that supersedes the old one.
 | ADR                                                                 | Title                                                  | Status   |
 | ------------------------------------------------------------------- | ------------------------------------------------------ | -------- |
 | [0001](0001-reusable-workflow-version-inputs.md)                    | Reusable workflows must not default package versions   | Accepted |
+| [0002](0002-runtime-ci-hardening.md)                                | Use Harden-Runner for runtime CI hardening             | Accepted |
