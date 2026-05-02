@@ -9,6 +9,11 @@ on:
         required: false
         type: boolean
         default: true
+      exclude-renovate-issues:
+        description: "Exclude Renovate-created issues from assignment"
+        required: false
+        type: boolean
+        default: true
       issue-number:
         description: "Issue number to assign. Leave empty to assign all open issues (workflow_dispatch only)."
         required: false
@@ -30,6 +35,7 @@ jobs:
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         env:
           ALLOW_SELF_ASSIGN: ${{ inputs.allow-self-assign }}
+          EXCLUDE_RENOVATE_ISSUES: ${{ inputs.exclude-renovate-issues }}
           ISSUE_NUMBER: ${{ inputs.issue-number }}
         with:
           script: |
@@ -106,6 +112,28 @@ jobs:
               // Filter out pull requests (they also appear in the issues endpoint)
               issues = issues.filter(i => !i.pull_request);
               core.info(`Found ${issues.length} open issue(s)`);
+            }
+
+            if (process.env.EXCLUDE_RENOVATE_ISSUES === 'true') {
+              const isRenovateIssue = issue => {
+                const author = issue.user?.login ?? '';
+                const title = issue.title ?? '';
+                const labels = (issue.labels ?? []).map(label => (
+                  typeof label === 'string' ? label : label.name ?? ''
+                ));
+
+                return author === 'renovate[bot]'
+                  || author === 'renovate-bot'
+                  || title === 'Dependency Dashboard'
+                  || labels.some(label => label.toLowerCase() === 'renovate');
+              };
+
+              issues = issues.filter(issue => {
+                if (!isRenovateIssue(issue)) return true;
+
+                core.info(`Issue #${issue.number} "${issue.title}" is a Renovate issue; skipping assignment`);
+                return false;
+              });
             }
 
             if (issues.length === 0) {
