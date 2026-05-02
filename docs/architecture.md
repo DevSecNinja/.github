@@ -274,6 +274,19 @@ jobs:
 See [`actions/open-pr/README.md`](../actions/open-pr/README.md) for full
 documentation and more examples.
 
+### Harden runner (`actions/harden-runner/`)
+
+Wraps `step-security/harden-runner` for runtime monitoring and optional egress
+blocking inside the caller's job. This is a composite action rather than a
+reusable workflow because runner hardening has to execute in the same job as the
+build, test, or release steps it protects.
+
+Start in audit mode, review the observed egress, then switch high-value jobs to
+block mode with explicit `allowed-endpoints`.
+
+See [`actions/harden-runner/README.md`](../actions/harden-runner/README.md) and
+[ADR 0002](design-decisions/0002-runtime-ci-hardening.md).
+
 ### Release publish (`actions/release-publish/`)
 
 Generates Conventional-Commit release notes via `git-cliff` and creates
