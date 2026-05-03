@@ -226,6 +226,14 @@ jobs:
         run: |-
           set -euo pipefail
           today="$(date -u +%Y-%m-%d)"
+          if [ ! -f "${SITEMAP_PATH}" ]; then
+            echo "::error::Sitemap file '${SITEMAP_PATH}' does not exist."
+            exit 1
+          fi
+          if ! grep -Eq "<lastmod>[0-9]{4}-[0-9]{2}-[0-9]{2}</lastmod>" "${SITEMAP_PATH}"; then
+            echo "::error::No sitemap lastmod tags found in '${SITEMAP_PATH}'."
+            exit 1
+          fi
           sed -i -E \
             "s|<lastmod>[0-9]{4}-[0-9]{2}-[0-9]{2}</lastmod>|<lastmod>${today}</lastmod>|g" \
             "${SITEMAP_PATH}"
@@ -381,12 +389,22 @@ jobs:
             exit 1
           fi
 
-          deployment_ids="$(
+          if ! deployment_ids="$(
             jq -r \
               --arg branch "${BRANCH}" \
-              '.result[] | select(.deployment_trigger.metadata.branch == $branch) | .id' \
+              'if (.result | type) == "array" then
+                .result[]
+                | select(.deployment_trigger.metadata.branch == $branch)
+                | .id
+              else
+                error("Cloudflare response did not include a result array")
+              end' \
               /tmp/cf_response.json
-          )"
+          )"; then
+            echo "::error::Failed to parse Cloudflare deployments response:"
+            cat /tmp/cf_response.json
+            exit 1
+          fi
 
           if [ -z "${deployment_ids}" ]; then
             echo "No preview deployments found for branch '${BRANCH}'"

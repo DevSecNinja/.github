@@ -38,7 +38,6 @@ jobs:
       # renovate: datasource=npm depName=wrangler
       wrangler-version: "3"
       artifact-path: "."
-      cloudflare-project-name: ${{ github.event.repository.name }}
       test-setup-command: npx playwright install webkit --with-deps
       test-command: |-
         npm run test:unit
