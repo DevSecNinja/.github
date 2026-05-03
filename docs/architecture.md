@@ -116,7 +116,7 @@ available.
 | ----------------------------- | -------------------------------------------------- |
 | `node-version`                | **Required.** Node.js version to install.          |
 | `node-cache`                  | Package manager cache. Default: `npm`.            |
-| `wrangler-version`            | **Required.** Wrangler version; workflow inputs cannot be conditional. |
+| `wrangler-version`            | **Required.** Wrangler version to install for previews; inputs cannot be conditional. |
 | `production-branch`           | Branch that deploys to GitHub Pages. Default: `main`. |
 | `artifact-path`               | Directory uploaded to Pages. Default: `.`.         |
 | `install-command`             | Dependency install command. Default: `npm ci`.     |
