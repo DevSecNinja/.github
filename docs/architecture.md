@@ -128,25 +128,25 @@ jobs detect missing Cloudflare secrets before any deploy work and skip preview
 deploy/cleanup when `CLOUDFLARE_API_TOKEN` or `CLOUDFLARE_ACCOUNT_ID` is not
 available.
 
-| Input                         | Description                                        |
-| ----------------------------- | -------------------------------------------------- |
-| `node-version`                | **Required.** Node.js version to install.          |
-| `node-cache`                  | Package manager cache. Default: `npm`.            |
-| `wrangler-version`            | **Required.** Wrangler version to install for previews; inputs cannot be conditional. |
-| `production-branch`           | Branch that deploys to GitHub Pages. Default: `main`. |
-| `artifact-path`               | Directory uploaded to Pages. Default: `.`.         |
-| `install-command`             | Dependency install command. Default: `npm ci`.     |
-| `test-command`                | Validation command block. Default: empty.          |
-| `test-setup-command`          | Optional command after install and before tests.   |
-| `build-command`               | Optional build command before deployment.          |
-| `pre-deploy-command`          | Optional production-only pre-upload command.       |
-| `pre-preview-command`         | Optional preview-only pre-deploy command.          |
-| `update-sitemap-lastmod`      | Update sitemap `<lastmod>` dates. Default: `false`. |
-| `sitemap-path`                | Sitemap file path. Default: `sitemap.xml`.         |
-| `cloudflare-preview`          | Enable Cloudflare pull request previews. Default: `true`. |
-| `cloudflare-project-name`     | Cloudflare Pages project; lowercase letters, numbers, and hyphens only. |
-| `cloudflare-production-branch` | Cloudflare production branch. Default: `main`.    |
-| `preview-comment-marker`      | Marker used to update the preview PR comment.      |
+| Input                          | Description                                                                           |
+| ------------------------------ | ------------------------------------------------------------------------------------- |
+| `node-version`                 | **Required.** Node.js version to install.                                             |
+| `node-cache`                   | Package manager cache for test and production jobs. Default: `npm`.                   |
+| `wrangler-version`             | **Required.** Wrangler version to install for previews; inputs cannot be conditional. |
+| `production-branch`            | Branch that deploys to GitHub Pages. Default: `main`.                                 |
+| `artifact-path`                | Directory uploaded to Pages. Default: `.`.                                            |
+| `install-command`              | Dependency install command. Default: `npm ci`.                                        |
+| `test-command`                 | Validation command block. Default: empty.                                             |
+| `test-setup-command`           | Optional command after install and before tests.                                      |
+| `build-command`                | Optional build command before deployment.                                             |
+| `pre-deploy-command`           | Optional production-only pre-upload command.                                          |
+| `pre-preview-command`          | Optional preview-only pre-deploy command.                                             |
+| `update-sitemap-lastmod`       | Update sitemap `<lastmod>` dates. Default: `false`.                                   |
+| `sitemap-path`                 | Sitemap file path. Default: `sitemap.xml`.                                            |
+| `cloudflare-preview`           | Enable Cloudflare pull request previews. Default: `true`.                             |
+| `cloudflare-project-name`      | Cloudflare Pages project; lowercase letters, numbers, and hyphens only.               |
+| `cloudflare-production-branch` | Cloudflare production branch. Default: `main`.                                        |
+| `preview-comment-marker`       | Marker used to update the preview PR comment.                                         |
 
 **Example caller:**
 

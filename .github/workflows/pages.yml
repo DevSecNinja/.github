@@ -155,22 +155,28 @@ jobs:
           persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version: ${{ inputs.node-version }}
           cache: ${{ inputs.node-cache }}
 
       - name: Install dependencies
         if: ${{ inputs.install-command != '' }}
-        run: ${{ inputs.install-command }}
+        env:
+          INSTALL_COMMAND: ${{ inputs.install-command }}
+        run: bash -euo pipefail -c "${INSTALL_COMMAND}"
 
       - name: Run test setup
         if: ${{ inputs.test-setup-command != '' }}
-        run: ${{ inputs.test-setup-command }}
+        env:
+          TEST_SETUP_COMMAND: ${{ inputs.test-setup-command }}
+        run: bash -euo pipefail -c "${TEST_SETUP_COMMAND}"
 
       - name: Run tests
         if: ${{ inputs.test-command != '' }}
-        run: ${{ inputs.test-command }}
+        env:
+          TEST_COMMAND: ${{ inputs.test-command }}
+        run: bash -euo pipefail -c "${TEST_COMMAND}"
 
   deploy:
     name: Deploy to GitHub Pages
@@ -202,22 +208,28 @@ jobs:
 
       - name: Setup Node.js
         if: ${{ inputs.build-command != '' }}
-        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version: ${{ inputs.node-version }}
           cache: ${{ inputs.node-cache }}
 
       - name: Install dependencies
         if: ${{ inputs.build-command != '' && inputs.install-command != '' }}
-        run: ${{ inputs.install-command }}
+        env:
+          INSTALL_COMMAND: ${{ inputs.install-command }}
+        run: bash -euo pipefail -c "${INSTALL_COMMAND}"
 
       - name: Build site
         if: ${{ inputs.build-command != '' }}
-        run: ${{ inputs.build-command }}
+        env:
+          BUILD_COMMAND: ${{ inputs.build-command }}
+        run: bash -euo pipefail -c "${BUILD_COMMAND}"
 
       - name: Run pre-deploy command
         if: ${{ inputs.pre-deploy-command != '' }}
-        run: ${{ inputs.pre-deploy-command }}
+        env:
+          PRE_DEPLOY_COMMAND: ${{ inputs.pre-deploy-command }}
+        run: bash -euo pipefail -c "${PRE_DEPLOY_COMMAND}"
 
       - name: Update sitemap lastmod dates
         if: ${{ inputs.update-sitemap-lastmod }}
@@ -277,22 +289,28 @@ jobs:
 
       - name: Setup Node.js
         if: ${{ inputs.build-command != '' }}
-        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version: ${{ inputs.node-version }}
-          cache: ${{ inputs.node-cache }}
+          package-manager-cache: false
 
       - name: Install dependencies
         if: ${{ inputs.build-command != '' && inputs.install-command != '' }}
-        run: ${{ inputs.install-command }}
+        env:
+          INSTALL_COMMAND: ${{ inputs.install-command }}
+        run: bash -euo pipefail -c "${INSTALL_COMMAND}"
 
       - name: Build site
         if: ${{ inputs.build-command != '' }}
-        run: ${{ inputs.build-command }}
+        env:
+          BUILD_COMMAND: ${{ inputs.build-command }}
+        run: bash -euo pipefail -c "${BUILD_COMMAND}"
 
       - name: Run pre-preview command
         if: ${{ inputs.pre-preview-command != '' }}
-        run: ${{ inputs.pre-preview-command }}
+        env:
+          PRE_PREVIEW_COMMAND: ${{ inputs.pre-preview-command }}
+        run: bash -euo pipefail -c "${PRE_PREVIEW_COMMAND}"
 
       - name: Ensure Cloudflare Pages project exists
         uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3
