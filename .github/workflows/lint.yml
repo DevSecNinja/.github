@@ -228,6 +228,7 @@ jobs:
           version: ${{ inputs.mise-version }}
 
       - name: Run shellcheck
+        shell: bash
         env:
           CONFIG_DIR: ${{ inputs.lint-config-dir }}
           EXCLUDE_PATTERN: ${{ inputs.lint-shellcheck-exclude }}
