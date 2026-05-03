@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   release:
-    uses: DevSecNinja/.github/.github/workflows/release.yml@e7037884132e77504ca7f50a23e98f594d1c764b # v1.1.0
+    uses: DevSecNinja/.github/.github/workflows/release.yml@d5381d4da98c75b3c86c6b4699616d176090824f # v1.2.0
     permissions:
       contents: write
     with:
