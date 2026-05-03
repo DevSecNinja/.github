@@ -1,0 +1,21 @@
+---
+name: Lint
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    uses: DevSecNinja/.github/.github/workflows/lint.yml@e7037884132e77504ca7f50a23e98f594d1c764b # v1.1.0
+    permissions:
+      contents: read
+      security-events: write
+    with:
+      # renovate: datasource=github-releases depName=jdx/mise
+      mise-version: "2026.4.9"
