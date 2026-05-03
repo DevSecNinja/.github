@@ -12,10 +12,11 @@ permissions:
 
 jobs:
   lint:
-    uses: DevSecNinja/.github/.github/workflows/lint.yml@4d799d366e6af6fd45ca2e7c4dfce6c12467fe09 # PR #66
+    uses: DevSecNinja/.github/.github/workflows/lint.yml@e7037884132e77504ca7f50a23e98f594d1c764b # v1.1.0
     permissions:
       contents: read
       security-events: write
     with:
       # renovate: datasource=github-releases depName=jdx/mise
       mise-version: "2026.4.9"
+      lint-dprint: false
