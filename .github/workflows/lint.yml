@@ -108,7 +108,7 @@ jobs:
           CONFIG_DIR: ${{ inputs.lint-config-dir }}
         run: |-
           if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/dprint.json" ]; then
-            mise exec -- dprint check --config "${CONFIG_DIR}/dprint.json" --allow-no-files .
+            mise exec -- dprint check --config "${CONFIG_DIR}/dprint.json" --allow-no-files
           else
             mise exec -- dprint check --allow-no-files
           fi
@@ -238,7 +238,11 @@ jobs:
         run: |
           if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/.shellcheckrc" ]; then
             # ShellCheck has no --rcfile flag, so copy the shared config for native discovery.
-            cp "${CONFIG_DIR}/.shellcheckrc" .shellcheckrc
+            if [ -f .shellcheckrc ]; then
+              echo "::notice::.shellcheckrc already exists; using the local file"
+            else
+              cp "${CONFIG_DIR}/.shellcheckrc" .shellcheckrc
+            fi
           fi
 
           if [ -n "${EXCLUDE_PATTERN}" ]; then
