@@ -490,7 +490,7 @@ Repositories import the shared fragments in their `renovate.json5`:
 {
   extends: [
     "config:recommended",
-    "helpers:pinGitHubActionDigests",
+    "helpers:pinGitHubActionDigestsToSemver",
     ":dependencyDashboard",
     ":semanticCommits",
     "github>DevSecNinja/.github//.renovate/autoMerge.json5",
