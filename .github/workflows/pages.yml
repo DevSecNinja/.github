@@ -37,6 +37,11 @@ on:
         required: false
         type: string
         default: ""
+      test-setup-command:
+        description: "Optional setup command after install and before tests"
+        required: false
+        type: string
+        default: ""
       build-command:
         description: "Optional build command before uploading artifacts"
         required: false
@@ -153,6 +158,10 @@ jobs:
       - name: Install dependencies
         if: ${{ inputs.install-command != '' }}
         run: ${{ inputs.install-command }}
+
+      - name: Run test setup
+        if: ${{ inputs.test-setup-command != '' }}
+        run: ${{ inputs.test-setup-command }}
 
       - name: Run tests
         if: ${{ inputs.test-command != '' }}

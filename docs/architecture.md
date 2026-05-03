@@ -116,11 +116,12 @@ available.
 | ----------------------------- | -------------------------------------------------- |
 | `node-version`                | **Required.** Node.js version to install.          |
 | `node-cache`                  | Package manager cache. Default: `npm`.            |
-| `wrangler-version`            | **Required.** Wrangler version for preview deploys. |
+| `wrangler-version`            | **Required.** Wrangler version, even when previews are off. |
 | `production-branch`           | Branch that deploys to GitHub Pages. Default: `main`. |
 | `artifact-path`               | Directory uploaded to Pages. Default: `.`.         |
 | `install-command`             | Dependency install command. Default: `npm ci`.     |
 | `test-command`                | Validation command block. Default: empty.          |
+| `test-setup-command`          | Optional command after install and before tests.   |
 | `build-command`               | Optional build command before deployment.          |
 | `pre-deploy-command`          | Optional production-only pre-upload command.       |
 | `pre-preview-command`         | Optional preview-only pre-deploy command.          |
@@ -157,11 +158,11 @@ jobs:
       node-cache: "npm"
       # renovate: datasource=npm depName=wrangler
       wrangler-version: "3"
+      test-setup-command: npx playwright install webkit --with-deps
       test-command: |
         npm run test:unit
         npm run test:html
         npm run test:a11y
-        npx playwright install webkit --with-deps
         npm run test:e2e
       update-sitemap-lastmod: true
     secrets:
