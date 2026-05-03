@@ -12,7 +12,8 @@ permissions:
 
 jobs:
   lint:
-    uses: DevSecNinja/.github/.github/workflows/lint.yml@60076760e7e1cb6a94d40def5ae7fac07c357153 # PR #66
+    # Local reference validates reusable workflow changes in this repository.
+    uses: ./.github/workflows/lint.yml
     permissions:
       contents: read
       security-events: write

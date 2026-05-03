@@ -239,7 +239,13 @@ jobs:
               line="${line#"${line%%[![:space:]]*}"}"
               line="${line%"${line##*[![:space:]]}"}"
               if [ -n "${line}" ]; then
-                shellcheck_args+=("--${line}")
+                if [[ "${line}" == *=* ]]; then
+                  key="${line%%=*}"
+                  value="${line#*=}"
+                  shellcheck_args+=("--${key}=${value}")
+                else
+                  shellcheck_args+=("--${line}")
+                fi
               fi
             done < "${CONFIG_DIR}/.shellcheckrc"
           fi
