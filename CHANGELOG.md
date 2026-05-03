@@ -2,6 +2,38 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.0](https://github.com/DevSecNinja/.github/compare/v1.2.0...v1.3.0) (2026-05-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* **mise:** Update tool cocogitto ( 6.4.0 ➔ 7.0.0 ) ([#43](https://github.com/DevSecNinja/.github/issues/43))
+
+### Features
+
+* **lint:** add self lint and auto-fix callers with shared config support ([#66](https://github.com/DevSecNinja/.github/issues/66)) ([02a3e49](https://github.com/DevSecNinja/.github/commit/02a3e49acd27b55460335f3b4d1614791268be54))
+* **mise:** Update tool cocogitto ( 6.4.0 ➔ 7.0.0 ) ([#43](https://github.com/DevSecNinja/.github/issues/43)) ([b6a0cad](https://github.com/DevSecNinja/.github/commit/b6a0cad05ad19c94ddc4842734fb73c954c68363))
+* **mise:** update tool git-cliff ( 2.8.0 ➔ 2.12.0 ) ([#38](https://github.com/DevSecNinja/.github/issues/38)) ([085b778](https://github.com/DevSecNinja/.github/commit/085b778ad073de82dfc1e58a69c26c99149cb0e0))
+* **mise:** update tool trivy ( 0.69.3 ➔ 0.70.0 ) ([#48](https://github.com/DevSecNinja/.github/issues/48)) ([81a5c41](https://github.com/DevSecNinja/.github/commit/81a5c41449c1b66180a7a8a44dd863f1a476fc08))
+
+
+### Bug Fixes
+
+* **github-release:** update release jdx/mise ( v2026.4.9 ➔ v2026.4.17 ) ([#28](https://github.com/DevSecNinja/.github/issues/28)) ([1937cb6](https://github.com/DevSecNinja/.github/commit/1937cb6586ba2d6198cc2648ed51b8dbe24d557e))
+* **mise:** update tool lefthook ( 2.1.4 ➔ 2.1.6 ) ([#21](https://github.com/DevSecNinja/.github/issues/21)) ([ae88aec](https://github.com/DevSecNinja/.github/commit/ae88aec137f3fc41dc21433876a3e9e55f427184))
+* **mise:** update tool pipx:checkov ( 3.2.521 ➔ 3.2.522 ) ([#73](https://github.com/DevSecNinja/.github/issues/73)) ([2b1bf6c](https://github.com/DevSecNinja/.github/commit/2b1bf6c7b9b6029b0474c8d737b61f62222cc9a7))
+* **notify-irm:** remove ${{ }} templates from description blocks ([#53](https://github.com/DevSecNinja/.github/issues/53)) ([b250963](https://github.com/DevSecNinja/.github/commit/b2509636243e456253c938184dfe1855d6401e6d))
+* **renovate:** pin Renovate version ranges by default ([#70](https://github.com/DevSecNinja/.github/issues/70)) ([1cf2a9c](https://github.com/DevSecNinja/.github/commit/1cf2a9c7d2546cfbc5174c9edfd2ae3c0cb8fd13))
+* update title in bug_report.md ([a3db2f9](https://github.com/DevSecNinja/.github/commit/a3db2f98cd8191ce78c26bb6f34bbae6bd4510bf))
+* update title in feature_request.md ([acdef53](https://github.com/DevSecNinja/.github/commit/acdef5306701c87f551282be93821755a868d90a))
+* **workflows:** exclude Renovate issues from codeowner assignment ([2ad05e7](https://github.com/DevSecNinja/.github/commit/2ad05e70df7b4ecf4b998ef99588fcffafff14be))
+
+
+### Miscellaneous Chores
+
+* release 1.2.0 ([7c98ece](https://github.com/DevSecNinja/.github/commit/7c98eceeca8b5fcef8861ad4410f20235629759a))
+* release 1.3.0 ([2e2c691](https://github.com/DevSecNinja/.github/commit/2e2c6919b02960b6f192de305a7fa9c015adb402))
+
 ## [1.2.0](https://github.com/DevSecNinja/.github/compare/v1.1.0...v1.2.0) (2026-05-01)
 
 ### Features
