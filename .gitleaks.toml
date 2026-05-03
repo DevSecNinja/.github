@@ -1,3 +1,0 @@
-[allowlist]
-description = "Global gitleaks allowlist"
-regexes = ["\\d+/api/verify"]
