@@ -1,0 +1,19 @@
+---
+name: Auto-fix formatting
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  autofix:
+    # Local reference validates reusable workflow changes in this repository.
+    uses: ./.github/workflows/autofix.yml
+    permissions:
+      contents: write
+    with:
+      # renovate: datasource=github-releases depName=jdx/mise
+      mise-version: "2026.4.9"
+      autofix-config-dir: config-sync/files

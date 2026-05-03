@@ -108,7 +108,10 @@ jobs:
           CONFIG_DIR: ${{ inputs.lint-config-dir }}
         run: |-
           if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/dprint.json" ]; then
-            mise exec -- dprint check --config "${CONFIG_DIR}/dprint.json" --allow-no-files
+            mise exec -- dprint check \
+              --config "${CONFIG_DIR}/dprint.json" \
+              --config-discovery=false \
+              --allow-no-files
           else
             mise exec -- dprint check --allow-no-files
           fi

@@ -25,30 +25,30 @@ GitHub-hosted runners.
 
 ## Inputs
 
-| Name             | Required | Default                                              | Description                                                                                                                                                                              |
-| ---------------- | -------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `branch`         | yes      | —                                                    | Working branch to create or force-push to. Use a stable per-purpose name (e.g. `chore/sign-powershell-scripts`) so repeat runs reuse the same PR.                                        |
-| `base`           | no       | `main`                                               | Branch to merge into.                                                                                                                                                                    |
-| `title`          | yes      | —                                                    | PR title (also default commit message). Should be a Conventional Commit subject.                                                                                                         |
-| `body`           | no       | `""`                                                 | PR body, plain Markdown.                                                                                                                                                                 |
-| `commit-message` | no       | `title`                                              | Commit message for the staged changes. Defaults to `title`.                                                                                                                              |
-| `paths`          | no       | `.`                                                  | Newline-delimited pathspecs to `git add`. Globs are forwarded literally.                                                                                                                 |
-| `labels`         | no       | `""`                                                 | Newline-delimited labels to apply on PR creation.                                                                                                                                        |
-| `draft`          | no       | `false`                                              | Open as draft.                                                                                                                                                                           |
-| `signoff`        | no       | `false`                                              | Add a `Signed-off-by` trailer to the commit.                                                                                                                                             |
-| `if-no-changes`  | no       | `skip`                                               | Behaviour when there's nothing to commit: `skip` (exit 0) or `fail` (exit non-zero).                                                                                                     |
-| `git-user-name`  | no       | `github-actions[bot]`                                | Author name for the commit.                                                                                                                                                              |
-| `git-user-email` | no       | `41898282+github-actions[bot]@users.noreply.github.com` | Author email for the commit.                                                                                                                                                          |
-| `github-token`   | no       | `${{ github.token }}`                                | Token used for the `git push` and `gh` API call. The default `GITHUB_TOKEN` will NOT retrigger workflows on the bot's push, which is what you want inside loops like signing-on-push. Pass a PAT/App token for cross-repo PRs or to retrigger CI on the new branch. |
+| Name             | Required | Default                                                 | Description                                                                                                                                                                                                                                                         |
+| ---------------- | -------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `branch`         | yes      | —                                                       | Working branch to create or force-push to. Use a stable per-purpose name (e.g. `chore/sign-powershell-scripts`) so repeat runs reuse the same PR.                                                                                                                   |
+| `base`           | no       | `main`                                                  | Branch to merge into.                                                                                                                                                                                                                                               |
+| `title`          | yes      | —                                                       | PR title (also default commit message). Should be a Conventional Commit subject.                                                                                                                                                                                    |
+| `body`           | no       | `""`                                                    | PR body, plain Markdown.                                                                                                                                                                                                                                            |
+| `commit-message` | no       | `title`                                                 | Commit message for the staged changes. Defaults to `title`.                                                                                                                                                                                                         |
+| `paths`          | no       | `.`                                                     | Newline-delimited pathspecs to `git add`. Globs are forwarded literally.                                                                                                                                                                                            |
+| `labels`         | no       | `""`                                                    | Newline-delimited labels to apply on PR creation.                                                                                                                                                                                                                   |
+| `draft`          | no       | `false`                                                 | Open as draft.                                                                                                                                                                                                                                                      |
+| `signoff`        | no       | `false`                                                 | Add a `Signed-off-by` trailer to the commit.                                                                                                                                                                                                                        |
+| `if-no-changes`  | no       | `skip`                                                  | Behaviour when there's nothing to commit: `skip` (exit 0) or `fail` (exit non-zero).                                                                                                                                                                                |
+| `git-user-name`  | no       | `github-actions[bot]`                                   | Author name for the commit.                                                                                                                                                                                                                                         |
+| `git-user-email` | no       | `41898282+github-actions[bot]@users.noreply.github.com` | Author email for the commit.                                                                                                                                                                                                                                        |
+| `github-token`   | no       | `${{ github.token }}`                                   | Token used for the `git push` and `gh` API call. The default `GITHUB_TOKEN` will NOT retrigger workflows on the bot's push, which is what you want inside loops like signing-on-push. Pass a PAT/App token for cross-repo PRs or to retrigger CI on the new branch. |
 
 ## Outputs
 
-| Name        | Description                                                                                              |
-| ----------- | -------------------------------------------------------------------------------------------------------- |
-| `changed`   | `true` when there were uncommitted changes and a PR was opened or updated.                               |
+| Name        | Description                                                                                               |
+| ----------- | --------------------------------------------------------------------------------------------------------- |
+| `changed`   | `true` when there were uncommitted changes and a PR was opened or updated.                                |
 | `created`   | `true` when a brand-new PR was opened, `false` when an existing PR for `branch` was reused, or no change. |
-| `pr-number` | PR number. Empty when `changed=false`.                                                                   |
-| `pr-url`    | PR URL. Empty when `changed=false`.                                                                      |
+| `pr-number` | PR number. Empty when `changed=false`.                                                                    |
+| `pr-url`    | PR URL. Empty when `changed=false`.                                                                       |
 
 ## Caller responsibilities
 
@@ -127,7 +127,7 @@ jobs:
 
 ## Example — regenerate manifest, fail if no drift detected
 
-Useful when you *expect* the regeneration to produce changes (because
+Useful when you _expect_ the regeneration to produce changes (because
 something else in the pipeline implies they should exist).
 
 ```yaml

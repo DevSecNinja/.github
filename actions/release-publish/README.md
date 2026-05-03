@@ -9,9 +9,9 @@ Release. Optional asset upload and preset notes blocks.
 
 ## Why a composite action (and not a reusable workflow)?
 
-Reusable workflows run with the OIDC subject of *the workflow file's
-repository*. That breaks `actions/attest-build-provenance` when the
-attestation needs to verify against the *caller's* repo. Composite
+Reusable workflows run with the OIDC subject of _the workflow file's
+repository_. That breaks `actions/attest-build-provenance` when the
+attestation needs to verify against the _caller's_ repo. Composite
 actions run inside the caller's job, inheriting its OIDC subject —
 which is what consumers expect when they run
 `gh attestation verify ... --repo <owner>/<caller-repo>`.
@@ -21,13 +21,13 @@ action to publish.
 
 ## Inputs
 
-| Name           | Required | Default            | Description                                                                  |
-| -------------- | -------- | ------------------ | ---------------------------------------------------------------------------- |
-| `mise-version` | yes      | —                  | mise version to install. Used to provision `git-cliff`.                       |
-| `tag`          | yes      | —                  | Git tag (e.g. `v1.2.0`). Usually `${{ github.ref_name }}`.                    |
-| `assets`       | no       | `""`               | Newline-delimited list of file paths to attach. No globbing — be explicit.    |
-| `extra-notes`  | no       | `""`               | Preset key for an appended notes block. See [Presets](#presets).              |
-| `github-token` | no       | `${{ github.token }}` | Token used by `gh release create`.                                       |
+| Name           | Required | Default               | Description                                                                |
+| -------------- | -------- | --------------------- | -------------------------------------------------------------------------- |
+| `mise-version` | yes      | —                     | mise version to install. Used to provision `git-cliff`.                    |
+| `tag`          | yes      | —                     | Git tag (e.g. `v1.2.0`). Usually `${{ github.ref_name }}`.                 |
+| `assets`       | no       | `""`                  | Newline-delimited list of file paths to attach. No globbing — be explicit. |
+| `extra-notes`  | no       | `""`                  | Preset key for an appended notes block. See [Presets](#presets).           |
+| `github-token` | no       | `${{ github.token }}` | Token used by `gh release create`.                                         |
 
 ## Presets
 
@@ -41,12 +41,12 @@ in two or more repos.
 
 ## Caller responsibilities
 
-- Check out the repo *before* calling this action (`actions/checkout` with
+- Check out the repo _before_ calling this action (`actions/checkout` with
   `fetch-depth: 0` so `git-cliff` can see history).
 - Set job permissions yourself: at minimum `contents: write`. Add
   `id-token: write` and `attestations: write` if you also call
   `actions/attest-build-provenance` in the same job.
-- Build any artifacts and call `attest-build-provenance` *before* this
+- Build any artifacts and call `attest-build-provenance` _before_ this
   action so the attestation is bound to the caller's OIDC.
 
 ## Example — notes-only release

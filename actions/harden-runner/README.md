@@ -22,7 +22,7 @@ audit findings to create `allowed-endpoints`, then switch high-value jobs to
 | `token`                       | no       | `${{ github.token }}` | GitHub token used by Harden-Runner to avoid API rate limits.                        |
 | `disable-telemetry`           | no       | `false`               | Disable telemetry to StepSecurity. Only supported when `egress-policy` is `block`.  |
 | `disable-sudo-and-containers` | no       | `false`               | Disable sudo and container access for the runner account.                           |
-| `disable-file-monitoring`     | no       | `false`               | Disable file monitoring.                                                           |
+| `disable-file-monitoring`     | no       | `false`               | Disable file monitoring.                                                            |
 | `policy`                      | no       | `""`                  | Policy name to use from the policy store. Requires `id-token: write`.               |
 | `use-policy-store`            | no       | `false`               | Fetch policy from the StepSecurity policy store.                                    |
 | `api-key`                     | no       | `""`                  | StepSecurity API key for policy-store authentication. Store this in GitHub Secrets. |

@@ -34,4 +34,5 @@ jobs:
         with:
           AUTO_ASSIGN: "${{ inputs.auto_assign }}"
           IDENTIFIERS: >-
-            ${{ inputs.label != '' && format('[{{"name": "TODO", "labels": ["{0}"]}}]', inputs.label) || '[{"name": "TODO", "labels": []}]' }}
+            ${{ inputs.label != '' && format('[{{"name": "TODO", "labels": ["{0}"]}}]', inputs.label) || '[{"name": "TODO",
+            "labels": []}]' }}
