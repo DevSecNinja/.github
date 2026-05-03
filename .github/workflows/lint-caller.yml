@@ -12,12 +12,11 @@ permissions:
 
 jobs:
   lint:
-    uses: DevSecNinja/.github/.github/workflows/lint.yml@e7037884132e77504ca7f50a23e98f594d1c764b # v1.1.0
+    uses: ./.github/workflows/lint.yml
     permissions:
       contents: read
       security-events: write
     with:
       # renovate: datasource=github-releases depName=jdx/mise
       mise-version: "2026.4.9"
-      # Temporarily disabled pending reusable workflow fix for --allow-no-files.
-      lint-dprint: false
+      lint-config-dir: config-sync/files

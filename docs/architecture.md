@@ -49,6 +49,7 @@ boolean inputs; all default to `true`.
 | Input               | Description                                      |
 | ------------------- | ------------------------------------------------ |
 | `mise-version`      | **Required.** mise version to install.           |
+| `lint-config-dir`   | Optional linter config directory. Default: `""`. |
 | `lint-dprint`       | Markdown formatting (dprint). Default: `true`.   |
 | `lint-yamlfmt`      | YAML formatting (yamlfmt). Default: `true`.      |
 | `lint-yamllint`     | YAML linting (yamllint). Default: `true`.        |
@@ -73,6 +74,7 @@ jobs:
     with:
       # renovate: datasource=github-releases depName=jdx/mise
       mise-version: "2026.4.5"
+      # lint-config-dir: config-sync/files
 ```
 
 ### Release (`release.yml`)

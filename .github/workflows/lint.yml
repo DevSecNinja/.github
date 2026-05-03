@@ -8,6 +8,11 @@ on:
         description: "mise version to install"
         required: true
         type: string
+      lint-config-dir:
+        description: "Directory containing optional linter config files"
+        required: false
+        type: string
+        default: ""
       lint-dprint:
         description: "Run dprint (Markdown formatting)"
         required: false
@@ -95,7 +100,14 @@ jobs:
           version: ${{ inputs.mise-version }}
 
       - name: Check formatting with dprint
-        run: mise exec -- dprint check --allow-no-files
+        env:
+          CONFIG_DIR: ${{ inputs.lint-config-dir }}
+        run: |-
+          if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/dprint.json" ]; then
+            mise exec -- dprint check --config "${CONFIG_DIR}/dprint.json" --allow-no-files .
+          else
+            mise exec -- dprint check --allow-no-files
+          fi
 
   yamlfmt:
     name: yamlfmt
@@ -114,7 +126,16 @@ jobs:
           version: ${{ inputs.mise-version }}
 
       - name: Check YAML formatting
-        run: find . \( -name '*.yaml' -o -name '*.yml' \) -print0 | xargs -0 mise exec -- yamlfmt -lint
+        env:
+          CONFIG_DIR: ${{ inputs.lint-config-dir }}
+        run: |-
+          if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/.yamlfmt.yaml" ]; then
+            find . \( -name '*.yaml' -o -name '*.yml' \) -print0 |
+              xargs -0 mise exec -- yamlfmt -conf "${CONFIG_DIR}/.yamlfmt.yaml" -lint
+          else
+            find . \( -name '*.yaml' -o -name '*.yml' \) -print0 |
+              xargs -0 mise exec -- yamlfmt -lint
+          fi
 
   yamllint:
     name: yamllint
@@ -133,7 +154,16 @@ jobs:
           version: ${{ inputs.mise-version }}
 
       - name: Run yamllint
-        run: find . \( -name '*.yaml' -o -name '*.yml' \) -print0 | xargs -0 mise exec -- yamllint
+        env:
+          CONFIG_DIR: ${{ inputs.lint-config-dir }}
+        run: |-
+          if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/.yamllint.yaml" ]; then
+            find . \( -name '*.yaml' -o -name '*.yml' \) -print0 |
+              xargs -0 mise exec -- yamllint -c "${CONFIG_DIR}/.yamllint.yaml"
+          else
+            find . \( -name '*.yaml' -o -name '*.yml' \) -print0 |
+              xargs -0 mise exec -- yamllint
+          fi
 
   actionlint:
     name: actionlint
@@ -172,7 +202,14 @@ jobs:
           version: ${{ inputs.mise-version }}
 
       - name: Run gitleaks
-        run: mise exec -- gitleaks detect --redact
+        env:
+          CONFIG_DIR: ${{ inputs.lint-config-dir }}
+        run: |-
+          if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/.gitleaks.toml" ]; then
+            mise exec -- gitleaks detect --redact --config "${CONFIG_DIR}/.gitleaks.toml"
+          else
+            mise exec -- gitleaks detect --redact
+          fi
 
   shellcheck:
     name: shellcheck
@@ -192,12 +229,27 @@ jobs:
 
       - name: Run shellcheck
         env:
+          CONFIG_DIR: ${{ inputs.lint-config-dir }}
           EXCLUDE_PATTERN: ${{ inputs.lint-shellcheck-exclude }}
         run: |
+          shellcheck_args=()
+          if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/.shellcheckrc" ]; then
+            while IFS= read -r line; do
+              line="${line%%#*}"
+              line="${line#"${line%%[![:space:]]*}"}"
+              line="${line%"${line##*[![:space:]]}"}"
+              if [ -n "${line}" ]; then
+                shellcheck_args+=("--${line}")
+              fi
+            done < "${CONFIG_DIR}/.shellcheckrc"
+          fi
+
           if [ -n "${EXCLUDE_PATTERN}" ]; then
-            find . -name '*.sh' -not -path "./${EXCLUDE_PATTERN}" -print0 | xargs -0 mise exec -- shellcheck
+            find . -name '*.sh' -not -path "./${EXCLUDE_PATTERN}" -print0 |
+              xargs -0 mise exec -- shellcheck "${shellcheck_args[@]}"
           else
-            find . -name '*.sh' -print0 | xargs -0 mise exec -- shellcheck
+            find . -name '*.sh' -print0 |
+              xargs -0 mise exec -- shellcheck "${shellcheck_args[@]}"
           fi
 
   shfmt:
@@ -289,7 +341,18 @@ jobs:
           version: ${{ inputs.mise-version }}
 
       - name: Run trivy
-        run: mise exec -- trivy fs --scanners misconfig,secret --format sarif --output trivy.sarif . || true
+        env:
+          CONFIG_DIR: ${{ inputs.lint-config-dir }}
+        run: |-
+          trivy_args=()
+          if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/trivy.yaml" ]; then
+            trivy_args+=(--config "${CONFIG_DIR}/trivy.yaml")
+          fi
+
+          mise exec -- trivy fs "${trivy_args[@]}" \
+            --scanners misconfig,secret \
+            --format sarif \
+            --output trivy.sarif . || true
 
       - name: Upload SARIF report
         uses: github/codeql-action/upload-sarif@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 # v4.35.2
