@@ -236,9 +236,7 @@ jobs:
           shellcheck_args=()
           if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/.shellcheckrc" ]; then
             while IFS= read -r line; do
-              line="${line%%#*}"
-              line="${line#"${line%%[![:space:]]*}"}"
-              line="${line%"${line##*[![:space:]]}"}"
+              line="$(printf '%s\n' "${line%%#*}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
               if [ -n "${line}" ]; then
                 if [[ "${line}" == *=* ]]; then
                   key="${line%%=*}"
@@ -252,12 +250,13 @@ jobs:
           fi
 
           if [ -n "${EXCLUDE_PATTERN}" ]; then
-            find . -name '*.sh' -not -path "./${EXCLUDE_PATTERN}" -print0 |
-              xargs -0 mise exec -- shellcheck "${shellcheck_args[@]}"
+            find_args=(-name '*.sh' -not -path "./${EXCLUDE_PATTERN}")
           else
-            find . -name '*.sh' -print0 |
-              xargs -0 mise exec -- shellcheck "${shellcheck_args[@]}"
+            find_args=(-name '*.sh')
           fi
+
+          find . "${find_args[@]}" -print0 |
+            xargs -0 mise exec -- shellcheck "${shellcheck_args[@]}"
 
   shfmt:
     name: shfmt
