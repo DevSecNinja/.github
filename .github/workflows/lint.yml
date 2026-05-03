@@ -237,16 +237,17 @@ jobs:
           EXCLUDE_PATTERN: ${{ inputs.lint-shellcheck-exclude }}
         run: |
           if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/.shellcheckrc" ]; then
+            # ShellCheck has no --rcfile flag, so copy the shared config for native discovery.
             cp "${CONFIG_DIR}/.shellcheckrc" .shellcheckrc
           fi
 
-          find_match_args=(-name '*.sh')
           if [ -n "${EXCLUDE_PATTERN}" ]; then
-            find_match_args+=(-not -path "./${EXCLUDE_PATTERN}")
+            find . -name '*.sh' -not -path "./${EXCLUDE_PATTERN}" -print0 |
+              xargs -0 mise exec -- shellcheck
+          else
+            find . -name '*.sh' -print0 |
+              xargs -0 mise exec -- shellcheck
           fi
-
-          find . "${find_match_args[@]}" -print0 |
-            xargs -0 mise exec -- shellcheck
 
   shfmt:
     name: shfmt
