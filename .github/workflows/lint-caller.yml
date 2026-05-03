@@ -19,4 +19,5 @@ jobs:
     with:
       # renovate: datasource=github-releases depName=jdx/mise
       mise-version: "2026.4.9"
+      # Temporarily disabled pending reusable workflow fix for --allow-no-files.
       lint-dprint: false
