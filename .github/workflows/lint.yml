@@ -95,7 +95,7 @@ jobs:
           version: ${{ inputs.mise-version }}
 
       - name: Check formatting with dprint
-        run: mise exec -- dprint check
+        run: mise exec -- dprint check --allow-no-files
 
   yamlfmt:
     name: yamlfmt
