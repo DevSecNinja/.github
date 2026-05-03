@@ -144,7 +144,7 @@ on:
 
 jobs:
   pages:
-    uses: DevSecNinja/.github/.github/workflows/pages.yml@35c54636d55aa4d3aa727a98500ad87571e50be2 # vNext
+    uses: DevSecNinja/.github/.github/workflows/pages.yml@35c54636d55aa4d3aa727a98500ad87571e50be2 # v1.0.0
     permissions:
       contents: read
       deployments: write
