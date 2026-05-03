@@ -7,6 +7,11 @@
       enabled: false,
     },
     {
+      description: "Expand GitHub Actions floating tags to concrete versions before pinning digests",
+      matchManagers: ["github-actions"],
+      rangeStrategy: "pin",
+    },
+    {
       description: "Flag dependencies where the currently-used version is over 1 year old — likely abandoned or unmaintained.",
       matchCurrentAge: "> 1 year",
       addLabels: ["stale-dependency"],
