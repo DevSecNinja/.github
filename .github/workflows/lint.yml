@@ -236,6 +236,7 @@ jobs:
           shellcheck_args=()
           if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/.shellcheckrc" ]; then
             while IFS= read -r line; do
+              # Strip inline comments and surrounding whitespace.
               line="$(printf '%s\n' "${line%%#*}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
               if [ -n "${line}" ]; then
                 if [[ "${line}" == *=* ]]; then
@@ -249,10 +250,9 @@ jobs:
             done < "${CONFIG_DIR}/.shellcheckrc"
           fi
 
+          find_args=(-name '*.sh')
           if [ -n "${EXCLUDE_PATTERN}" ]; then
-            find_args=(-name '*.sh' -not -path "./${EXCLUDE_PATTERN}")
-          else
-            find_args=(-name '*.sh')
+            find_args+=(-not -path "./${EXCLUDE_PATTERN}")
           fi
 
           find . "${find_args[@]}" -print0 |
