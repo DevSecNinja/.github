@@ -116,7 +116,7 @@ available.
 | ----------------------------- | -------------------------------------------------- |
 | `node-version`                | **Required.** Node.js version to install.          |
 | `node-cache`                  | Package manager cache. Default: `npm`.            |
-| `wrangler-version`            | **Required.** Wrangler version, even when previews are off. |
+| `wrangler-version`            | **Required.** Wrangler version; workflow inputs cannot be conditional. |
 | `production-branch`           | Branch that deploys to GitHub Pages. Default: `main`. |
 | `artifact-path`               | Directory uploaded to Pages. Default: `.`.         |
 | `install-command`             | Dependency install command. Default: `npm ci`.     |
@@ -144,7 +144,7 @@ on:
 
 jobs:
   pages:
-    uses: DevSecNinja/.github/.github/workflows/pages.yml@<sha> # v1.0.0
+    uses: DevSecNinja/.github/.github/workflows/pages.yml@35c54636d55aa4d3aa727a98500ad87571e50be2 # vNext
     permissions:
       contents: read
       deployments: write
