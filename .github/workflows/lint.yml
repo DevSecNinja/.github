@@ -236,12 +236,16 @@ jobs:
           CONFIG_DIR: ${{ inputs.lint-config-dir }}
           EXCLUDE_PATTERN: ${{ inputs.lint-shellcheck-exclude }}
         run: |
+          copied_shellcheck_config=false
+          trap 'if [ "${copied_shellcheck_config}" = "true" ]; then rm -f .shellcheckrc; fi' EXIT
+
           if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/.shellcheckrc" ]; then
             # ShellCheck has no --rcfile flag, so copy the shared config for native discovery.
             if [ -f .shellcheckrc ]; then
               echo "::notice::.shellcheckrc already exists; using the local file"
             else
               cp "${CONFIG_DIR}/.shellcheckrc" .shellcheckrc
+              copied_shellcheck_config=true
             fi
           fi
 
@@ -350,10 +354,17 @@ jobs:
             trivy_args+=(--config "${CONFIG_DIR}/trivy.yaml")
           fi
 
-          mise exec -- trivy fs "${trivy_args[@]}" \
-            --scanners misconfig,secret \
-            --format sarif \
-            --output trivy.sarif . || true
+          if [ "${#trivy_args[@]}" -gt 0 ]; then
+            mise exec -- trivy fs "${trivy_args[@]}" \
+              --scanners misconfig,secret \
+              --format sarif \
+              --output trivy.sarif . || true
+          else
+            mise exec -- trivy fs \
+              --scanners misconfig,secret \
+              --format sarif \
+              --output trivy.sarif . || true
+          fi
 
       - name: Upload SARIF report
         uses: github/codeql-action/upload-sarif@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 # v4.35.2
