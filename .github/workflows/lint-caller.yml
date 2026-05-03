@@ -1,0 +1,23 @@
+---
+name: Lint
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    # Local reference validates reusable workflow changes in this repository.
+    uses: ./.github/workflows/lint.yml
+    permissions:
+      contents: read
+      security-events: write
+    with:
+      # renovate: datasource=github-releases depName=jdx/mise
+      mise-version: "2026.4.9"
+      lint-config-dir: config-sync/files

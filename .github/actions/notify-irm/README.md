@@ -18,11 +18,11 @@ auto-resolve once the workflow goes green again.
 
 ## Inputs
 
-| Name                 | Required | Default | Description                                                                                                |
-| -------------------- | :------: | ------- | ---------------------------------------------------------------------------------------------------------- |
-| `webhook-url`        |   yes    | —       | Grafana IRM Custom webhook URL. Empty value disables the step.                                             |
-| `job-failed`         |   yes    | —       | `'true'` when any prior job failed/was cancelled, `'false'` otherwise.                                     |
-| `service`            |    no    | `ci`    | Logical service tag for IRM routing/labelling.                                                             |
+| Name                 | Required | Default | Description                                                                                                  |
+| -------------------- | :------: | ------- | ------------------------------------------------------------------------------------------------------------ |
+| `webhook-url`        |   yes    | —       | Grafana IRM Custom webhook URL. Empty value disables the step.                                               |
+| `job-failed`         |   yes    | —       | `'true'` when any prior job failed/was cancelled, `'false'` otherwise.                                       |
+| `service`            |    no    | `ci`    | Logical service tag for IRM routing/labelling.                                                               |
 | `resolve-on-success` |    no    | `true`  | When `true`, a green run posts `state=ok` to auto-resolve. Set `false` for unique-uid workflows (e.g. tags). |
 
 ## Usage

@@ -195,7 +195,7 @@ runs:
         BODY: ${{ inputs.body }}
         LABELS: ${{ inputs.labels }}
         DRAFT: ${{ inputs.draft }}
-      run: |
+      run: |-
         set -euo pipefail
 
         # Build label flags from newline-delimited input.

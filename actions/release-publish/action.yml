@@ -100,7 +100,7 @@ runs:
         TAG: ${{ inputs.tag }}
         REPO: ${{ github.repository }}
         ASSETS: ${{ inputs.assets }}
-      run: |
+      run: |-
         set -euo pipefail
 
         # Convert newline-delimited assets into a bash array, stripping

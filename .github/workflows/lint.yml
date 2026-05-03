@@ -8,6 +8,11 @@ on:
         description: "mise version to install"
         required: true
         type: string
+      lint-config-dir:
+        description: "Directory containing optional linter config files"
+        required: false
+        type: string
+        default: ""
       lint-dprint:
         description: "Run dprint (Markdown formatting)"
         required: false
@@ -77,6 +82,10 @@ on:
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   dprint:
     name: dprint
@@ -95,7 +104,17 @@ jobs:
           version: ${{ inputs.mise-version }}
 
       - name: Check formatting with dprint
-        run: mise exec -- dprint check
+        env:
+          CONFIG_DIR: ${{ inputs.lint-config-dir }}
+        run: |-
+          if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/dprint.json" ]; then
+            mise exec -- dprint check \
+              --config "${CONFIG_DIR}/dprint.json" \
+              --config-discovery=false \
+              --allow-no-files
+          else
+            mise exec -- dprint check --allow-no-files
+          fi
 
   yamlfmt:
     name: yamlfmt
@@ -114,7 +133,16 @@ jobs:
           version: ${{ inputs.mise-version }}
 
       - name: Check YAML formatting
-        run: find . \( -name '*.yaml' -o -name '*.yml' \) -print0 | xargs -0 mise exec -- yamlfmt -lint
+        env:
+          CONFIG_DIR: ${{ inputs.lint-config-dir }}
+        run: |-
+          if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/.yamlfmt.yaml" ]; then
+            find . \( -name '*.yaml' -o -name '*.yml' \) -print0 |
+              xargs -0 mise exec -- yamlfmt -conf "${CONFIG_DIR}/.yamlfmt.yaml" -lint
+          else
+            find . \( -name '*.yaml' -o -name '*.yml' \) -print0 |
+              xargs -0 mise exec -- yamlfmt -lint
+          fi
 
   yamllint:
     name: yamllint
@@ -133,7 +161,16 @@ jobs:
           version: ${{ inputs.mise-version }}
 
       - name: Run yamllint
-        run: find . \( -name '*.yaml' -o -name '*.yml' \) -print0 | xargs -0 mise exec -- yamllint
+        env:
+          CONFIG_DIR: ${{ inputs.lint-config-dir }}
+        run: |-
+          if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/.yamllint.yaml" ]; then
+            find . \( -name '*.yaml' -o -name '*.yml' \) -print0 |
+              xargs -0 mise exec -- yamllint -c "${CONFIG_DIR}/.yamllint.yaml"
+          else
+            find . \( -name '*.yaml' -o -name '*.yml' \) -print0 |
+              xargs -0 mise exec -- yamllint
+          fi
 
   actionlint:
     name: actionlint
@@ -172,7 +209,14 @@ jobs:
           version: ${{ inputs.mise-version }}
 
       - name: Run gitleaks
-        run: mise exec -- gitleaks detect --redact
+        env:
+          CONFIG_DIR: ${{ inputs.lint-config-dir }}
+        run: |-
+          if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/.gitleaks.toml" ]; then
+            mise exec -- gitleaks detect --redact --config "${CONFIG_DIR}/.gitleaks.toml"
+          else
+            mise exec -- gitleaks detect --redact
+          fi
 
   shellcheck:
     name: shellcheck
@@ -192,12 +236,28 @@ jobs:
 
       - name: Run shellcheck
         env:
+          CONFIG_DIR: ${{ inputs.lint-config-dir }}
           EXCLUDE_PATTERN: ${{ inputs.lint-shellcheck-exclude }}
         run: |
+          repo_dir="${GITHUB_WORKSPACE:-$PWD}"
+          shellcheck_workdir="${repo_dir}"
+
+          if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/.shellcheckrc" ]; then
+            if [ -f "${repo_dir}/.shellcheckrc" ]; then
+              echo "::notice::.shellcheckrc already exists; using the local file"
+            else
+              shellcheck_workdir="${RUNNER_TEMP:-/tmp}/shellcheck-config"
+              mkdir -p "${shellcheck_workdir}"
+              cp "${CONFIG_DIR}/.shellcheckrc" "${shellcheck_workdir}/.shellcheckrc"
+            fi
+          fi
+
           if [ -n "${EXCLUDE_PATTERN}" ]; then
-            find . -name '*.sh' -not -path "./${EXCLUDE_PATTERN}" -print0 | xargs -0 mise exec -- shellcheck
+            find "${repo_dir}" -name '*.sh' -not -path "${repo_dir}/${EXCLUDE_PATTERN}" -print0 |
+              (cd "${shellcheck_workdir}" && xargs -0 mise exec -- shellcheck)
           else
-            find . -name '*.sh' -print0 | xargs -0 mise exec -- shellcheck
+            find "${repo_dir}" -name '*.sh' -print0 |
+              (cd "${shellcheck_workdir}" && xargs -0 mise exec -- shellcheck)
           fi
 
   shfmt:
@@ -263,7 +323,7 @@ jobs:
           fi
 
       - name: Upload SARIF report
-        uses: github/codeql-action/upload-sarif@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 # v4.35.2
+        uses: github/codeql-action/upload-sarif@e46ed2cbd01164d986452f91f178727624ae40d7 # v4.35.3
         if: always()
         with:
           sarif_file: results_sarif.sarif
@@ -289,10 +349,21 @@ jobs:
           version: ${{ inputs.mise-version }}
 
       - name: Run trivy
-        run: mise exec -- trivy fs --scanners misconfig,secret --format sarif --output trivy.sarif . || true
+        env:
+          CONFIG_DIR: ${{ inputs.lint-config-dir }}
+        run: |-
+          trivy_args=()
+          if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/trivy.yaml" ]; then
+            trivy_args+=(--config "${CONFIG_DIR}/trivy.yaml")
+          fi
+
+          mise exec -- trivy fs "${trivy_args[@]}" \
+            --scanners misconfig,secret \
+            --format sarif \
+            --output trivy.sarif . || true
 
       - name: Upload SARIF report
-        uses: github/codeql-action/upload-sarif@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 # v4.35.2
+        uses: github/codeql-action/upload-sarif@e46ed2cbd01164d986452f91f178727624ae40d7 # v4.35.3
         with:
           sarif_file: trivy.sarif
           category: trivy
@@ -320,7 +391,7 @@ jobs:
         run: mise exec -- zizmor --format sarif . > zizmor.sarif
 
       - name: Upload SARIF report
-        uses: github/codeql-action/upload-sarif@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 # v4.35.2
+        uses: github/codeql-action/upload-sarif@e46ed2cbd01164d986452f91f178727624ae40d7 # v4.35.3
         if: always()
         with:
           sarif_file: zizmor.sarif

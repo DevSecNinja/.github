@@ -49,6 +49,7 @@ boolean inputs; all default to `true`.
 | Input               | Description                                      |
 | ------------------- | ------------------------------------------------ |
 | `mise-version`      | **Required.** mise version to install.           |
+| `lint-config-dir`   | Optional linter config directory. Default: `""`. |
 | `lint-dprint`       | Markdown formatting (dprint). Default: `true`.   |
 | `lint-yamlfmt`      | YAML formatting (yamlfmt). Default: `true`.      |
 | `lint-yamllint`     | YAML linting (yamllint). Default: `true`.        |
@@ -73,16 +74,31 @@ jobs:
     with:
       # renovate: datasource=github-releases depName=jdx/mise
       mise-version: "2026.4.5"
+      # lint-config-dir: config-sync/files
 ```
+
+### Auto-fix formatting (`autofix.yml`)
+
+Runs dprint, yamlfmt, and shfmt in write mode, then commits and pushes any
+formatting changes.
+
+| Input                | Description                                            |
+| -------------------- | ------------------------------------------------------ |
+| `mise-version`       | **Required.** mise version to install.                 |
+| `autofix-config-dir` | Optional formatter config directory. Default: `""`.    |
+| `autofix-dprint`     | Markdown formatting (dprint). Default: `true`.         |
+| `autofix-yamlfmt`    | YAML formatting (yamlfmt). Default: `true`.            |
+| `autofix-shfmt`      | Shell formatting (shfmt). Default: `true`.             |
+| `commit-message`     | Commit message. Default: `style: auto-fix formatting`. |
 
 ### Release (`release.yml`)
 
 Creates a GitHub Release from a version tag using `git-cliff` for release
 notes.
 
-| Input          | Description                             |
-| -------------- | --------------------------------------- |
-| `mise-version` | **Required.** mise version to install.  |
+| Input          | Description                            |
+| -------------- | -------------------------------------- |
+| `mise-version` | **Required.** mise version to install. |
 | `tag`          | **Required.** Tag name, e.g. `v1.2.3`. |
 
 **Example caller:**
@@ -287,21 +303,21 @@ Key properties:
   spam duplicate PRs.
 - Branch protection on the base branch stays fully enforced.
 
-| Input            | Required | Default                 | Description                                                                |
-| ---------------- | -------- | ----------------------- | -------------------------------------------------------------------------- |
-| `branch`         | yes      | —                       | Working branch to create or force-push to.                                 |
-| `title`          | yes      | —                       | PR title (also default commit message). Conventional Commit subject.       |
-| `base`           | no       | `main`                  | Branch to merge into.                                                      |
-| `body`           | no       | `""`                    | PR body (Markdown).                                                        |
-| `commit-message` | no       | `title`                 | Override the commit message.                                               |
-| `paths`          | no       | `.`                     | Newline-delimited pathspecs to `git add`.                                  |
-| `labels`         | no       | `""`                    | Newline-delimited labels.                                                  |
-| `draft`          | no       | `false`                 | Open as draft.                                                             |
-| `signoff`        | no       | `false`                 | Add `Signed-off-by` trailer.                                               |
-| `if-no-changes`  | no       | `skip`                  | `skip` = exit 0; `fail` = error when nothing to commit.                    |
-| `git-user-name`  | no       | `github-actions[bot]`   | Commit author name.                                                        |
-| `git-user-email` | no       | github-actions[bot] noreply | Commit author email.                                                   |
-| `github-token`   | no       | `${{ github.token }}`   | Token for `git push` and `gh`. Override with PAT/App for cross-repo PRs.   |
+| Input            | Required | Default                     | Description                                                              |
+| ---------------- | -------- | --------------------------- | ------------------------------------------------------------------------ |
+| `branch`         | yes      | —                           | Working branch to create or force-push to.                               |
+| `title`          | yes      | —                           | PR title (also default commit message). Conventional Commit subject.     |
+| `base`           | no       | `main`                      | Branch to merge into.                                                    |
+| `body`           | no       | `""`                        | PR body (Markdown).                                                      |
+| `commit-message` | no       | `title`                     | Override the commit message.                                             |
+| `paths`          | no       | `.`                         | Newline-delimited pathspecs to `git add`.                                |
+| `labels`         | no       | `""`                        | Newline-delimited labels.                                                |
+| `draft`          | no       | `false`                     | Open as draft.                                                           |
+| `signoff`        | no       | `false`                     | Add `Signed-off-by` trailer.                                             |
+| `if-no-changes`  | no       | `skip`                      | `skip` = exit 0; `fail` = error when nothing to commit.                  |
+| `git-user-name`  | no       | `github-actions[bot]`       | Commit author name.                                                      |
+| `git-user-email` | no       | github-actions[bot] noreply | Commit author email.                                                     |
+| `github-token`   | no       | `${{ github.token }}`       | Token for `git push` and `gh`. Override with PAT/App for cross-repo PRs. |
 
 Outputs: `changed`, `created`, `pr-number`, `pr-url`.
 
@@ -372,16 +388,16 @@ the GitHub UI under **Actions → New workflow** for repositories in this
 organisation. Each template has a matching `.properties.json` file that
 provides the display name, description, and category shown in the picker.
 
-| Template                         | Purpose                               |
-| -------------------------------- | ------------------------------------- |
-| `lint.yml`                       | Linting pipeline                      |
-| `pages.yml`                      | GitHub Pages deploy and PR previews   |
-| `release.yml`                    | GitHub Release on tag push            |
-| `config-sync.yml`                | Weekly config drift sync              |
-| `label-sync.yml`                 | Sync labels from `.github/labels.yaml`|
-| `labeler.yml`                    | Auto-label PRs and issues             |
-| `todo-to-issue.yml`              | Convert TODO comments to issues       |
-| `assign-issue-to-codeowners.yml` | Assign issues to CODEOWNERS           |
+| Template                         | Purpose                                |
+| -------------------------------- | -------------------------------------- |
+| `lint.yml`                       | Linting pipeline                       |
+| `pages.yml`                      | GitHub Pages deploy and PR previews    |
+| `release.yml`                    | GitHub Release on tag push             |
+| `config-sync.yml`                | Weekly config drift sync               |
+| `label-sync.yml`                 | Sync labels from `.github/labels.yaml` |
+| `labeler.yml`                    | Auto-label PRs and issues              |
+| `todo-to-issue.yml`              | Convert TODO comments to issues        |
+| `assign-issue-to-codeowners.yml` | Assign issues to CODEOWNERS            |
 
 ---
 
@@ -437,34 +453,34 @@ PRs **without** this label require manual review and merge.
 
 **What auto-merges (minor + patch, via GitHub platform automerge):**
 
-| Ecosystem | Scope | Condition |
-| --------- | ----- | --------- |
-| GitHub Actions | `actions/*`, `docker/*`, `github/*` | All versions |
-| Docker images | All | Current version ≥ 1.0 |
-| GitHub releases | All | Current version ≥ 1.0 |
-| Mise tools | All | Current version ≥ 1.0 |
-| npm | All | Current version ≥ 1.0 |
-| pip | All | Current version ≥ 1.0 |
-| Go modules | All | Current version ≥ 1.0 |
-| Lock file maintenance | All | Always (branch merge, no PR) |
+| Ecosystem             | Scope                               | Condition                    |
+| --------------------- | ----------------------------------- | ---------------------------- |
+| GitHub Actions        | `actions/*`, `docker/*`, `github/*` | All versions                 |
+| Docker images         | All                                 | Current version ≥ 1.0        |
+| GitHub releases       | All                                 | Current version ≥ 1.0        |
+| Mise tools            | All                                 | Current version ≥ 1.0        |
+| npm                   | All                                 | Current version ≥ 1.0        |
+| pip                   | All                                 | Current version ≥ 1.0        |
+| Go modules            | All                                 | Current version ≥ 1.0        |
+| Lock file maintenance | All                                 | Always (branch merge, no PR) |
 
 **What does NOT auto-merge:**
 
--   Major version updates (all ecosystems)
--   Pre-1.0 packages (`0.x` — semver minor can introduce breaking changes)
--   GitHub Actions from untrusted organisations
--   Digest-only updates (disabled entirely for supply-chain safety)
+- Major version updates (all ecosystems)
+- Pre-1.0 packages (`0.x` — semver minor can introduce breaking changes)
+- GitHub Actions from untrusted organisations
+- Digest-only updates (disabled entirely for supply-chain safety)
 
 ### Safety nets
 
--   **14-day `minimumReleaseAge`** on Docker images, GitHub releases, mise
-    tools, and all major updates — ensures community vetting before adoption.
--   **CI must pass** — `platformAutomerge: true` uses GitHub's native
-    auto-merge, which respects required status checks.
--   **OSV vulnerability alerts** bypass `minimumReleaseAge` (set to `0`) so
-    security fixes merge immediately.
--   **Schedule** — Renovate only runs on weekends and Fridays.
--   **Digest updates disabled** — prevents merging potentially hijacked tags.
+- **14-day `minimumReleaseAge`** on Docker images, GitHub releases, mise
+  tools, and all major updates — ensures community vetting before adoption.
+- **CI must pass** — `platformAutomerge: true` uses GitHub's native
+  auto-merge, which respects required status checks.
+- **OSV vulnerability alerts** bypass `minimumReleaseAge` (set to `0`) so
+  security fixes merge immediately.
+- **Schedule** — Renovate only runs on weekends and Fridays.
+- **Digest updates disabled** — prevents merging potentially hijacked tags.
 
 ### Consuming the preset
 
@@ -495,6 +511,6 @@ Repositories import the shared fragments in their `renovate.json5`:
 Architecture Decision Records are stored in
 [`docs/design-decisions/`](design-decisions/README.md).
 
-| ADR                                                                     | Title                                                | Status   |
-| ----------------------------------------------------------------------- | ---------------------------------------------------- | -------- |
-| [0001](design-decisions/0001-reusable-workflow-version-inputs.md)       | Reusable workflows must not default package versions | Accepted |
+| ADR                                                               | Title                                                | Status   |
+| ----------------------------------------------------------------- | ---------------------------------------------------- | -------- |
+| [0001](design-decisions/0001-reusable-workflow-version-inputs.md) | Reusable workflows must not default package versions | Accepted |

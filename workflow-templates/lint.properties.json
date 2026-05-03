@@ -1,6 +1,6 @@
 {
     "name": "Lint",
-    "description": "Centralized linting workflow with toggles for dprint, yamlfmt, yamllint, actionlint, gitleaks, shellcheck, shfmt, checkov, trivy, zizmor, and config-drift checking.",
+    "description": "Centralized linting workflow with config-directory support and toggles for dprint, yamlfmt, yamllint, actionlint, gitleaks, shellcheck, shfmt, checkov, trivy, zizmor, and config-drift checking.",
     "categories": ["Continuous integration"],
     "filePatterns": ["\\.ya?ml$", "\\.sh$", "\\.md$"]
 }

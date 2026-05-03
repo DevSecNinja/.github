@@ -4,7 +4,7 @@
     {
       matchUpdateTypes: ["major"],
       semanticCommitType: "feat",
-      commitMessagePrefix: "{{semanticCommitType}}({{semanticCommitScope}})!:",
+      commitMessagePrefix: "{{semanticCommitType}}({{semanticCommitScope}}):",
       commitMessageExtra: "( {{currentVersion}} ➔ {{newVersion}} )",
     },
     {
