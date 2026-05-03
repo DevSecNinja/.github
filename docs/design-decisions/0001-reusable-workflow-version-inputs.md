@@ -14,7 +14,7 @@ caller runs.
 
 If the reusable workflow hard-codes a tool version (or provides a default that
 most callers omit), bumping that version in this repository effectively ships
-a new version to every consumer the next time their workflow runs — *without*
+a new version to every consumer the next time their workflow runs — _without_
 that consumer's CI ever having validated the new version against their code.
 The caller carries the operational risk of an upgrade that was never tested
 against their repository.
@@ -89,15 +89,15 @@ It does **not** apply to:
 
 - Declare every version input as `required: true` with a clear description:
 
-    ```yaml
-    on:
-      workflow_call:
-        inputs:
-          mise-version:
-            description: "mise version to install"
-            required: true
-            type: string
-    ```
+  ```yaml
+  on:
+    workflow_call:
+      inputs:
+        mise-version:
+          description: "mise version to install"
+          required: true
+          type: string
+  ```
 
 - Pass the input through to the installing action via `${{ inputs.<name> }}`.
   Never hard-code a version number elsewhere in the workflow.
@@ -109,14 +109,14 @@ It does **not** apply to:
 - Set the version explicitly in `with:` and annotate with `# renovate:` so
   the value is maintained automatically:
 
-    ```yaml
-    jobs:
-      lint:
-        uses: DevSecNinja/.github/.github/workflows/lint.yml@<sha> # main
-        with:
-          # renovate: datasource=github-releases depName=jdx/mise
-          mise-version: "2026.4.3"
-    ```
+  ```yaml
+  jobs:
+    lint:
+      uses: DevSecNinja/.github/.github/workflows/lint.yml@<sha> # main
+      with:
+        # renovate: datasource=github-releases depName=jdx/mise
+        mise-version: "2026.4.3"
+  ```
 
 - Treat the value as production configuration — review it in PRs, keep it
   in lockstep with `.mise.toml` when applicable, and merge Renovate PRs

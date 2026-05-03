@@ -1,6 +1,6 @@
 {
     "name": "Auto-fix formatting",
-    "description": "Manually triggered workflow that auto-fixes formatting issues using dprint fmt, yamlfmt, and shfmt --write, then commits and pushes the changes.",
+    "description": "Manually triggered workflow that auto-fixes formatting issues using dprint fmt, yamlfmt, and shfmt --write, then commits and pushes the changes. Supports formatter configs from an optional config directory.",
     "categories": ["Continuous integration"],
     "filePatterns": ["\\.ya?ml$", "\\.sh$", "\\.md$"]
 }

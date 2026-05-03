@@ -9,7 +9,8 @@ on:
   workflow_call:
     inputs:
       sync-templates:
-        description: "Also sync template files (only copies if file does not exist locally — will not overwrite customized files)"
+        description: "Also sync template files (only copies if file does not exist locally — will not overwrite customized
+          files)"
         required: false
         type: boolean
         default: false

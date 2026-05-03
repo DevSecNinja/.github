@@ -16,6 +16,6 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-    # Uncomment to also bootstrap template files for new repos:
-    # with:
-    #   sync-templates: true
+      # Uncomment to also bootstrap template files for new repos:
+      # with:
+      #   sync-templates: true

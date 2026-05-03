@@ -7,7 +7,9 @@ on:
     branches:
       - $default-branch
   issues:
-    types: [opened, edited]
+    types:
+      - opened
+      - edited
 
 permissions:
   contents: read

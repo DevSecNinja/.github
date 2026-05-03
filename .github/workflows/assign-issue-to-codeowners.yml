@@ -38,7 +38,7 @@ jobs:
           EXCLUDE_RENOVATE_ISSUES: ${{ inputs.exclude-renovate-issues }}
           ISSUE_NUMBER: ${{ inputs.issue-number }}
         with:
-          script: |
+          script: |-
             // Try to read CODEOWNERS from common locations
             const paths = ['.github/CODEOWNERS', 'CODEOWNERS', 'docs/CODEOWNERS'];
             let content = null;

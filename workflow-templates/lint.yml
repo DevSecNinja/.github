@@ -19,6 +19,8 @@ jobs:
     with:
       # renovate: datasource=github-releases depName=jdx/mise
       mise-version: "2026.4.9"
+      # Optional: use configs from a non-root directory.
+      # lint-config-dir: config-sync/files
       # Toggle linters on/off (all default to true):
       # lint-dprint: true
       # lint-yamlfmt: true
