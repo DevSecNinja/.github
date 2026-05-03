@@ -128,7 +128,7 @@ available.
 | `update-sitemap-lastmod`      | Update sitemap `<lastmod>` dates. Default: `false`. |
 | `sitemap-path`                | Sitemap file path. Default: `sitemap.xml`.         |
 | `cloudflare-preview`          | Enable Cloudflare pull request previews. Default: `true`. |
-| `cloudflare-project-name`     | Cloudflare Pages project; defaults to repo name.   |
+| `cloudflare-project-name`     | Cloudflare Pages project; lowercase letters, numbers, and hyphens only. |
 | `cloudflare-production-branch` | Cloudflare production branch. Default: `main`.    |
 | `preview-comment-marker`      | Marker used to update the preview PR comment.      |
 
