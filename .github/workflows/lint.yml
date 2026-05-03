@@ -82,6 +82,10 @@ on:
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   dprint:
     name: dprint
@@ -228,35 +232,21 @@ jobs:
           version: ${{ inputs.mise-version }}
 
       - name: Run shellcheck
-        shell: bash
         env:
           CONFIG_DIR: ${{ inputs.lint-config-dir }}
           EXCLUDE_PATTERN: ${{ inputs.lint-shellcheck-exclude }}
         run: |
-          shellcheck_args=()
           if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/.shellcheckrc" ]; then
-            while IFS= read -r line; do
-              # Strip inline comments and surrounding whitespace.
-              line="$(printf '%s\n' "${line%%#*}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
-              if [ -n "${line}" ]; then
-                if [[ "${line}" == *=* ]]; then
-                  key="${line%%=*}"
-                  value="${line#*=}"
-                  shellcheck_args+=("--${key}=${value}")
-                else
-                  shellcheck_args+=("--${line}")
-                fi
-              fi
-            done < "${CONFIG_DIR}/.shellcheckrc"
+            cp "${CONFIG_DIR}/.shellcheckrc" .shellcheckrc
           fi
 
-          find_args=(-name '*.sh')
+          find_match_args=(-name '*.sh')
           if [ -n "${EXCLUDE_PATTERN}" ]; then
-            find_args+=(-not -path "./${EXCLUDE_PATTERN}")
+            find_match_args+=(-not -path "./${EXCLUDE_PATTERN}")
           fi
 
-          find . "${find_args[@]}" -print0 |
-            xargs -0 mise exec -- shellcheck "${shellcheck_args[@]}"
+          find . "${find_match_args[@]}" -print0 |
+            xargs -0 mise exec -- shellcheck
 
   shfmt:
     name: shfmt
