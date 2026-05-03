@@ -7,7 +7,7 @@
       enabled: false,
     },
     {
-      description: "Expand GitHub Actions floating tags to concrete versions before pinning digests",
+      description: "Expand GitHub Actions floating tags to concrete versions for version pinning",
       matchManagers: ["github-actions"],
       rangeStrategy: "pin",
     },
