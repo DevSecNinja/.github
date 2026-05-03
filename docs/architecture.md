@@ -119,6 +119,73 @@ jobs:
       tag: ${{ github.ref_name }}
 ```
 
+### Pages (`pages.yml`)
+
+Runs configurable site validation commands, deploys the production artifact to
+GitHub Pages from the configured production branch, and optionally deploys
+same-repository pull request previews to Cloudflare Pages. Cloudflare preview
+jobs detect missing Cloudflare secrets before any deploy work and skip preview
+deploy/cleanup when `CLOUDFLARE_API_TOKEN` or `CLOUDFLARE_ACCOUNT_ID` is not
+available.
+
+| Input                          | Description                                                                           |
+| ------------------------------ | ------------------------------------------------------------------------------------- |
+| `node-version`                 | **Required.** Node.js version to install.                                             |
+| `node-cache`                   | Package manager cache for test and production jobs. Default: `npm`.                   |
+| `wrangler-version`             | **Required.** Wrangler version to install for previews; inputs cannot be conditional. |
+| `production-branch`            | Branch that deploys to GitHub Pages. Default: `main`.                                 |
+| `artifact-path`                | Directory uploaded to Pages. Default: `.`.                                            |
+| `install-command`              | Dependency install command. Default: `npm ci`.                                        |
+| `test-command`                 | Validation command block. Default: empty.                                             |
+| `test-setup-command`           | Optional command after install and before tests.                                      |
+| `build-command`                | Optional build command before deployment.                                             |
+| `pre-deploy-command`           | Optional production-only pre-upload command.                                          |
+| `pre-preview-command`          | Optional preview-only pre-deploy command.                                             |
+| `update-sitemap-lastmod`       | Update sitemap `<lastmod>` dates. Default: `false`.                                   |
+| `sitemap-path`                 | Sitemap file path. Default: `sitemap.xml`.                                            |
+| `cloudflare-preview`           | Enable Cloudflare pull request previews. Default: `true`.                             |
+| `cloudflare-project-name`      | Cloudflare Pages project; lowercase letters, numbers, and hyphens only.               |
+| `cloudflare-production-branch` | Cloudflare production branch. Default: `main`.                                        |
+| `preview-comment-marker`       | Marker used to update the preview PR comment.                                         |
+
+**Example caller:**
+
+```yaml
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    types: [opened, edited, synchronize, reopened, closed]
+  workflow_dispatch:
+
+jobs:
+  pages:
+    uses: DevSecNinja/.github/.github/workflows/pages.yml@35c54636d55aa4d3aa727a98500ad87571e50be2 # v1.0.0
+    permissions:
+      contents: read
+      deployments: write
+      id-token: write
+      issues: write
+      pages: write
+      pull-requests: write
+    with:
+      # renovate: datasource=node-version depName=node
+      node-version: "24"
+      node-cache: "npm"
+      # renovate: datasource=npm depName=wrangler
+      wrangler-version: "3"
+      test-setup-command: npx playwright install webkit --with-deps
+      test-command: |
+        npm run test:unit
+        npm run test:html
+        npm run test:a11y
+        npm run test:e2e
+      update-sitemap-lastmod: true
+    secrets:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+```
+
 ### Config Sync (`config-sync.yml`)
 
 Syncs the files from `config-sync/files/` to the calling repository. Runs on a
@@ -324,6 +391,7 @@ provides the display name, description, and category shown in the picker.
 | Template                         | Purpose                                |
 | -------------------------------- | -------------------------------------- |
 | `lint.yml`                       | Linting pipeline                       |
+| `pages.yml`                      | GitHub Pages deploy and PR previews    |
 | `release.yml`                    | GitHub Release on tag push             |
 | `config-sync.yml`                | Weekly config drift sync               |
 | `label-sync.yml`                 | Sync labels from `.github/labels.yaml` |

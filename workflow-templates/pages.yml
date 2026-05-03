@@ -1,0 +1,50 @@
+---
+name: Pages
+
+on:
+  push:
+    branches:
+      - $default-branch
+    paths-ignore:
+      - "**.md"
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+      - closed
+    paths-ignore:
+      - "**.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pages:
+    uses: DevSecNinja/.github/.github/workflows/pages.yml@35c54636d55aa4d3aa727a98500ad87571e50be2 # v1.0.0
+    permissions:
+      contents: read
+      deployments: write
+      id-token: write
+      issues: write
+      pages: write
+      pull-requests: write
+    with:
+      # renovate: datasource=node-version depName=node
+      node-version: "24"
+      node-cache: "npm"
+      # renovate: datasource=npm depName=wrangler
+      wrangler-version: "3"
+      artifact-path: "."
+      test-setup-command: npx playwright install webkit --with-deps
+      test-command: |-
+        npm run test:unit
+        npm run test:html
+        npm run test:a11y
+        npm run test:e2e
+      update-sitemap-lastmod: true
+    secrets:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

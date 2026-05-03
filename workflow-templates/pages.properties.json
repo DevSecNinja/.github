@@ -1,0 +1,6 @@
+{
+    "name": "Pages",
+    "description": "Deploy GitHub Pages on the default branch and Cloudflare Pages previews for pull requests.",
+    "categories": ["Deployment", "Continuous integration"],
+    "filePatterns": ["package.json", "index.html", "sitemap.xml"]
+}
