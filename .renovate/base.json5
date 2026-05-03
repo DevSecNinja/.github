@@ -2,10 +2,10 @@
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
   extends: [
     "config:best-practices",
+    "helpers:pinGitHubActionDigestsToSemver",
   ],
   dependencyDashboardTitle: "Renovate Dashboard 🤖",
   suppressNotifications: ["prEditedNotification", "prIgnoreNotification"],
-  pinDigests: true,
   labels: ["dependencies"],
   osvVulnerabilityAlerts: true,
   timezone: 'Europe/Amsterdam',
