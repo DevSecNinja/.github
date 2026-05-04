@@ -74,12 +74,7 @@ jobs:
               index += 1
 
           for start, end, lines in reversed(replacements):
-              if start > len(incoming):
-                  incoming.extend(["\n"] * (start - len(incoming)))
-                  incoming.extend(lines)
-              elif start == len(incoming):
-                  incoming.extend(lines)
-              else:
+              if start < len(incoming):
                   incoming[start:min(end, len(incoming))] = lines
 
           sys.stdout.write("".join(incoming))
