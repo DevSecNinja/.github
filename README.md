@@ -10,6 +10,7 @@ repositories.
 | Workflow templates           | [`workflow-templates/`](workflow-templates/)                                   |
 | Config sync (files)          | [`config-sync/files/`](config-sync/files/)                                     |
 | Config sync (templates)      | [`config-sync/templates/`](config-sync/templates/)                             |
+| Config sync (workflows)      | [`workflow-templates/`](workflow-templates/)                                   |
 | Renovate presets             | [`.renovate/`](.renovate/)                                                     |
 | Design decisions (ADRs)      | [`docs/design-decisions/`](docs/design-decisions/README.md)                    |
 | Architecture & usage guide   | [`docs/architecture.md`](docs/architecture.md)                                 |

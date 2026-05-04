@@ -188,8 +188,9 @@ jobs:
 
 ### Config Sync (`config-sync.yml`)
 
-Syncs the files from `config-sync/files/` to the calling repository. Runs on a
-weekly schedule and opens a PR when files drift.
+Syncs the files from `config-sync/files/` to the calling repository. It can
+also sync workflow templates into `.github/workflows/`. Runs on a weekly
+schedule and opens a PR when files drift.
 
 **Example caller:**
 
@@ -201,6 +202,7 @@ jobs:
       contents: write
       pull-requests: write
     # with:
+    #   sync-workflows: true  # also sync workflow templates into .github/workflows
     #   sync-templates: true   # also bootstrap template files for new repos
 ```
 
@@ -428,6 +430,22 @@ These are **starting-point** files. Copy them into a new repository and adapt
 as needed — they are not auto-synced. See
 [`config-sync/templates/README.md`](../config-sync/templates/README.md) for
 details.
+
+### Workflows (`workflow-templates/`)
+
+When `sync-workflows` is enabled, config sync copies workflow templates into
+the caller's `.github/workflows/` directory and replaces `$default-branch` with
+the repository default branch.
+
+Use local exclusion markers when a synced workflow needs repository-specific
+customization:
+
+- Put `# config-sync: ignore` or `# config-sync: skip` on the first line to
+  exclude the whole workflow file.
+- Add `# config-sync: ignore-line` to a line to keep that local line during
+  sync.
+- Wrap a local section with `# config-sync: off` and `# config-sync: on` to
+  keep that block during sync.
 
 ---
 

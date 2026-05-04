@@ -14,6 +14,11 @@ on:
         required: false
         type: boolean
         default: false
+      sync-workflows:
+        description: "Also sync workflow templates into .github/workflows"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -31,10 +36,52 @@ jobs:
         id: pull
         env:
           SYNC_TEMPLATES: ${{ inputs.sync-templates }}
+          SYNC_WORKFLOWS: ${{ inputs.sync-workflows }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch || 'main' }}
         run: |-
           REPO_URL="https://raw.githubusercontent.com/DevSecNinja/.github/main"
           API_URL="https://api.github.com/repos/DevSecNinja/.github/contents"
           updated=0
+
+          workflow_is_excluded() {
+            [ -f "${1}" ] && head -n 1 "${1}" | grep -Eq 'config-sync: (ignore|skip)'
+          }
+
+          merge_workflow_exclusions() {
+            python3 - "${1}" "${2}" <<'PY'
+          from pathlib import Path
+          import sys
+
+          current = Path(sys.argv[1]).read_text(encoding="utf-8").splitlines(keepends=True)
+          incoming = Path(sys.argv[2]).read_text(encoding="utf-8").splitlines(keepends=True)
+          replacements = []
+          index = 0
+
+          while index < len(current):
+              if "config-sync: off" in current[index]:
+                  start = index
+                  index += 1
+                  while index < len(current) and "config-sync: on" not in current[index]:
+                      index += 1
+                  if index < len(current):
+                      index += 1
+                  replacements.append((start, index, current[start:index]))
+                  continue
+
+              if "config-sync: ignore-line" in current[index]:
+                  replacements.append((index, index + 1, [current[index]]))
+
+              index += 1
+
+          for start, end, lines in reversed(replacements):
+              if start >= len(incoming):
+                  incoming.extend(lines)
+              else:
+                  incoming[start:min(end, len(incoming))] = lines
+
+          sys.stdout.write("".join(incoming))
+          PY
+          }
 
           # --- Sync files (always overwrite to match central repo) ---
           echo "=== Syncing config files ==="
@@ -82,6 +129,57 @@ jobs:
             done
           fi
 
+          # --- Sync workflows (if enabled; supports local exclusion markers) ---
+          if [ "${SYNC_WORKFLOWS}" = "true" ]; then
+            echo ""
+            echo "=== Syncing workflow templates ==="
+            mkdir -p .github/workflows
+            workflows=$(curl -sf "${API_URL}/workflow-templates" | grep '"name"' | sed 's/.*"name": "\(.*\)".*/\1/' | grep -E '\.ya?ml$')
+
+            for workflow in ${workflows}; do
+              target=".github/workflows/${workflow}"
+
+              if workflow_is_excluded "${target}"; then
+                echo "  ⏭ ${target} is excluded by its first line"
+                continue
+              fi
+
+              echo "Fetching workflow ${workflow}..."
+              tmp_workflow=$(mktemp)
+              if curl -sf "${REPO_URL}/workflow-templates/${workflow}" -o "${tmp_workflow}"; then
+                python3 - "${tmp_workflow}" "${DEFAULT_BRANCH}" <<'PY'
+          from pathlib import Path
+          import sys
+
+          path = Path(sys.argv[1])
+          default_branch = sys.argv[2]
+          path.write_text(path.read_text(encoding="utf-8").replace("$default-branch", default_branch), encoding="utf-8")
+          PY
+
+                if [ -f "${target}" ]; then
+                  merged_workflow=$(mktemp)
+                  merge_workflow_exclusions "${target}" "${tmp_workflow}" > "${merged_workflow}"
+                  mv "${merged_workflow}" "${tmp_workflow}"
+
+                  if ! diff -q "${target}" "${tmp_workflow}" > /dev/null 2>&1; then
+                    cp "${tmp_workflow}" "${target}"
+                    echo "  ⬆ Updated ${target}"
+                    updated=1
+                  else
+                    echo "  ✓ ${target} is up to date"
+                  fi
+                else
+                  cp "${tmp_workflow}" "${target}"
+                  echo "  ➕ Added ${target}"
+                  updated=1
+                fi
+              else
+                echo "  ⚠ Failed to fetch workflow ${workflow} (skipping)"
+              fi
+              rm -f "${tmp_workflow}"
+            done
+          fi
+
           echo "updated=${updated}" >> "${GITHUB_OUTPUT}"
 
       - name: Ensure config-sync label exists
@@ -100,12 +198,12 @@ jobs:
         uses: DevSecNinja/.github/actions/open-pr@af5030dd0d6f61b80fe58f949c9b985d1931ddf2 # v1.3.0
         with:
           branch: chore/config-sync
-          title: 'chore: sync config files from central repo'
-          commit-message: 'chore: sync config files from DevSecNinja/.github'
+          title: 'chore: sync configuration from central repo'
+          commit-message: 'chore: sync configuration from DevSecNinja/.github'
           labels: config-sync
           body: |-
-            Automated PR — config files pulled from
-            [DevSecNinja/.github](https://github.com/DevSecNinja/.github/tree/main/config-sync).
+            Automated PR — repository configuration pulled from
+            [DevSecNinja/.github](https://github.com/DevSecNinja/.github).
 
             Triggered by `${{ github.workflow }}` on `${{ github.ref_name }}`
             at commit `${{ github.sha }}`.
