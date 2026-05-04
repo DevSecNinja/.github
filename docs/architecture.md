@@ -232,6 +232,84 @@ jobs:
     #   sync-templates: true   # also bootstrap template files for new repos
 ```
 
+### Vendored File Sync (`vendored-file-sync.yml`)
+
+Runs a caller-provided refresher command for repo-specific vendored files,
+checks the configured paths for drift, and optionally opens or updates a PR
+using [`actions/open-pr/`](../actions/open-pr/README.md).
+The caller controls token permissions: grant `contents: read` for validation,
+or `contents: write` and `pull-requests: write` when `create-pr: true`.
+
+Use the same refresher command in two places:
+
+- **Scheduled/manual maintenance:** call this workflow with `create-pr: true`
+  (the default) so refreshed vendored files land through a normal PR.
+- **Pull-request validation:** call this workflow with `create-pr: false` so a
+  PR that directly introduces vendored drift fails until the refreshed files
+  are committed.
+
+| Input             | Description                                                                 |
+| ----------------- | --------------------------------------------------------------------------- |
+| `refresh-command` | **Required.** Command that refreshes vendored files in the caller repo.     |
+| `paths`           | **Required.** Newline-delimited pathspecs to watch and stage.               |
+| `create-pr`       | Open/update a PR on drift. Set to `false` for validation-only PR lint.      |
+| `branch`          | Working branch for the maintenance PR. Default: `chore/vendored-file-sync`. |
+| `base`            | Base branch for the maintenance PR. Default: `main`.                        |
+| `pr-title`        | PR title and default commit message. Default: `chore: sync vendored files`. |
+| `pr-body`         | PR body (Markdown). Default: `""`.                                          |
+| `labels`          | Newline-delimited labels to apply on PR creation.                           |
+| `commit-message`  | Override the commit message.                                                |
+| `draft`           | Open the PR as a draft. Default: `false`.                                   |
+| `signoff`         | Add `Signed-off-by` trailer. Default: `false`.                              |
+
+Outputs: `changed`, `pr-number`, `pr-url`.
+
+**Example caller — scheduled/manual auto-remediation plus PR validation:**
+
+```yaml
+name: Vendored File Sync
+
+on:
+  pull_request:
+    paths:
+      - scripts/lib/**
+      - scripts/update-log-sh.sh
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    if: github.event_name == 'pull_request'
+    uses: DevSecNinja/.github/.github/workflows/vendored-file-sync.yml@<sha> # v1.4.0
+    permissions:
+      contents: read
+    with:
+      refresh-command: bash scripts/update-log-sh.sh
+      paths: scripts/lib/
+      create-pr: false
+
+  sync:
+    if: github.event_name != 'pull_request'
+    uses: DevSecNinja/.github/.github/workflows/vendored-file-sync.yml@<sha> # v1.4.0
+    permissions:
+      contents: write
+      pull-requests: write
+    with:
+      refresh-command: bash scripts/update-log-sh.sh
+      paths: scripts/lib/
+      branch: chore/sync-vendored-log-sh
+      pr-title: 'chore: sync vendored log.sh'
+      pr-body: |
+        Refreshes the vendored `scripts/lib/log.sh` files from upstream.
+      labels: |
+        automated
+        vendored-file-sync
+```
+
 ### Label Sync (`label-sync.yml`)
 
 Syncs the repository's `.github/labels.yaml` (merged with the org base labels)

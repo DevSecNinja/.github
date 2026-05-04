@@ -1,0 +1,145 @@
+---
+name: Reusable — Vendored File Sync
+
+on:
+  workflow_call:
+    inputs:
+      refresh-command:
+        description: "Command that refreshes vendored files in the caller repository"
+        required: true
+        type: string
+      paths:
+        description: "Newline-delimited pathspecs to watch and stage"
+        required: true
+        type: string
+      create-pr:
+        description: "Open or update a pull request when refreshed files drift"
+        required: false
+        type: boolean
+        default: true
+      branch:
+        description: "Working branch for the vendored-file sync pull request"
+        required: false
+        type: string
+        default: chore/vendored-file-sync
+      base:
+        description: "Base branch for the vendored-file sync pull request"
+        required: false
+        type: string
+        default: main
+      pr-title:
+        description: "Pull request title and default commit message"
+        required: false
+        type: string
+        default: "chore: sync vendored files"
+      pr-body:
+        description: "Pull request body"
+        required: false
+        type: string
+        default: ""
+      labels:
+        description: "Newline-delimited labels to apply when creating the pull request"
+        required: false
+        type: string
+        default: vendored-file-sync
+      commit-message:
+        description: "Commit message for refreshed vendored files"
+        required: false
+        type: string
+        default: ""
+      draft:
+        description: "Open the pull request as a draft"
+        required: false
+        type: boolean
+        default: false
+      signoff:
+        description: "Add a Signed-off-by trailer to the commit"
+        required: false
+        type: boolean
+        default: false
+    outputs:
+      changed:
+        description: "true when the refresher left drift in the watched paths"
+        value: ${{ jobs.sync.outputs.changed }}
+      pr-number:
+        description: "Pull request number when create-pr=true and drift was found"
+        value: ${{ jobs.sync.outputs.pr-number }}
+      pr-url:
+        description: "Pull request URL when create-pr=true and drift was found"
+        value: ${{ jobs.sync.outputs.pr-url }}
+
+jobs:
+  sync:
+    name: Refresh vendored files
+    runs-on: ubuntu-24.04
+    outputs:
+      changed: ${{ steps.detect.outputs.changed }}
+      pr-number: ${{ steps.open-pr.outputs.pr-number }}
+      pr-url: ${{ steps.open-pr.outputs.pr-url }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Run vendored-file refresher
+        run: ${{ inputs.refresh-command }}
+
+      - name: Detect vendored-file drift
+        id: detect
+        env:
+          PATHS: ${{ inputs.paths }}
+        run: |-
+          set -euo pipefail
+
+          pathspecs=()
+          while IFS= read -r line; do
+            trimmed="${line#"${line%%[![:space:]]*}"}"
+            trimmed="${trimmed%"${trimmed##*[![:space:]]}"}"
+            [ -n "${trimmed}" ] && pathspecs+=("${trimmed}")
+          done <<< "${PATHS}"
+
+          if [ "${#pathspecs[@]}" -eq 0 ]; then
+            echo "::error::At least one watched path is required." >&2
+            exit 1
+          fi
+
+          git status --short -- "${pathspecs[@]}"
+          if [ -n "$(git status --porcelain -- "${pathspecs[@]}")" ]; then
+            echo "changed=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "changed=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Fail validation when vendored files drift
+        if: ${{ !inputs.create-pr && steps.detect.outputs.changed == 'true' }}
+        env:
+          PATHS: ${{ inputs.paths }}
+        run: |-
+          set -euo pipefail
+
+          echo "::error::Vendored files are out of sync. Run the vendored-file refresher and commit the resulting changes."
+          while IFS= read -r line; do
+            trimmed="${line#"${line%%[![:space:]]*}"}"
+            trimmed="${trimmed%"${trimmed##*[![:space:]]}"}"
+            if [ -n "${trimmed}" ]; then
+              git diff -- "${trimmed}" || true
+            fi
+          done <<< "${PATHS}"
+          exit 1
+
+      - name: Open or update vendored-file sync PR
+        id: open-pr
+        if: ${{ inputs.create-pr && steps.detect.outputs.changed == 'true' }}
+        # renovate: datasource=github-tags depName=DevSecNinja/.github
+        uses: DevSecNinja/.github/actions/open-pr@af5030dd0d6f61b80fe58f949c9b985d1931ddf2 # v1.3.0
+        with:
+          branch: ${{ inputs.branch }}
+          base: ${{ inputs.base }}
+          title: ${{ inputs.pr-title }}
+          body: ${{ inputs.pr-body }}
+          commit-message: ${{ inputs.commit-message }}
+          paths: ${{ inputs.paths }}
+          labels: ${{ inputs.labels }}
+          draft: ${{ inputs.draft }}
+          signoff: ${{ inputs.signoff }}
