@@ -74,9 +74,8 @@ jobs:
               index += 1
 
           for start, end, lines in reversed(replacements):
-              bounded_end = min(end, len(incoming))
-              if start < bounded_end:  # Only preserve markers that map to valid lines in the new template
-                  incoming[start:bounded_end] = lines
+              if end <= len(incoming):  # Only preserve full marker ranges that map to the new template
+                  incoming[start:end] = lines
 
           sys.stdout.write("".join(incoming))
           PY
@@ -212,7 +211,7 @@ jobs:
           commit-message: 'chore: sync ${{ steps.pull.outputs.sync_scope }} from DevSecNinja/.github'
           labels: config-sync
           body: |-
-            Automated PR — repository configuration pulled from
+            Automated PR — ${{ steps.pull.outputs.sync_scope }} pulled from
             [DevSecNinja/.github](https://github.com/DevSecNinja/.github).
 
             Triggered by `${{ github.workflow }}` on `${{ github.ref_name }}`
