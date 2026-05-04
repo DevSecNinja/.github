@@ -17,6 +17,7 @@ jobs:
       contents: write
       pull-requests: write
     with:
-      sync-workflows: true
+      # Set to true to also sync workflow templates into .github/workflows:
+      sync-workflows: false
       # Uncomment to also bootstrap template files for new repos:
       #   sync-templates: true

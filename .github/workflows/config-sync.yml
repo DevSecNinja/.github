@@ -74,10 +74,9 @@ jobs:
               index += 1
 
           for start, end, lines in reversed(replacements):
-              if start >= len(incoming):
-                  incoming.extend(lines)
-              else:
-                  incoming[start:min(end, len(incoming))] = lines
+              if start > len(incoming):
+                  incoming.extend(["\n"] * (start - len(incoming)))
+              incoming[start:min(end, len(incoming))] = lines
 
           sys.stdout.write("".join(incoming))
           PY
@@ -144,7 +143,7 @@ jobs:
                 continue
               fi
 
-              echo "Fetching workflow ${workflow}..."
+              echo "  Fetching workflow ${workflow}..."
               tmp_workflow=$(mktemp)
               if curl -sf "${REPO_URL}/workflow-templates/${workflow}" -o "${tmp_workflow}"; then
                 python3 - "${tmp_workflow}" "${DEFAULT_BRANCH}" <<'PY'
