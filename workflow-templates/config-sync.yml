@@ -19,5 +19,5 @@ jobs:
     with:
       # Set to true to also sync workflow templates into .github/workflows:
       sync-workflows: false
-      # Uncomment to also bootstrap template files for new repos:
+      # Uncomment the next line to also bootstrap template files for new repos:
       #   sync-templates: true
