@@ -74,6 +74,7 @@ jobs:
               index += 1
 
           for start, end, lines in reversed(replacements):
+              # Preserve only markers that still map into the incoming template.
               if start < len(incoming):
                   incoming[start:min(end, len(incoming))] = lines
 
@@ -138,13 +139,14 @@ jobs:
               target=".github/workflows/${workflow}"
 
               if workflow_is_excluded "${target}"; then
-                echo "  ⏭ ${target} is excluded by its first line"
+                echo "  [SKIP] ${target} is excluded by its first line"
                 continue
               fi
 
               echo "  Fetching workflow ${workflow}..."
               tmp_workflow=$(mktemp)
-              if curl -sf "${REPO_URL}/workflow-templates/${workflow}" -o "${tmp_workflow}"; then
+              workflow_url="${REPO_URL}/workflow-templates/${workflow}"
+              if curl -sf "${workflow_url}" -o "${tmp_workflow}"; then
                 python3 - "${tmp_workflow}" "${DEFAULT_BRANCH}" <<'PY'
           from pathlib import Path
           import sys
@@ -172,7 +174,7 @@ jobs:
                   updated=1
                 fi
               else
-                echo "  ⚠ Failed to fetch workflow ${workflow} (skipping)"
+                echo "  ⚠ Failed to fetch workflow ${workflow} from ${workflow_url} (skipping)"
               fi
               rm -f "${tmp_workflow}"
             done
