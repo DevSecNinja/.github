@@ -74,8 +74,9 @@ jobs:
               index += 1
 
           for start, end, lines in reversed(replacements):
-              if start < len(incoming):  # Only preserve markers that map to valid lines in the new template.
-                  incoming[start:min(end, len(incoming))] = lines
+              bounded_end = min(end, len(incoming))
+              if start < bounded_end:  # Only preserve markers that map to valid lines in the new template.
+                  incoming[start:bounded_end] = lines
 
           sys.stdout.write("".join(incoming))
           PY
