@@ -74,8 +74,7 @@ jobs:
               index += 1
 
           for start, end, lines in reversed(replacements):
-              # Preserve only markers that still map into the incoming template.
-              if start < len(incoming):
+              if start < len(incoming):  # Only preserve markers that map to valid lines in the new template.
                   incoming[start:min(end, len(incoming))] = lines
 
           sys.stdout.write("".join(incoming))
@@ -180,7 +179,17 @@ jobs:
             done
           fi
 
+          sync_scope="config files"
+          if [ "${SYNC_TEMPLATES}" = "true" ] && [ "${SYNC_WORKFLOWS}" = "true" ]; then
+            sync_scope="config files, templates, and workflows"
+          elif [ "${SYNC_TEMPLATES}" = "true" ]; then
+            sync_scope="config files and templates"
+          elif [ "${SYNC_WORKFLOWS}" = "true" ]; then
+            sync_scope="config files and workflows"
+          fi
+
           echo "updated=${updated}" >> "${GITHUB_OUTPUT}"
+          echo "sync_scope=${sync_scope}" >> "${GITHUB_OUTPUT}"
 
       - name: Ensure config-sync label exists
         if: steps.pull.outputs.updated == '1'
@@ -198,8 +207,8 @@ jobs:
         uses: DevSecNinja/.github/actions/open-pr@af5030dd0d6f61b80fe58f949c9b985d1931ddf2 # v1.3.0
         with:
           branch: chore/config-sync
-          title: 'chore: sync configuration from central repo'
-          commit-message: 'chore: sync configuration from DevSecNinja/.github'
+          title: 'chore: sync ${{ steps.pull.outputs.sync_scope }} from central repo'
+          commit-message: 'chore: sync ${{ steps.pull.outputs.sync_scope }} from DevSecNinja/.github'
           labels: config-sync
           body: |-
             Automated PR — repository configuration pulled from
