@@ -17,10 +17,11 @@
       minimumReleaseAge: "0",
     },
     {
-      description: "Disable Docker lookups for Dev Container feature references",
+      description: "Disable Docker lookups for official Dev Container feature references",
       matchManagers: ["devcontainer"],
       matchDatasources: ["docker"],
       matchDepTypes: ["feature"],
+      matchPackageNames: ["/^ghcr\\.io\\/devcontainers\\/features\\//"],
       enabled: false,
     },
     {
