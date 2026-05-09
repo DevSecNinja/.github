@@ -19,5 +19,5 @@ jobs:
       security-events: write
     with:
       # renovate: datasource=github-releases depName=jdx/mise
-      mise-version: "2026.4.20"
+      mise-version: "2026.4.22"
       lint-config-dir: config-sync/files
