@@ -43,24 +43,27 @@ comment and supply the required inputs.
 
 ### Lint (`lint.yml`)
 
-Runs up to ten linters in a single job. Toggle individual linters on/off with
+Runs up to eleven linters in a single job. Toggle individual linters on/off with
 boolean inputs; all default to `true`.
 
-| Input               | Description                                      |
-| ------------------- | ------------------------------------------------ |
-| `mise-version`      | **Required.** mise version to install.           |
-| `lint-config-dir`   | Optional linter config directory. Default: `""`. |
-| `lint-dprint`       | Markdown formatting (dprint). Default: `true`.   |
-| `lint-yamlfmt`      | YAML formatting (yamlfmt). Default: `true`.      |
-| `lint-yamllint`     | YAML linting (yamllint). Default: `true`.        |
-| `lint-actionlint`   | GitHub Actions linting. Default: `true`.         |
-| `lint-gitleaks`     | Secret scanning (gitleaks). Default: `true`.     |
-| `lint-shellcheck`   | Shell linting (shellcheck). Default: `true`.     |
-| `lint-shfmt`        | Shell formatting (shfmt). Default: `true`.       |
-| `lint-checkov`      | IaC security scan (checkov). Default: `true`.    |
-| `lint-trivy`        | Filesystem scan (trivy). Default: `true`.        |
-| `lint-zizmor`       | Actions security scan (zizmor). Default: `true`. |
-| `lint-config-drift` | Config-drift check. Default: `false`.            |
+| Input                    | Description                                           |
+| ------------------------ | ----------------------------------------------------- |
+| `mise-version`           | **Required.** mise version to install.                |
+| `golangci-lint-version`  | **Required.** golangci-lint version to install.       |
+| `go-version-file`        | Go version file for setup-go. Default: `go.mod`.      |
+| `lint-config-dir`        | Optional linter config directory. Default: `""`.      |
+| `lint-dprint`            | Markdown formatting (dprint). Default: `true`.        |
+| `lint-yamlfmt`           | YAML formatting (yamlfmt). Default: `true`.           |
+| `lint-yamllint`          | YAML linting (yamllint). Default: `true`.             |
+| `lint-actionlint`        | GitHub Actions linting. Default: `true`.              |
+| `lint-gitleaks`          | Secret scanning (gitleaks). Default: `true`.          |
+| `lint-go`                | Go linting (golangci-lint). Default: `true`.          |
+| `lint-shellcheck`        | Shell linting (shellcheck). Default: `true`.          |
+| `lint-shfmt`             | Shell formatting (shfmt). Default: `true`.            |
+| `lint-checkov`           | IaC security scan (checkov). Default: `true`.         |
+| `lint-trivy`             | Filesystem scan (trivy). Default: `true`.             |
+| `lint-zizmor`            | Actions security scan (zizmor). Default: `true`.      |
+| `lint-config-drift`      | Config-drift check. Default: `false`.                 |
 
 **Example caller:**
 
@@ -74,6 +77,8 @@ jobs:
     with:
       # renovate: datasource=github-releases depName=jdx/mise
       mise-version: "2026.4.5"
+      # renovate: datasource=github-releases depName=golangci/golangci-lint
+      golangci-lint-version: "v2.11.4"
       # lint-config-dir: config-sync/files
 ```
 
