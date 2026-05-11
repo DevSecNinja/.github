@@ -7,6 +7,7 @@
   suppressNotifications: ["prEditedNotification", "prIgnoreNotification"],
   pinDigests: true,
   rangeStrategy: "pin",
+  minimumReleaseAge: "14 days",
   labels: ["dependencies"],
   osvVulnerabilityAlerts: true,
   timezone: 'Europe/Amsterdam',
