@@ -453,23 +453,24 @@ PRs **without** this label require manual review and merge.
 
 **What auto-merges (minor + patch, via GitHub platform automerge):**
 
-| Ecosystem             | Scope                               | Condition                    |
-| --------------------- | ----------------------------------- | ---------------------------- |
-| GitHub Actions        | `actions/*`, `docker/*`, `github/*` | All versions                 |
-| Docker images         | All                                 | Current version ≥ 1.0        |
-| GitHub releases       | All                                 | Current version ≥ 1.0        |
-| Mise tools            | All                                 | Current version ≥ 1.0        |
-| npm                   | All                                 | Current version ≥ 1.0        |
-| pip                   | All                                 | Current version ≥ 1.0        |
-| Go modules            | All                                 | Current version ≥ 1.0        |
-| Lock file maintenance | All                                 | Always (branch merge, no PR) |
+| Ecosystem                         | Scope                               | Condition                    |
+| --------------------------------- | ----------------------------------- | ---------------------------- |
+| GitHub Actions                    | `actions/*`, `docker/*`, `github/*` | All versions                 |
+| Docker images                     | All                                 | Current version ≥ 1.0        |
+| GitHub releases                   | All                                 | Current version ≥ 1.0        |
+| Mise tools                        | All                                 | Current version ≥ 1.0        |
+| npm                               | All                                 | Current version ≥ 1.0        |
+| pip                               | All                                 | Current version ≥ 1.0        |
+| Go modules                        | All                                 | Current version ≥ 1.0        |
+| DevSecNinja devcontainer (digest) | `ghcr.io/devsecninja/*`             | Always (no wait time)        |
+| Lock file maintenance             | All                                 | Always (branch merge, no PR) |
 
 **What does NOT auto-merge:**
 
 - Major version updates (all ecosystems)
 - Pre-1.0 packages (`0.x` — semver minor can introduce breaking changes)
 - GitHub Actions from untrusted organisations
-- Digest-only updates (disabled entirely for supply-chain safety)
+- Digest-only updates (disabled entirely for supply-chain safety, except DevSecNinja devcontainer images)
 
 ### Safety nets
 
@@ -480,7 +481,9 @@ PRs **without** this label require manual review and merge.
 - **OSV vulnerability alerts** bypass `minimumReleaseAge` (set to `0`) so
   security fixes merge immediately.
 - **Schedule** — Renovate only runs on weekends and Fridays.
-- **Digest updates disabled** — prevents merging potentially hijacked tags.
+- **Digest updates disabled** — prevents merging potentially hijacked tags (except
+  DevSecNinja-owned devcontainer images on `ghcr.io/devsecninja/`, which are trusted
+  internal images and auto-merge immediately with no wait time).
 
 ### Consuming the preset
 

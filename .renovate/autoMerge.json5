@@ -76,5 +76,17 @@
       automergeType: "pr",
       platformAutomerge: true,
     },
+
+    // --- DevSecNinja devcontainer images (digest) ---
+    {
+      description: "Auto-merge DevSecNinja devcontainer digest updates — internal images, no wait time needed",
+      matchManagers: ["devcontainer"],
+      matchDatasources: ["docker"],
+      matchPackageNames: ["/^ghcr\\.io\\/devsecninja\\//"],
+      matchUpdateTypes: ["digest"],
+      automerge: true,
+      automergeType: "pr",
+      platformAutomerge: true,
+    },
   ],
 }
