@@ -474,8 +474,8 @@ PRs **without** this label require manual review and merge.
 
 ### Safety nets
 
-- **14-day `minimumReleaseAge`** on Docker images, GitHub releases, mise
-  tools, and all major updates — ensures community vetting before adoption.
+- **14-day `minimumReleaseAge`** on all dependency updates — ensures community
+  vetting before adoption.
 - **CI must pass** — `platformAutomerge: true` uses GitHub's native
   auto-merge, which respects required status checks.
 - **OSV vulnerability alerts** bypass `minimumReleaseAge` (set to `0`) so

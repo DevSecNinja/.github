@@ -47,15 +47,6 @@
       minimumReleaseAge: "14 days",
     },
     {
-      description: "Do not delay updates for DevSecNinja-owned packages.",
-      matchPackageNames: [
-        "/^DevSecNinja\\//",
-        "/^devsecninja\\//",
-        "/^ghcr\\.io\\/devsecninja\\//",
-      ],
-      minimumReleaseAge: "0",
-    },
-    {
       description: "Use custom versioning for linuxserver images",
       versioning: "regex:^(version)(?<compatibility>.*?)-(?<major>v?\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)[\\.-]*r?(?<build>\\d+)*-*r?(?<release>\\w+)|^latest*",
       matchPackageNames: ["/^lscr\\.io\\/linuxserver\\//"],
