@@ -50,6 +50,14 @@
       addLabels: ["merge: auto"],
     },
     {
+      description: "Label DevSecNinja devcontainer digest updates as auto-merge",
+      matchManagers: ["devcontainer"],
+      matchDatasources: ["docker"],
+      matchPackageNames: ["/^ghcr\\.io\\/devsecninja\\//"],
+      matchUpdateTypes: ["digest"],
+      addLabels: ["merge: auto"],
+    },
+    {
       description: "Label major updates as requiring manual review/merge",
       matchUpdateTypes: ["major"],
       addLabels: ["merge: manual"],
