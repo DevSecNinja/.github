@@ -1,13 +1,13 @@
 # renovate: datasource=github-releases depName=jdx/mise
-min_version = "2026.4.17"
+min_version = "2026.4.28"
 
 [tools]
 actionlint = "1.7.12"
 cocogitto = "7.0.0"
 dprint = "0.54.0"
 gitleaks = "8.30.1"
-git-cliff = "2.12.0"
-"pipx:checkov" = "3.2.522"
+git-cliff = "2.13.1"
+"pipx:checkov" = "3.2.525"
 "pipx:yamllint" = "1.38.0"
 shellcheck = "0.11.0"
 shfmt = "3.13.1"

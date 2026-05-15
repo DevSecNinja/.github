@@ -12,21 +12,26 @@ permissions:
 
 jobs:
   lint:
-    uses: DevSecNinja/.github/.github/workflows/lint.yml@d5381d4da98c75b3c86c6b4699616d176090824f # v1.2.0
+    uses: DevSecNinja/.github/.github/workflows/lint.yml@af5030dd0d6f61b80fe58f949c9b985d1931ddf2 # v1.3.0
     permissions:
       contents: read
       security-events: write
     with:
       # renovate: datasource=github-releases depName=jdx/mise
-      mise-version: "2026.4.17"
+      mise-version: "2026.4.28"
+      # renovate: datasource=github-releases depName=golangci/golangci-lint
+      golangci-lint-version: "v2.11.4"
       # Optional: use configs from a non-root directory.
       # lint-config-dir: config-sync/files
+      # Optional: use a different Go version file.
+      # go-version-file: go.mod
       # Toggle linters on/off (all default to true):
       # lint-dprint: true
       # lint-yamlfmt: true
       # lint-yamllint: true
       # lint-actionlint: true
       # lint-gitleaks: true
+      # lint-go: true
       # lint-shellcheck: true
       # lint-shfmt: true
       # lint-checkov: true

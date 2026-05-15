@@ -43,24 +43,27 @@ comment and supply the required inputs.
 
 ### Lint (`lint.yml`)
 
-Runs up to ten linters in a single job. Toggle individual linters on/off with
+Runs up to eleven linters in a single job. Toggle individual linters on/off with
 boolean inputs; all default to `true`.
 
-| Input               | Description                                      |
-| ------------------- | ------------------------------------------------ |
-| `mise-version`      | **Required.** mise version to install.           |
-| `lint-config-dir`   | Optional linter config directory. Default: `""`. |
-| `lint-dprint`       | Markdown formatting (dprint). Default: `true`.   |
-| `lint-yamlfmt`      | YAML formatting (yamlfmt). Default: `true`.      |
-| `lint-yamllint`     | YAML linting (yamllint). Default: `true`.        |
-| `lint-actionlint`   | GitHub Actions linting. Default: `true`.         |
-| `lint-gitleaks`     | Secret scanning (gitleaks). Default: `true`.     |
-| `lint-shellcheck`   | Shell linting (shellcheck). Default: `true`.     |
-| `lint-shfmt`        | Shell formatting (shfmt). Default: `true`.       |
-| `lint-checkov`      | IaC security scan (checkov). Default: `true`.    |
-| `lint-trivy`        | Filesystem scan (trivy). Default: `true`.        |
-| `lint-zizmor`       | Actions security scan (zizmor). Default: `true`. |
-| `lint-config-drift` | Config-drift check. Default: `false`.            |
+| Input                   | Description                                      |
+| ----------------------- | ------------------------------------------------ |
+| `mise-version`          | **Required.** mise version to install.           |
+| `golangci-lint-version` | **Required.** golangci-lint version to install.  |
+| `go-version-file`       | Go version file for setup-go. Default: `go.mod`. |
+| `lint-config-dir`       | Optional linter config directory. Default: `""`. |
+| `lint-dprint`           | Markdown formatting (dprint). Default: `true`.   |
+| `lint-yamlfmt`          | YAML formatting (yamlfmt). Default: `true`.      |
+| `lint-yamllint`         | YAML linting (yamllint). Default: `true`.        |
+| `lint-actionlint`       | GitHub Actions linting. Default: `true`.         |
+| `lint-gitleaks`         | Secret scanning (gitleaks). Default: `true`.     |
+| `lint-go`               | Go linting (golangci-lint). Default: `true`.     |
+| `lint-shellcheck`       | Shell linting (shellcheck). Default: `true`.     |
+| `lint-shfmt`            | Shell formatting (shfmt). Default: `true`.       |
+| `lint-checkov`          | IaC security scan (checkov). Default: `true`.    |
+| `lint-trivy`            | Filesystem scan (trivy). Default: `true`.        |
+| `lint-zizmor`           | Actions security scan (zizmor). Default: `true`. |
+| `lint-config-drift`     | Config-drift check. Default: `false`.            |
 
 **Example caller:**
 
@@ -74,6 +77,8 @@ jobs:
     with:
       # renovate: datasource=github-releases depName=jdx/mise
       mise-version: "2026.4.5"
+      # renovate: datasource=github-releases depName=golangci/golangci-lint
+      golangci-lint-version: "v2.11.4"
       # lint-config-dir: config-sync/files
 ```
 
@@ -454,34 +459,37 @@ can still assign Code Owners if an automerge PR cannot merge cleanly.
 
 **What auto-merges (minor + patch, via GitHub platform automerge):**
 
-| Ecosystem             | Scope                               | Condition                    |
-| --------------------- | ----------------------------------- | ---------------------------- |
-| GitHub Actions        | `actions/*`, `docker/*`, `github/*` | All versions                 |
-| Docker images         | All                                 | Current version ≥ 1.0        |
-| GitHub releases       | All                                 | Current version ≥ 1.0        |
-| Mise tools            | All                                 | Current version ≥ 1.0        |
-| npm                   | All                                 | Current version ≥ 1.0        |
-| pip                   | All                                 | Current version ≥ 1.0        |
-| Go modules            | All                                 | Current version ≥ 1.0        |
-| Lock file maintenance | All                                 | Always (branch merge, no PR) |
+| Ecosystem                         | Scope                               | Condition                    |
+| --------------------------------- | ----------------------------------- | ---------------------------- |
+| GitHub Actions                    | `actions/*`, `docker/*`, `github/*` | All versions                 |
+| Docker images                     | All                                 | Current version ≥ 1.0        |
+| GitHub releases                   | All                                 | Current version ≥ 1.0        |
+| Mise tools                        | All                                 | Current version ≥ 1.0        |
+| npm                               | All                                 | Current version ≥ 1.0        |
+| pip                               | All                                 | Current version ≥ 1.0        |
+| Go modules                        | All                                 | Current version ≥ 1.0        |
+| DevSecNinja devcontainer (digest) | `ghcr.io/devsecninja/*`             | Always (no wait time)        |
+| Lock file maintenance             | All                                 | Always (branch merge, no PR) |
 
 **What does NOT auto-merge:**
 
 - Major version updates (all ecosystems)
 - Pre-1.0 packages (`0.x` — semver minor can introduce breaking changes)
 - GitHub Actions from untrusted organisations
-- Digest-only updates (disabled entirely for supply-chain safety)
+- Digest-only updates (disabled entirely for supply-chain safety, except DevSecNinja devcontainer images)
 
 ### Safety nets
 
-- **14-day `minimumReleaseAge`** on Docker images, GitHub releases, mise
-  tools, and all major updates — ensures community vetting before adoption.
+- **14-day `minimumReleaseAge`** on all dependency updates — ensures community
+  vetting before adoption.
 - **CI must pass** — `platformAutomerge: true` uses GitHub's native
   auto-merge, which respects required status checks.
 - **OSV vulnerability alerts** bypass `minimumReleaseAge` (set to `0`) so
   security fixes merge immediately.
 - **Schedule** — Renovate only runs on weekends and Fridays.
-- **Digest updates disabled** — prevents merging potentially hijacked tags.
+- **Digest updates disabled** — prevents merging potentially hijacked tags (except
+  DevSecNinja-owned devcontainer images on `ghcr.io/devsecninja/`, which are trusted
+  internal images and auto-merge immediately with no wait time).
 
 ### Consuming the preset
 

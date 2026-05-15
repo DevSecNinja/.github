@@ -129,7 +129,7 @@ It does **not** apply to:
 
 ## Compliance
 
-- `lint.yml` — `mise-version` required ✅
+- `lint.yml` — `mise-version` and `golangci-lint-version` required ✅
 - `release.yml` — `mise-version` required ✅
 - `autofix.yml` — `mise-version` required ✅
 - `config-sync.yml`, `label-sync.yml`, `labeler.yml`, `todo-to-issue.yml` —
