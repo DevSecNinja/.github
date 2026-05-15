@@ -448,8 +448,9 @@ by individual repositories via their `renovate.json5`.
 
 ### Auto-merge strategy
 
-PRs that Renovate can auto-merge are tagged with the **`automerge`** label.
-PRs **without** this label require manual review and merge.
+PRs that Renovate can auto-merge are tagged with the **`merge: auto`** label.
+Code Owners are not requested as reviewers for routine Renovate PRs. Renovate
+can still assign Code Owners if an automerge PR cannot merge cleanly.
 
 **What auto-merges (minor + patch, via GitHub platform automerge):**
 

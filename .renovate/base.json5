@@ -18,7 +18,7 @@
     '**/*.sops.*',
   ],
   assigneesFromCodeOwners: true,
-  reviewersFromCodeOwners: true,
+  reviewersFromCodeOwners: false,
   vulnerabilityAlerts: {
     labels: ["security"],
     minimumReleaseAge: "0",
