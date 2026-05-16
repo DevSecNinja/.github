@@ -21,5 +21,5 @@ jobs:
       # renovate: datasource=github-releases depName=jdx/mise
       mise-version: "2026.4.28"
       # renovate: datasource=github-releases depName=golangci/golangci-lint
-      golangci-lint-version: "v2.12.0"
+      golangci-lint-version: "v2.12.1"
       lint-config-dir: config-sync/files
