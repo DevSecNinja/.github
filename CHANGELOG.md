@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.0](https://github.com/DevSecNinja/.github/compare/v1.3.0...v1.4.0) (2026-05-18)
+
+
+### Features
+
+* **ci:** add Go linting to reusable lint workflow ([#100](https://github.com/DevSecNinja/.github/issues/100)) ([52ead33](https://github.com/DevSecNinja/.github/commit/52ead33a69740e725ec35d4d92304571be0ad3df))
+* **github-release:** update release golangci/golangci-lint ( v2.11.4 ➔ v2.12.0 ) ([#104](https://github.com/DevSecNinja/.github/issues/104)) ([6af6652](https://github.com/DevSecNinja/.github/commit/6af66521bcdcbd1e5318dcf4a7d3663a64b5a2d9))
+* **github-release:** update release jdx/mise ( v2026.4.28 ➔ v2026.5.0 ) ([#106](https://github.com/DevSecNinja/.github/issues/106)) ([b369ce2](https://github.com/DevSecNinja/.github/commit/b369ce220cf2de0a219e4ea8d65bb07b883953e4))
+* **mise:** update tool git-cliff ( 2.12.0 ➔ 2.13.1 ) ([#93](https://github.com/DevSecNinja/.github/issues/93)) ([425478e](https://github.com/DevSecNinja/.github/commit/425478e2d699b454fec58f42fedd599b70cd90e2))
+* **renovate:** Add auto-merge label for DevSecNinja devcontainer digest updates ([ce1beeb](https://github.com/DevSecNinja/.github/commit/ce1beebd841bf6447e4f2e8d5c00125ae022c8fe))
+* **renovate:** auto-merge DevSecNinja devcontainer digest updates ([#96](https://github.com/DevSecNinja/.github/issues/96)) ([a99ea13](https://github.com/DevSecNinja/.github/commit/a99ea137f5c05d84c3b9930402c71cb444df5405))
+* **renovate:** don't assign code owners as reviewers ([094aefe](https://github.com/DevSecNinja/.github/commit/094aefe1d20d62727ffacb77edaf020e9acfa9e2))
+* **renovate:** skip release-age delay for DevSecNinja packages ([#90](https://github.com/DevSecNinja/.github/issues/90)) ([5d465c7](https://github.com/DevSecNinja/.github/commit/5d465c73af753041fa876059790b127940ba9233))
+
+
+### Bug Fixes
+
+* **github-release:** update release golangci/golangci-lint ( v2.12.0 ➔ v2.12.1 ) ([#105](https://github.com/DevSecNinja/.github/issues/105)) ([e3a3962](https://github.com/DevSecNinja/.github/commit/e3a3962be6b7ec2c54125922906a8ac660af0352))
+* **github-release:** update release jdx/mise ( v2026.4.17 ➔ v2026.4.18 ) ([#79](https://github.com/DevSecNinja/.github/issues/79)) ([24aae60](https://github.com/DevSecNinja/.github/commit/24aae605cdd5019df09fb0a4693cb7849a68ea3d))
+* **github-release:** update release jdx/mise ( v2026.4.18 ➔ v2026.4.20 ) ([#86](https://github.com/DevSecNinja/.github/issues/86)) ([82dce5e](https://github.com/DevSecNinja/.github/commit/82dce5e7efb030b5c5f232a4b953b97a792216cd))
+* **github-release:** update release jdx/mise ( v2026.4.20 ➔ v2026.4.22 ) ([#92](https://github.com/DevSecNinja/.github/issues/92)) ([e63517c](https://github.com/DevSecNinja/.github/commit/e63517c60d2f2b63cb57de89a4450de7280b82e8))
+* **github-release:** update release jdx/mise ( v2026.4.22 ➔ v2026.4.28 ) ([#102](https://github.com/DevSecNinja/.github/issues/102)) ([e0f2d98](https://github.com/DevSecNinja/.github/commit/e0f2d98a1510df1804a521c2d00a26721ccd34f9))
+* **lint:** exclude generated release notes from dprint ([#77](https://github.com/DevSecNinja/.github/issues/77)) ([24015c4](https://github.com/DevSecNinja/.github/commit/24015c4ebd42c5171837de7878bf92067a957cfc))
+* **mise:** update tool pipx:checkov ( 3.2.522 ➔ 3.2.524 ) ([#87](https://github.com/DevSecNinja/.github/issues/87)) ([a9feb95](https://github.com/DevSecNinja/.github/commit/a9feb95cffb099fc0875c43ed40545d2eb1799eb))
+* **mise:** update tool pipx:checkov ( 3.2.524 ➔ 3.2.525 ) ([#94](https://github.com/DevSecNinja/.github/issues/94)) ([839a1c8](https://github.com/DevSecNinja/.github/commit/839a1c8c27c80fea3e298096f7a51d79af53630f))
+* **mise:** update tool pipx:checkov ( 3.2.525 ➔ 3.2.526 ) ([#103](https://github.com/DevSecNinja/.github/issues/103)) ([e6bee2a](https://github.com/DevSecNinja/.github/commit/e6bee2ac741e9fdf0c6243a0d1eb498c0b03ddbe))
+* **renovate:** apply wait time to all dependency updates ([#98](https://github.com/DevSecNinja/.github/issues/98)) ([17f0e3d](https://github.com/DevSecNinja/.github/commit/17f0e3d9c33796531c96e5c6ecedee1f0643420d))
+* **renovate:** centralize devcontainer lookup rules ([8ea6360](https://github.com/DevSecNinja/.github/commit/8ea63605001e6082c7a5664a88034b9bc219f7d5))
+* **renovate:** scope devcontainer feature suppression ([c73ec21](https://github.com/DevSecNinja/.github/commit/c73ec21348764ca74c289488706faa28c99da7cb))
+
 ## [1.3.0](https://github.com/DevSecNinja/.github/compare/v1.2.0...v1.3.0) (2026-05-03)
 
 
