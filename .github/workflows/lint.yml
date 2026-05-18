@@ -22,6 +22,11 @@ on:
         required: false
         type: string
         default: ""
+      lint-fail-on-error:
+        description: "Fail the workflow when a linter fails"
+        required: false
+        type: boolean
+        default: false
       lint-dprint:
         description: "Run dprint (Markdown formatting)"
         required: false
@@ -104,6 +109,7 @@ jobs:
   dprint:
     name: dprint
     if: ${{ inputs.lint-dprint }}
+    continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
@@ -133,6 +139,7 @@ jobs:
   yamlfmt:
     name: yamlfmt
     if: ${{ inputs.lint-yamlfmt }}
+    continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
@@ -161,6 +168,7 @@ jobs:
   yamllint:
     name: yamllint
     if: ${{ inputs.lint-yamllint }}
+    continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
@@ -189,6 +197,7 @@ jobs:
   actionlint:
     name: actionlint
     if: ${{ inputs.lint-actionlint }}
+    continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
@@ -208,6 +217,7 @@ jobs:
   gitleaks:
     name: gitleaks
     if: ${{ inputs.lint-gitleaks }}
+    continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
@@ -235,6 +245,7 @@ jobs:
   go:
     name: go
     if: ${{ inputs.lint-go }}
+    continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
@@ -269,6 +280,7 @@ jobs:
   shellcheck:
     name: shellcheck
     if: ${{ inputs.lint-shellcheck }}
+    continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
@@ -311,6 +323,7 @@ jobs:
   shfmt:
     name: shfmt
     if: ${{ inputs.lint-shfmt }}
+    continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
@@ -337,6 +350,7 @@ jobs:
   checkov:
     name: checkov
     if: ${{ inputs.lint-checkov }}
+    continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -380,6 +394,7 @@ jobs:
   trivy:
     name: trivy
     if: ${{ inputs.lint-trivy }}
+    continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -419,6 +434,7 @@ jobs:
   zizmor:
     name: zizmor
     if: ${{ inputs.lint-zizmor }}
+    continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -448,6 +464,7 @@ jobs:
   config-drift:
     name: config drift
     if: ${{ inputs.lint-config-drift }}
+    continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout code

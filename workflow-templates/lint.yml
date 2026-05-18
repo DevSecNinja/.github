@@ -23,6 +23,8 @@ jobs:
       golangci-lint-version: "v2.12.1"
       # Optional: use configs from a non-root directory.
       # lint-config-dir: config-sync/files
+      # Optional: fail this workflow when a linter fails (default: false).
+      # lint-fail-on-error: true
       # Optional: use a different Go version file.
       # go-version-file: go.mod
       # Toggle linters on/off (all default to true):
