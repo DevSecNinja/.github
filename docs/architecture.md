@@ -43,8 +43,10 @@ comment and supply the required inputs.
 
 ### Lint (`lint.yml`)
 
-Runs up to eleven linters in a single job. Toggle individual linters on/off with
-boolean inputs; all default to `true`.
+Runs up to eleven linters. By default, linter failures are reported without
+failing the workflow; set `lint-fail-on-error` to `true` to make lint failures
+fail the workflow. Toggle individual linters on/off with boolean inputs; all
+linter toggles default to `true`.
 
 | Input                   | Description                                      |
 | ----------------------- | ------------------------------------------------ |
@@ -52,6 +54,7 @@ boolean inputs; all default to `true`.
 | `golangci-lint-version` | **Required.** golangci-lint version to install.  |
 | `go-version-file`       | Go version file for setup-go. Default: `go.mod`. |
 | `lint-config-dir`       | Optional linter config directory. Default: `""`. |
+| `lint-fail-on-error`    | Fail when a linter fails. Default: `false`.      |
 | `lint-dprint`           | Markdown formatting (dprint). Default: `true`.   |
 | `lint-yamlfmt`          | YAML formatting (yamlfmt). Default: `true`.      |
 | `lint-yamllint`         | YAML linting (yamllint). Default: `true`.        |
@@ -80,6 +83,7 @@ jobs:
       # renovate: datasource=github-releases depName=golangci/golangci-lint
       golangci-lint-version: "v2.11.4"
       # lint-config-dir: config-sync/files
+      # lint-fail-on-error: true
 ```
 
 ### Auto-fix formatting (`autofix.yml`)
