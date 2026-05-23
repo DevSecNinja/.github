@@ -1,6 +1,6 @@
 # Template — adapt per repo. Remove tools you don't need.
 # renovate: datasource=github-releases depName=jdx/mise
-min_version = "2026.5.3"
+min_version = "2026.5.4"
 
 [tools]
 actionlint = "1.7.12"
