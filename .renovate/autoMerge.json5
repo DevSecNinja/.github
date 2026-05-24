@@ -3,9 +3,9 @@
   packageRules: [
     // --- GitHub Actions ---
     {
-      description: "Auto-merge GitHub Actions (pin/minor/patch) — SHA pinning + soak time covers supply-chain risk regardless of publisher",
+      description: "Auto-merge GitHub Actions (pin/pinDigest/minor/patch) — SHA pinning + soak time covers supply-chain risk regardless of publisher",
       matchManagers: ["github-actions"],
-      matchUpdateTypes: ["pinDigest", "minor", "patch"],
+      matchUpdateTypes: ["pin", "pinDigest", "minor", "patch"],
       automerge: true,
       automergeType: "pr",
       platformAutomerge: true,

@@ -44,9 +44,9 @@
       addLabels: ["merge: auto"],
     },
     {
-      description: "Label all GitHub Actions minor/patch/pinDigest as auto-merge (covered by autoMerge.json5 regardless of 0.x)",
+      description: "Label all GitHub Actions pin/pinDigest/minor/patch as auto-merge (covered by autoMerge.json5 regardless of 0.x)",
       matchManagers: ["github-actions"],
-      matchUpdateTypes: ["pinDigest", "minor", "patch"],
+      matchUpdateTypes: ["pin", "pinDigest", "minor", "patch"],
       addLabels: ["merge: auto"],
     },
     {
