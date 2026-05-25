@@ -45,6 +45,10 @@ jobs:
         npm run test:a11y
         npm run test:e2e
       update-sitemap-lastmod: true
+      # Optional Cloudflare production instead of GitHub Pages:
+      # github-pages: false
+      # cloudflare-production: true
+      # cloudflare-project-name: "my-site"
     secrets:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
