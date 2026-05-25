@@ -133,9 +133,8 @@ jobs:
 Runs configurable site validation commands, deploys the production artifact to
 GitHub Pages and/or Cloudflare Pages from the configured production branch, and
 optionally deploys same-repository pull request previews to Cloudflare Pages.
-Cloudflare jobs detect missing Cloudflare secrets before any deploy work and skip
-deploy/cleanup when `CLOUDFLARE_API_TOKEN` or `CLOUDFLARE_ACCOUNT_ID` is not
-available.
+Cloudflare jobs detect missing Cloudflare secrets before any deploy work. Missing
+secrets fail production Cloudflare deploys and skip preview-only deploys.
 
 | Input                          | Description                                                                           |
 | ------------------------------ | ------------------------------------------------------------------------------------- |

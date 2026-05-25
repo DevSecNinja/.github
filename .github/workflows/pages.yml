@@ -136,6 +136,11 @@ jobs:
 
           if [ -z "${CLOUDFLARE_API_TOKEN}" ] || [ -z "${CLOUDFLARE_ACCOUNT_ID}" ]; then
             echo "enabled=false" >>"${GITHUB_OUTPUT}"
+            if [ "${CLOUDFLARE_PRODUCTION}" = "true" ]; then
+              echo "::error::cloudflare-production is enabled, but CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID is missing."
+              exit 1
+            fi
+
             echo "::notice::Missing Cloudflare secrets; skipping preview deploys."
             exit 0
           fi
@@ -152,7 +157,7 @@ jobs:
 
           echo "project-name=${project_name}" >>"${GITHUB_OUTPUT}"
           echo "enabled=true" >>"${GITHUB_OUTPUT}"
-          echo "Cloudflare Pages previews are configured."
+          echo "Cloudflare Pages deployments are configured."
 
   test:
     name: Run tests
