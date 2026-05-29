@@ -9,6 +9,7 @@
       automerge: true,
       automergeType: "pr",
       platformAutomerge: true,
+      addLabels: ["merge: auto"],
     },
 
     // --- Docker / container images ---
@@ -20,6 +21,7 @@
       automerge: true,
       automergeType: "pr",
       platformAutomerge: true,
+      addLabels: ["merge: auto"],
     },
 
     // --- GitHub releases (mise tools, etc.) ---
@@ -31,6 +33,7 @@
       automerge: true,
       automergeType: "pr",
       platformAutomerge: true,
+      addLabels: ["merge: auto"],
     },
 
     // --- Mise tool manager ---
@@ -42,6 +45,7 @@
       automerge: true,
       automergeType: "pr",
       platformAutomerge: true,
+      addLabels: ["merge: auto"],
     },
 
     // --- npm ---
@@ -53,6 +57,7 @@
       automerge: true,
       automergeType: "pr",
       platformAutomerge: true,
+      addLabels: ["merge: auto"],
     },
 
     // --- pip ---
@@ -64,6 +69,7 @@
       automerge: true,
       automergeType: "pr",
       platformAutomerge: true,
+      addLabels: ["merge: auto"],
     },
 
     // --- Go modules ---
@@ -75,6 +81,7 @@
       automerge: true,
       automergeType: "pr",
       platformAutomerge: true,
+      addLabels: ["merge: auto"],
     },
 
     // --- DevSecNinja devcontainer images (digest) ---
@@ -87,6 +94,7 @@
       automerge: true,
       automergeType: "pr",
       platformAutomerge: true,
+      addLabels: ["merge: auto"],
     },
   ],
 }

@@ -28,6 +28,7 @@
     enabled: true,
     automerge: true,
     automergeType: "branch",
+    addLabels: ["merge: auto"],
   },
   registryAliases: {
     "dhi.io": "dhi.io",
