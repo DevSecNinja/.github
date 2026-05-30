@@ -18,9 +18,9 @@
         "/workflow-templates/.+\\.ya?ml$/",
       ],
       matchStrings: [
-        "# renovate: datasource=github-releases depName=(?<depName>\\S+)\\n\\s+[\\w-]*version: \"?(?<currentValue>[^\\s\"]+)\"?",
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\n\\s+[\\w-]*version: \"?(?<currentValue>[^\\s\"]+)\"?",
       ],
-      datasourceTemplate: "github-releases",
+      datasourceTemplate: "{{{datasource}}}",
     },
     {
       customType: "regex",
