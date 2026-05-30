@@ -13,8 +13,8 @@ on:
         required: false
         type: string
         default: "npm"
-      wrangler-version:
-        description: "Wrangler version to install for Cloudflare Pages previews"
+      wrangler_version:
+        description: "Wrangler version to install for Cloudflare Pages deploys"
         required: true
         type: string
       production-branch:
@@ -337,7 +337,7 @@ jobs:
           command: >-
             pages project create ${{ needs.detect-cloudflare.outputs.project-name }}
             --production-branch ${{ inputs.cloudflare-production-branch }}
-          wranglerVersion: ${{ inputs.wrangler-version }}
+          wranglerVersion: ${{ inputs.wrangler_version }}
 
       - name: Deploy to Cloudflare Pages
         id: deploy
@@ -349,7 +349,7 @@ jobs:
             pages deploy ${{ inputs.artifact-path }}
             --project-name=${{ needs.detect-cloudflare.outputs.project-name }}
             --branch=${{ inputs.cloudflare-production-branch }}
-          wranglerVersion: ${{ inputs.wrangler-version }}
+          wranglerVersion: ${{ inputs.wrangler_version }}
 
   deploy-preview:
     name: Deploy Cloudflare preview
@@ -414,7 +414,7 @@ jobs:
           command: >-
             pages project create ${{ needs.detect-cloudflare.outputs.project-name }}
             --production-branch ${{ inputs.cloudflare-production-branch }}
-          wranglerVersion: ${{ inputs.wrangler-version }}
+          wranglerVersion: ${{ inputs.wrangler_version }}
 
       - name: Deploy to Cloudflare Pages
         id: deploy
@@ -426,7 +426,7 @@ jobs:
             pages deploy ${{ inputs.artifact-path }}
             --project-name=${{ needs.detect-cloudflare.outputs.project-name }}
             --branch=${{ github.head_ref }}
-          wranglerVersion: ${{ inputs.wrangler-version }}
+          wranglerVersion: ${{ inputs.wrangler_version }}
 
       - name: Post or update PR comment
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
