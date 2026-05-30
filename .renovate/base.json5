@@ -29,6 +29,7 @@
     automerge: true,
     automergeType: "branch",
     addLabels: ["merge: auto"],
+    commitMessageSuffix: "[automerge]",
     minimumReleaseAge: "0",
   },
   registryAliases: {
