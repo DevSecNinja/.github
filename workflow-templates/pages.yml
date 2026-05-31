@@ -34,7 +34,6 @@ jobs:
     with:
       # renovate: datasource=node-version depName=node
       node-version: "24"
-      node-cache: "npm"
       # renovate: datasource=npm depName=wrangler
       wrangler-version: "4.95.0"
       artifact-path: "."
