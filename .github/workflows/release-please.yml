@@ -102,6 +102,11 @@ jobs:
         with:
           app-id: ${{ inputs.app-id }}
           private-key: ${{ secrets.app-private-key }}
+          # Scope the minted token to only the permissions release-please
+          # needs, instead of inheriting the App installation's blanket
+          # permissions.
+          permission-contents: write
+          permission-pull-requests: write
 
       - name: Run release-please
         id: release-please
