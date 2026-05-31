@@ -139,7 +139,7 @@ secrets fail production Cloudflare deploys and skip preview-only deploys.
 | Input                          | Description                                                                           |
 | ------------------------------ | ------------------------------------------------------------------------------------- |
 | `node-version`                 | **Required.** Node.js version to install.                                             |
-| `node-cache`                   | Package manager cache for test and production jobs. Default: `npm`.                   |
+| `node-cache`                   | Package manager cache for test and production jobs. Default: empty (disabled).        |
 | `wrangler-version`             | **Required.** Wrangler version to install for previews; inputs cannot be conditional. |
 | `production-branch`            | Branch that deploys to production. Default: `main`.                                   |
 | `artifact-path`                | Directory uploaded to Pages. Default: `.`.                                            |
@@ -181,7 +181,6 @@ jobs:
     with:
       # renovate: datasource=node-version depName=node
       node-version: "24"
-      node-cache: "npm"
       # renovate: datasource=npm depName=wrangler
       wrangler-version: "3"
       test-setup-command: npx playwright install webkit --with-deps

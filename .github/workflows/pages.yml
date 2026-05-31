@@ -12,7 +12,7 @@ on:
         description: "Package manager cache for setup-node; use empty to disable"
         required: false
         type: string
-        default: "npm"
+        default: ""
       wrangler-version:
         description: "Wrangler version to install for Cloudflare Pages previews"
         required: true
