@@ -84,10 +84,17 @@ jobs:
       pr-url: ${{ steps.open-pr.outputs.pr-url }}
     steps:
       - name: Checkout code
+        # zizmor: ignore[artipacked]
+        # Persisted credentials are required: the `actions/open-pr`
+        # step below invokes `git push` which relies on the bearer
+        # token that `actions/checkout` writes into the remote URL.
+        # The caller-supplied `refresh-command` runs in this same job
+        # and could in theory exfiltrate the token, but the caller
+        # also controls the workflow that wires this input — so the
+        # trust boundary is the same as for any caller-owned step.
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
-          persist-credentials: false
 
       - name: Run vendored-file refresher
         env:

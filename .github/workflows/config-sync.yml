@@ -42,9 +42,15 @@ jobs:
       pull-requests: write
     steps:
       - name: Checkout calling repository
+        # zizmor: ignore[artipacked]
+        # Persisted credentials are required: the `actions/open-pr` step
+        # below invokes `git push` which relies on the bearer token that
+        # `actions/checkout` writes into the remote URL. Setting
+        # `persist-credentials: false` here breaks PR creation without
+        # offering meaningful isolation, since this job never executes
+        # content fetched from the central repo (it only reads files
+        # from `.config-sync-source/` to copy them).
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
       - name: Checkout central config source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
