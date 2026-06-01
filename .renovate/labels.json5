@@ -37,5 +37,14 @@
       matchManagers: ["mise"],
       addLabels: ["renovate/mise"],
     },
+    {
+      matchManagers: ["ansible-galaxy"],
+      addLabels: ["renovate/ansible"],
+    },
+    {
+      description: "Label major updates as requiring manual review/merge",
+      matchUpdateTypes: ["major"],
+      addLabels: ["merge: manual"],
+    },
   ],
 }

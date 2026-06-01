@@ -14,6 +14,8 @@
   color: "027fa0"
 - name: renovate/mise
   color: "027fa0"
+- name: renovate/ansible
+  color: "027fa0"
 
 # Semantic Types
 - name: type/digest

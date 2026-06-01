@@ -1,103 +1,13 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
   packageRules: [
-    // --- GitHub Actions ---
+    // Auto-merge every non-major update (pin/pinDigest/digest/minor/patch).
+    // Risk is covered by the global minimumReleaseAge soak time in base.json5
+    // plus required status checks; major updates are left for manual review.
+    // See docs/design-decisions/0004-automerge-non-major-after-soak.md.
     {
-      description: "Auto-merge GitHub Actions (pin/pinDigest/minor/patch) — SHA pinning + soak time covers supply-chain risk regardless of publisher",
-      matchManagers: ["github-actions"],
-      matchUpdateTypes: ["pin", "pinDigest", "minor", "patch"],
-      automerge: true,
-      automergeType: "pr",
-      platformAutomerge: true,
-      commitMessageSuffix: "[automerge]",
-      addLabels: ["merge: auto"],
-    },
-
-    // --- Docker / container images ---
-    {
-      description: "Auto-merge Docker image minor/patch via PR",
-      matchDatasources: ["docker"],
-      matchUpdateTypes: ["minor", "patch"],
-      matchCurrentVersion: "!/^0\\./",
-      automerge: true,
-      automergeType: "pr",
-      platformAutomerge: true,
-      commitMessageSuffix: "[automerge]",
-      addLabels: ["merge: auto"],
-    },
-
-    // --- GitHub releases (mise tools, etc.) ---
-    {
-      description: "Auto-merge GitHub releases minor/patch via PR",
-      matchDatasources: ["github-releases"],
-      matchUpdateTypes: ["minor", "patch"],
-      matchCurrentVersion: "!/^0\\./",
-      automerge: true,
-      automergeType: "pr",
-      platformAutomerge: true,
-      commitMessageSuffix: "[automerge]",
-      addLabels: ["merge: auto"],
-    },
-
-    // --- Mise tool manager ---
-    {
-      description: "Auto-merge mise tool minor/patch via PR",
-      matchManagers: ["mise"],
-      matchUpdateTypes: ["minor", "patch"],
-      matchCurrentVersion: "!/^0\\./",
-      automerge: true,
-      automergeType: "pr",
-      platformAutomerge: true,
-      commitMessageSuffix: "[automerge]",
-      addLabels: ["merge: auto"],
-    },
-
-    // --- npm ---
-    {
-      description: "Auto-merge npm minor/patch via PR",
-      matchManagers: ["npm"],
-      matchUpdateTypes: ["minor", "patch"],
-      matchCurrentVersion: "!/^0\\./",
-      automerge: true,
-      automergeType: "pr",
-      platformAutomerge: true,
-      commitMessageSuffix: "[automerge]",
-      addLabels: ["merge: auto"],
-    },
-
-    // --- pip ---
-    {
-      description: "Auto-merge pip minor/patch via PR",
-      matchManagers: ["pip_requirements", "pip-compile", "pipenv", "poetry", "setup-cfg"],
-      matchUpdateTypes: ["minor", "patch"],
-      matchCurrentVersion: "!/^0\\./",
-      automerge: true,
-      automergeType: "pr",
-      platformAutomerge: true,
-      commitMessageSuffix: "[automerge]",
-      addLabels: ["merge: auto"],
-    },
-
-    // --- Go modules ---
-    {
-      description: "Auto-merge gomod minor/patch via PR",
-      matchManagers: ["gomod"],
-      matchUpdateTypes: ["minor", "patch"],
-      matchCurrentVersion: "!/^0\\./",
-      automerge: true,
-      automergeType: "pr",
-      platformAutomerge: true,
-      commitMessageSuffix: "[automerge]",
-      addLabels: ["merge: auto"],
-    },
-
-    // --- DevSecNinja devcontainer images (digest) ---
-    {
-      description: "Auto-merge DevSecNinja devcontainer digest updates — internal images, no wait time needed",
-      matchManagers: ["devcontainer"],
-      matchDatasources: ["docker"],
-      matchPackageNames: ["/^ghcr\\.io\\/devsecninja\\//"],
-      matchUpdateTypes: ["digest"],
+      description: "Auto-merge non-major updates (pin/pinDigest/digest/minor/patch) via PR — soak time + passing checks cover the risk; major requires manual review",
+      matchUpdateTypes: ["pin", "pinDigest", "digest", "minor", "patch"],
       automerge: true,
       automergeType: "pr",
       platformAutomerge: true,

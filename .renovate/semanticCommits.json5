@@ -48,5 +48,10 @@
       semanticCommitScope: "gomod",
       commitMessageTopic: "module {{depName}}",
     },
+    {
+      matchManagers: ["ansible-galaxy"],
+      semanticCommitScope: "ansible",
+      commitMessageTopic: "{{depName}}",
+    },
   ],
 }

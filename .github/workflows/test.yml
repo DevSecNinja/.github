@@ -1,0 +1,31 @@
+---
+name: Test
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  renovate-presets:
+    name: Renovate preset checks
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Install mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        with:
+          install: true
+          # renovate: datasource=github-releases depName=jdx/mise
+          version: "2026.5.5"
+
+      - name: Verify custom-manager governance coverage
+        run: mise run test
