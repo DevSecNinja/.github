@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.1](https://github.com/DevSecNinja/.github/compare/v1.6.0...v1.6.1) (2026-06-01)
+
+
+### Bug Fixes
+
+* **workflows:** restore persisted creds on caller checkout for open-pr ([#147](https://github.com/DevSecNinja/.github/issues/147)) ([2ffca5f](https://github.com/DevSecNinja/.github/commit/2ffca5f2e99b94982c70da6571e3a1983e6d1b74))
+
 ## [1.6.0](https://github.com/DevSecNinja/.github/compare/v1.5.0...v1.6.0) (2026-06-01)
 
 
