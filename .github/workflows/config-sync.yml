@@ -3,8 +3,13 @@ name: Reusable — Config Sync
 
 # Pull-based config sync: each repo calls this workflow to pull the
 # latest config files from the public DevSecNinja/.github repo and open
-# a PR if anything changed. Only requires the default GITHUB_TOKEN (no
-# PAT needed).
+# a PR if anything changed.
+#
+# Auth model: the calling workflow MUST pass the credentials of a
+# GitHub App (default: the "DevSecNinja Repo Manager" App) via the
+# `secrets:` block. The reusable workflow mints a short-lived (1h)
+# installation token at job start and uses it for all push/PR-create
+# calls. Rationale + setup steps: docs/repo-manager-app.md.
 #
 # Source layout mirrors target layout: anything under
 # `config-sync/files/` in the central repo is synced (overwriting) to
@@ -30,6 +35,18 @@ on:
         required: false
         type: string
         default: main
+    secrets:
+      app-id:
+        description: |
+          App ID of the GitHub App used to authenticate pushes and PR
+          creation. Stored per repo as `REPO_MANAGER_APP_ID`.
+        required: true
+      private-key:
+        description: |
+          PEM-encoded private key of the same GitHub App. Stored per
+          repo as `REPO_MANAGER_APP_PRIVATE_KEY`.
+        required: true
+
 permissions:
   contents: read
 
@@ -38,19 +55,31 @@ jobs:
     name: Sync config from central repo
     runs-on: ubuntu-24.04
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
     steps:
+      - name: Mint App installation token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.app-id }}
+          private-key: ${{ secrets.private-key }}
+          # Narrow the installation token below the App's blanket
+          # permissions: this workflow only ever pushes a branch,
+          # opens a PR, and ensures a label exists. No account
+          # permissions, no admin, no workflows.
+          permission-contents: write
+          permission-pull-requests: write
+          permission-issues: write
+          permission-metadata: read
       - name: Checkout calling repository
         # zizmor: ignore[artipacked]
-        # Persisted credentials are required: the `actions/open-pr` step
-        # below invokes `git push` which relies on the bearer token that
-        # `actions/checkout` writes into the remote URL. Setting
-        # `persist-credentials: false` here breaks PR creation without
-        # offering meaningful isolation, since this job never executes
-        # content fetched from the central repo (it only reads files
-        # from `.config-sync-source/` to copy them).
+        # The App token is short-lived (≤1h) and scoped per the
+        # `permission-*` inputs above. Persisting it in the local
+        # git config is required so the working branch can be
+        # pushed in `actions/open-pr` below.
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          token: ${{ steps.app-token.outputs.token }}
       - name: Checkout central config source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -162,7 +191,7 @@ jobs:
       - name: Ensure config-sync label exists
         if: steps.pull.outputs.updated == '1'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |-
           gh label create "config-sync" \
               --color "0075ca" \
@@ -177,6 +206,7 @@ jobs:
           title: 'chore: sync config files from central repo'
           commit-message: 'chore: sync config files from DevSecNinja/.github'
           labels: config-sync
+          github-token: ${{ steps.app-token.outputs.token }}
           body: |-
             Automated PR — config files pulled from
             [DevSecNinja/.github](https://github.com/DevSecNinja/.github/tree/main/config-sync)

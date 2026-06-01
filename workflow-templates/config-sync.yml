@@ -7,15 +7,21 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
+
+concurrency:
+  group: config-sync
+  cancel-in-progress: false
 
 jobs:
   sync:
-    uses: DevSecNinja/.github/.github/workflows/config-sync.yml@af5030dd0d6f61b80fe58f949c9b985d1931ddf2 # v1.3.0
+    # renovate: datasource=github-tags depName=DevSecNinja/.github
+    uses: DevSecNinja/.github/.github/workflows/config-sync.yml@8487f36bfcc8b040e5541937ba450411f6993e2b # v1.6.1
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
+    secrets:
+      app-id: ${{ secrets.REPO_MANAGER_APP_ID }}
+      private-key: ${{ secrets.REPO_MANAGER_APP_PRIVATE_KEY }}
       # Uncomment to also bootstrap template files for new repos:
       # with:
       #   sync-templates: true

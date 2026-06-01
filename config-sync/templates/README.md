@@ -4,6 +4,21 @@ The reusable workflow `.github/workflows/config-sync.yml` pulls config
 out of this directory tree. **Source layout mirrors target layout**:
 a file at `config-sync/files/<path>` is synced to `<repo>/<path>`.
 
+## Prerequisite: Repo Manager App secrets
+
+Each consumer repo must have these two secrets set:
+
+- `REPO_MANAGER_APP_ID`
+- `REPO_MANAGER_APP_PRIVATE_KEY`
+
+The reusable workflow uses them to mint a short-lived GitHub App
+installation token; pushes and PR creation happen as the
+`devsecninja-repo-manager[bot]` identity rather than via the
+account-wide `GITHUB_TOKEN`. See
+[`docs/repo-manager-app.md`](../../docs/repo-manager-app.md) for
+the one-time App setup, per-permission scoping, and rotation
+runbook.
+
 ## `config-sync/files/`
 
 Files here are **always** synced (overwriting any local changes) so

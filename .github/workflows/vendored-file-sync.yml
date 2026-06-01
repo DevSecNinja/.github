@@ -57,6 +57,17 @@ on:
         required: false
         type: boolean
         default: false
+    secrets:
+      app-id:
+        description: |
+          App ID of the GitHub App used to authenticate pushes and PR
+          creation. Stored per repo as `REPO_MANAGER_APP_ID`.
+        required: true
+      private-key:
+        description: |
+          PEM-encoded private key of the same GitHub App. Stored per
+          repo as `REPO_MANAGER_APP_PRIVATE_KEY`.
+        required: true
     outputs:
       changed:
         description: "true when the refresher left drift in the watched paths"
@@ -76,25 +87,36 @@ jobs:
     name: Refresh vendored files
     runs-on: ubuntu-24.04
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
     outputs:
       changed: ${{ steps.detect.outputs.changed }}
       pr-number: ${{ steps.open-pr.outputs.pr-number }}
       pr-url: ${{ steps.open-pr.outputs.pr-url }}
     steps:
+      - name: Mint App installation token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.app-id }}
+          private-key: ${{ secrets.private-key }}
+          # Narrow the installation token below the App's blanket
+          # permissions. This workflow pushes a branch and opens a
+          # PR; the caller-supplied refresher runs in this same job
+          # so over-broad permissions would expand its blast radius.
+          permission-contents: write
+          permission-pull-requests: write
+          permission-issues: write
+          permission-metadata: read
       - name: Checkout code
         # zizmor: ignore[artipacked]
-        # Persisted credentials are required: the `actions/open-pr`
-        # step below invokes `git push` which relies on the bearer
-        # token that `actions/checkout` writes into the remote URL.
-        # The caller-supplied `refresh-command` runs in this same job
-        # and could in theory exfiltrate the token, but the caller
-        # also controls the workflow that wires this input — so the
-        # trust boundary is the same as for any caller-owned step.
+        # The App token is short-lived (≤1h) and scoped per the
+        # `permission-*` inputs above. Persisting it in the local
+        # git config is required so `actions/open-pr` can push the
+        # working branch when `create-pr: true`.
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Run vendored-file refresher
         env:
@@ -161,3 +183,4 @@ jobs:
           labels: ${{ inputs.labels }}
           draft: ${{ inputs.draft }}
           signoff: ${{ inputs.signoff }}
+          github-token: ${{ steps.app-token.outputs.token }}
