@@ -239,6 +239,11 @@ runs:
             --json number,url \
             --jq '.[0]')
           if [ -z "${existing}" ] || [ "${existing}" = "null" ]; then
+            # Surface the most common config gotcha so the failure is
+            # self-diagnosing rather than just "exit 1".
+            if grep -qiE 'not permitted to create.*pull request|GraphQL.*pull[- ]request' /tmp/gh-pr-create.out; then
+              echo "::error::gh pr create was refused by GitHub. Enable Settings → Actions → General → Workflow permissions → 'Allow GitHub Actions to create and approve pull requests' on this repository (and on the org if it inherits from there)." >&2
+            fi
             echo "::error::gh pr create failed and no existing open PR found for ${BRANCH} -> ${BASE}." >&2
             exit 1
           fi

@@ -4,6 +4,20 @@ The reusable workflow `.github/workflows/config-sync.yml` pulls config
 out of this directory tree. **Source layout mirrors target layout**:
 a file at `config-sync/files/<path>` is synced to `<repo>/<path>`.
 
+## Repo prerequisites
+
+Before installing the caller workflow in a repo, make sure
+**Settings → Actions → General → Workflow permissions** has:
+
+- _Read and write permissions_ enabled, **and**
+- _Allow GitHub Actions to create and approve pull requests_ enabled.
+
+Without the second toggle, `gh pr create` is rejected by the API
+(`GitHub Actions is not permitted to create or approve pull requests`)
+even when the workflow itself has `pull-requests: write`. The toggle
+also exists at the org level and is inherited unless explicitly
+overridden per repo.
+
 ## `config-sync/files/`
 
 Files here are **always** synced (overwriting any local changes) so
