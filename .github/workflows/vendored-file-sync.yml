@@ -68,10 +68,16 @@ on:
         description: "Pull request URL when create-pr=true and drift was found"
         value: ${{ jobs.sync.outputs.pr-url }}
 
+permissions:
+  contents: read
+
 jobs:
   sync:
     name: Refresh vendored files
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pull-requests: write
     outputs:
       changed: ${{ steps.detect.outputs.changed }}
       pr-number: ${{ steps.open-pr.outputs.pr-number }}
@@ -81,9 +87,14 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Run vendored-file refresher
-        run: ${{ inputs.refresh-command }}
+        env:
+          REFRESH_COMMAND: ${{ inputs.refresh-command }}
+        run: |-
+          set -euo pipefail
+          bash -c "${REFRESH_COMMAND}"
 
       - name: Detect vendored-file drift
         id: detect
