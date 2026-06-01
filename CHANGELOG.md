@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.0](https://github.com/DevSecNinja/.github/compare/v1.5.0...v1.6.0) (2026-06-01)
+
+
+### Features
+
+* config sync nested codeowners ([#146](https://github.com/DevSecNinja/.github/issues/146)) ([f296be4](https://github.com/DevSecNinja/.github/commit/f296be4831868e121232ef3f381d3daf4874ad14))
+* **config-sync:** support nested paths and centrally manage CODEOWNERS ([#144](https://github.com/DevSecNinja/.github/issues/144)) ([4683261](https://github.com/DevSecNinja/.github/commit/46832610404ed21c70c2f06485306645e7d1fd3a))
+
 ## [1.5.0](https://github.com/DevSecNinja/.github/compare/v1.4.0...v1.5.0) (2026-06-01)
 
 
