@@ -31,15 +31,20 @@ on:
         type: string
         default: main
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
+
 jobs:
   sync:
     name: Sync config from central repo
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - name: Checkout calling repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: Checkout central config source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
