@@ -201,8 +201,23 @@ jobs:
 
 ### Config Sync (`config-sync.yml`)
 
-Syncs the files from `config-sync/files/` to the calling repository. Runs on a
+Syncs files from `config-sync/files/` to the calling repository. Runs on a
 weekly schedule and opens a PR when files drift.
+
+**Source layout mirrors target layout.** A file at
+`config-sync/files/<path>` is synced to `<repo>/<path>`, recursively. For
+example, `config-sync/files/.github/CODEOWNERS` lands at
+`<repo>/.github/CODEOWNERS`.
+
+**Per-repo opt-out.** List paths (one per line, repo-relative) in
+`.github/.config-sync-ignore` to skip them during sync. `#` comments and
+blank lines are allowed. The `unmanaged` repo topic remains the
+all-or-nothing escape hatch.
+
+| Input            | Description                                                           |
+| ---------------- | --------------------------------------------------------------------- |
+| `sync-templates` | Also bootstrap files from `config-sync/templates/`. Default: `false`. |
+| `central-ref`    | Git ref of `DevSecNinja/.github` to sync from. Default: `main`.       |
 
 **Example caller:**
 
@@ -422,18 +437,24 @@ These files are kept identical across all repositories. The `config-sync.yml`
 workflow opens a PR whenever a repo's copy drifts from the source. **Do not
 edit these files in individual repos** — submit a change here instead.
 
-| File                 | Purpose                          |
-| -------------------- | -------------------------------- |
-| `.editorconfig`      | Editor formatting defaults       |
-| `.gitleaks.toml`     | Gitleaks allow-list              |
-| `.markdownlint.yaml` | Markdown lint rules              |
-| `.shellcheckrc`      | ShellCheck configuration         |
-| `.yamlfmt.yaml`      | yamlfmt formatting rules         |
-| `.yamllint.yaml`     | yamllint rules                   |
-| `dprint.json`        | dprint Markdown formatter config |
-| `issue-labeler.yaml` | Issue auto-label rules           |
-| `pr-labeler.yaml`    | PR auto-label rules              |
-| `renovate.json5`     | Renovate base config reference   |
+The directory tree mirrors the layout in the calling repo: a file at
+`config-sync/files/<path>` is synced to `<repo>/<path>`. To opt a single
+repo out of a specific path, list it in `.github/.config-sync-ignore` at
+the repo root.
+
+| File                 | Purpose                                       |
+| -------------------- | --------------------------------------------- |
+| `.editorconfig`      | Editor formatting defaults                    |
+| `.github/CODEOWNERS` | Canonical CODEOWNERS (default `@DevSecNinja`) |
+| `.gitleaks.toml`     | Gitleaks allow-list                           |
+| `.markdownlint.yaml` | Markdown lint rules                           |
+| `.shellcheckrc`      | ShellCheck configuration                      |
+| `.yamlfmt.yaml`      | yamlfmt formatting rules                      |
+| `.yamllint.yaml`     | yamllint rules                                |
+| `dprint.json`        | dprint Markdown formatter config              |
+| `issue-labeler.yaml` | Issue auto-label rules                        |
+| `pr-labeler.yaml`    | PR auto-label rules                           |
+| `renovate.json5`     | Renovate base config reference                |
 
 ### Templates (`config-sync/templates/`)
 
