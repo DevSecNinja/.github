@@ -2,6 +2,48 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.0](https://github.com/DevSecNinja/.github/compare/v1.4.0...v1.5.0) (2026-06-01)
+
+
+### Features
+
+* **deps:** Update dependency wrangler ( 3.114.17 ➔ 4.92.0 ) ([#132](https://github.com/DevSecNinja/.github/issues/132)) ([459b7b5](https://github.com/DevSecNinja/.github/commit/459b7b58f6e714e2f8185f953a5647d7ffa4fd87))
+* **deps:** update dependency wrangler ( 4.92.0 ➔ 4.95.0 ) ([#135](https://github.com/DevSecNinja/.github/issues/135)) ([92f7b7a](https://github.com/DevSecNinja/.github/commit/92f7b7af0152f2955b691d4fa029f5fadb8653e0))
+* **mise:** update tool zizmor ( 1.24.1 ➔ 1.25.0 ) ([#122](https://github.com/DevSecNinja/.github/issues/122)) ([89b97e8](https://github.com/DevSecNinja/.github/commit/89b97e84b03ce33d64faec616fd322849ac5e176))
+* **pages:** support Cloudflare production deploys ([a8f6fb5](https://github.com/DevSecNinja/.github/commit/a8f6fb55948a23ca75c427a46dc00787b4bd5d70))
+* **renovate:** append `[automerge]` suffix to auto-merge PR titles ([#129](https://github.com/DevSecNinja/.github/issues/129)) ([c23a538](https://github.com/DevSecNinja/.github/commit/c23a53868e6bbfb2c703cc9bb719b48f11aa7370))
+* **renovate:** auto-merge non-major updates after soak and enforce custom-manager governance ([20c696b](https://github.com/DevSecNinja/.github/commit/20c696bbe62ff134635269fdeda5594ae10542af))
+* **renovate:** prevent lockfile refreshes not working due to minimum release age ([70e9026](https://github.com/DevSecNinja/.github/commit/70e9026ae9d819cd6bc140f7d09c58b2900135fe))
+
+
+### Bug Fixes
+
+* **ci:** disable setup-node caching by default in Pages workflow ([#139](https://github.com/DevSecNinja/.github/issues/139)) ([40674e1](https://github.com/DevSecNinja/.github/commit/40674e1dbee4b6ec84d060830ef41d7f188bb36d))
+* **ci:** scope release-please App token to least privilege ([#137](https://github.com/DevSecNinja/.github/issues/137)) ([f992e18](https://github.com/DevSecNinja/.github/commit/f992e18e529ba67c268ffd64579484a4b56126e4))
+* **github-release:** update release golangci/golangci-lint ( v2.12.1 ➔ v2.12.2 ) ([#110](https://github.com/DevSecNinja/.github/issues/110)) ([7af578a](https://github.com/DevSecNinja/.github/commit/7af578af21fcb72a2e1961dbe79628adc75e8cf0))
+* **github-release:** update release jdx/mise ( v2026.5.0 ➔ v2026.5.2 ) ([#112](https://github.com/DevSecNinja/.github/issues/112)) ([429d8e2](https://github.com/DevSecNinja/.github/commit/429d8e2096c3829bba17a8ff01b01952ffab77cc))
+* **github-release:** update release jdx/mise ( v2026.5.10 ➔ v2026.5.11 ) [automerge] ([#143](https://github.com/DevSecNinja/.github/issues/143)) ([b184c9d](https://github.com/DevSecNinja/.github/commit/b184c9d202ace5ee7036dcc5aa73ea169fe2453d))
+* **github-release:** update release jdx/mise ( v2026.5.2 ➔ v2026.5.3 ) ([#114](https://github.com/DevSecNinja/.github/issues/114)) ([21453b2](https://github.com/DevSecNinja/.github/commit/21453b27d66ce4df0154bda85b3c9b1588211302))
+* **github-release:** update release jdx/mise ( v2026.5.3 ➔ v2026.5.4 ) ([#115](https://github.com/DevSecNinja/.github/issues/115)) ([8e503a5](https://github.com/DevSecNinja/.github/commit/8e503a50bacf8bf33cb3be16d9ed5a37ec2c176f))
+* **github-release:** update release jdx/mise ( v2026.5.4 ➔ v2026.5.5 ) ([#116](https://github.com/DevSecNinja/.github/issues/116)) ([d4a7feb](https://github.com/DevSecNinja/.github/commit/d4a7febedac78532040475b493666f0fcfa3bdd1))
+* **github-release:** update release jdx/mise ( v2026.5.5 ➔ v2026.5.9 ) ([#119](https://github.com/DevSecNinja/.github/issues/119)) ([ef9510d](https://github.com/DevSecNinja/.github/commit/ef9510d367d1ef839c4232b09901be1fcd20d6c2))
+* **github-release:** update release jdx/mise ( v2026.5.9 ➔ v2026.5.10 ) [automerge] ([#134](https://github.com/DevSecNinja/.github/issues/134)) ([7900749](https://github.com/DevSecNinja/.github/commit/79007493465b163c417f1eec09a101551bfd8f73))
+* **mise:** update tool pipx:checkov ( 3.2.526 ➔ 3.2.527 ) ([#113](https://github.com/DevSecNinja/.github/issues/113)) ([276901b](https://github.com/DevSecNinja/.github/commit/276901b72cf3c1f4244ab6f7d79466c2798a5a5a))
+* **mise:** update tool pipx:checkov ( 3.2.527 ➔ 3.2.528 ) ([#117](https://github.com/DevSecNinja/.github/issues/117)) ([644da14](https://github.com/DevSecNinja/.github/commit/644da14c3536f3b64a0751cfd2c592d6dc4f1354))
+* **mise:** update tool pipx:checkov ( 3.2.528 ➔ 3.2.529 ) ([#120](https://github.com/DevSecNinja/.github/issues/120)) ([1fe6ea3](https://github.com/DevSecNinja/.github/commit/1fe6ea3edb9dd68cc471b095edb542c0f1aee993))
+* **mise:** update tool zizmor ( 1.25.0 ➔ 1.25.2 ) [automerge] ([#127](https://github.com/DevSecNinja/.github/issues/127)) ([f786192](https://github.com/DevSecNinja/.github/commit/f786192ac2b7fd5395b7744034cceacf5d20aaa9))
+* move automerge label closer to the automerge setting ([9d9d9d5](https://github.com/DevSecNinja/.github/commit/9d9d9d5ab96592ebc94ffeaa417563eabe658d84))
+* **pages:** require Cloudflare credentials for production ([827f771](https://github.com/DevSecNinja/.github/commit/827f77131e6a52e247ed5e33234eee538ff31b17))
+* **renovate:** automerge github action pin prs ([897927e](https://github.com/DevSecNinja/.github/commit/897927e847a27f8450a7817bad2afd84abd8cf73))
+* **renovate:** expand custom-managed dependencies to full version ([#141](https://github.com/DevSecNinja/.github/issues/141)) ([1c0531e](https://github.com/DevSecNinja/.github/commit/1c0531ec3a8f22cb0740de7584193aaebdf6b781))
+* **renovate:** support non-github-releases datasources in workflow custom manager ([#131](https://github.com/DevSecNinja/.github/issues/131)) ([82e0381](https://github.com/DevSecNinja/.github/commit/82e03818b7f22efbcbec58092782c691a0a0fd1b))
+* Update wrangler version to 4.92.0 ([bf64a09](https://github.com/DevSecNinja/.github/commit/bf64a09b141e6452f69515dac4366a9785020b3a))
+
+
+### Reverts
+
+* **renovate:** reverse ineffective custom.regex pin rule from [#141](https://github.com/DevSecNinja/.github/issues/141) ([#142](https://github.com/DevSecNinja/.github/issues/142)) ([40aa05b](https://github.com/DevSecNinja/.github/commit/40aa05b209811f08c51a63b61b929d11992577f3))
+
 ## [1.4.0](https://github.com/DevSecNinja/.github/compare/v1.3.0...v1.4.0) (2026-05-18)
 
 
