@@ -385,7 +385,7 @@ jobs:
           fi
 
       - name: Upload SARIF report
-        uses: github/codeql-action/upload-sarif@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4.35.5
+        uses: github/codeql-action/upload-sarif@7211b7c8077ea37d8641b6271f6a365a22a5fbfa # v4.36.0
         if: always()
         with:
           sarif_file: results_sarif.sarif
@@ -426,7 +426,7 @@ jobs:
             --output trivy.sarif . || true
 
       - name: Upload SARIF report
-        uses: github/codeql-action/upload-sarif@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4.35.5
+        uses: github/codeql-action/upload-sarif@7211b7c8077ea37d8641b6271f6a365a22a5fbfa # v4.36.0
         with:
           sarif_file: trivy.sarif
           category: trivy
@@ -455,7 +455,7 @@ jobs:
         run: mise exec -- zizmor --format sarif . > zizmor.sarif
 
       - name: Upload SARIF report
-        uses: github/codeql-action/upload-sarif@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4.35.5
+        uses: github/codeql-action/upload-sarif@7211b7c8077ea37d8641b6271f6a365a22a5fbfa # v4.36.0
         if: always()
         with:
           sarif_file: zizmor.sarif
