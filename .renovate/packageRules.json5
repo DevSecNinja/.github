@@ -22,10 +22,10 @@
       matchDatasources: ["docker"],
       matchDepTypes: ["image"],
       matchPackageNames: ["ghcr.io/devsecninja/dotfiles-devcontainer"],
+      matchUpdateTypes: ["digest"],
       automerge: true,
       automergeType: "branch",
       ignoreTests: true,
-      minimumReleaseAge: "0",
     },
     {
       description: "Disable Docker lookups for official Dev Container feature references",
