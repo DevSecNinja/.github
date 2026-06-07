@@ -578,6 +578,7 @@ can still assign Code Owners if an automerge PR cannot merge cleanly.
 | pip                               | All                                 | Current version ≥ 1.0        |
 | Go modules                        | All                                 | Current version ≥ 1.0        |
 | DevSecNinja devcontainer (digest) | `ghcr.io/devsecninja/*`             | Always (no wait time)        |
+| Dotfiles devcontainer image       | `ghcr.io/devsecninja/dotfiles-devcontainer` | Always (branch merge, no tests) |
 | Lock file maintenance             | All                                 | Always (branch merge, no PR) |
 
 **What does NOT auto-merge:**
@@ -593,6 +594,8 @@ can still assign Code Owners if an automerge PR cannot merge cleanly.
   vetting before adoption.
 - **CI must pass** — `platformAutomerge: true` uses GitHub's native
   auto-merge, which respects required status checks.
+- **Branch auto-merge exceptions** — `ghcr.io/devsecninja/dotfiles-devcontainer`
+  and lock file maintenance updates use branch automerge with `ignoreTests: true`.
 - **OSV vulnerability alerts** bypass `minimumReleaseAge` (set to `0`) so
   security fixes merge immediately.
 - **Schedule** — Renovate only runs on weekends and Fridays.
