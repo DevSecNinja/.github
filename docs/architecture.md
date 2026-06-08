@@ -568,18 +568,18 @@ can still assign Code Owners if an automerge PR cannot merge cleanly.
 
 **What auto-merges (minor + patch, via GitHub platform automerge):**
 
-| Ecosystem                         | Scope                               | Condition                    |
-| --------------------------------- | ----------------------------------- | ---------------------------- |
-| GitHub Actions                    | `actions/*`, `docker/*`, `github/*` | All versions                 |
-| Docker images                     | All                                 | Current version ≥ 1.0        |
-| GitHub releases                   | All                                 | Current version ≥ 1.0        |
-| Mise tools                        | All                                 | Current version ≥ 1.0        |
-| npm                               | All                                 | Current version ≥ 1.0        |
-| pip                               | All                                 | Current version ≥ 1.0        |
-| Go modules                        | All                                 | Current version ≥ 1.0        |
-| DevSecNinja devcontainer (digest) | `ghcr.io/devsecninja/*`             | Always (no wait time)        |
+| Ecosystem                         | Scope                                       | Condition                       |
+| --------------------------------- | ------------------------------------------- | ------------------------------- |
+| GitHub Actions                    | `actions/*`, `docker/*`, `github/*`         | All versions                    |
+| Docker images                     | All                                         | Current version ≥ 1.0           |
+| GitHub releases                   | All                                         | Current version ≥ 1.0           |
+| Mise tools                        | All                                         | Current version ≥ 1.0           |
+| npm                               | All                                         | Current version ≥ 1.0           |
+| pip                               | All                                         | Current version ≥ 1.0           |
+| Go modules                        | All                                         | Current version ≥ 1.0           |
+| DevSecNinja devcontainer (digest) | `ghcr.io/devsecninja/*`                     | Always (no wait time)           |
 | Dotfiles devcontainer image       | `ghcr.io/devsecninja/dotfiles-devcontainer` | Always (branch merge, no tests) |
-| Lock file maintenance             | All                                 | Always (branch merge, no PR) |
+| Lock file maintenance             | All                                         | Always (branch merge, no PR)    |
 
 **What does NOT auto-merge:**
 
@@ -596,9 +596,12 @@ can still assign Code Owners if an automerge PR cannot merge cleanly.
   auto-merge, which respects required status checks.
 - **Branch auto-merge exceptions** — `ghcr.io/devsecninja/dotfiles-devcontainer`
   and lock file maintenance updates use branch automerge with `ignoreTests: true`.
+  The dotfiles devcontainer rule also sets `schedule: ["at any time"]` so it
+  ignores the global schedule and can merge whenever a digest update lands.
 - **OSV vulnerability alerts** bypass `minimumReleaseAge` (set to `0`) so
   security fixes merge immediately.
-- **Schedule** — Renovate only runs on weekends and Fridays.
+- **Schedule** — Renovate only runs on weekends and Fridays, except the dotfiles
+  devcontainer image, which can merge at any time.
 - **Digest updates disabled** — prevents merging potentially hijacked tags (except
   DevSecNinja-owned devcontainer images on `ghcr.io/devsecninja/`, which are trusted
   internal images and auto-merge immediately with no wait time).

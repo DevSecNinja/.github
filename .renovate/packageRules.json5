@@ -17,7 +17,7 @@
       minimumReleaseAge: "0",
     },
     {
-      description: "Auto-merge dotfiles devcontainer image updates via branch without tests",
+      description: "Auto-merge dotfiles devcontainer image updates via branch without tests, ignoring the global schedule so they can always merge",
       matchManagers: ["devcontainer"],
       matchDatasources: ["docker"],
       matchDepTypes: ["image"],
@@ -26,6 +26,7 @@
       automerge: true,
       automergeType: "branch",
       ignoreTests: true,
+      schedule: ["at any time"],
     },
     {
       description: "Disable Docker lookups for official Dev Container feature references",
