@@ -13,6 +13,7 @@
       platformAutomerge: true,
       commitMessageSuffix: "[automerge]",
       addLabels: ["merge: auto"],
+      minimumReleaseAge: "0",
     },
   ],
 }
