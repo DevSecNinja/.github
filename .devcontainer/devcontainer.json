@@ -1,6 +1,6 @@
 {
   "name": "github",
-  "image": "ghcr.io/devsecninja/dotfiles-devcontainer:latest@sha256:32265d1527d0e432d483fe4a95be64a75eee6d865c5082615b668a1564b9a8df",
+  "image": "ghcr.io/devsecninja/dotfiles-devcontainer:latest@sha256:4c5badf73a3079f5138224d2655be70b489b73972a33f460b8f8d054e78e6db4",
   "features": {},
   "postCreateCommand": "",
   "customizations": {}
