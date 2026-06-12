@@ -23,6 +23,24 @@
       datasourceTemplate: "{{{datasource}}}",
     },
     {
+      // Container images pinned by digest in GitHub Actions workflows. Annotate
+      // the image line with a Renovate comment, e.g.:
+      //   # renovate: datasource=docker depName=mcr.microsoft.com/devcontainers/base
+      //   source: "mcr.microsoft.com/devcontainers/base:debian-12@sha256:..."
+      // The key (source:, image:, etc.) is irrelevant; both the tag and the
+      // digest are kept up to date.
+      customType: "regex",
+      description: "Process digest-pinned container images in GitHub Actions workflows",
+      managerFilePatterns: [
+        "/.github/workflows/.+\\.ya?ml$/",
+        "/workflow-templates/.+\\.ya?ml$/",
+      ],
+      matchStrings: [
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\n\\s+[\\w-]+:\\s*\"?[^\\s\"@]+:(?<currentValue>[^\\s\"@]+)@(?<currentDigest>sha256:[a-f0-9]+)\"?",
+      ],
+      datasourceTemplate: "{{{datasource}}}",
+    },
+    {
       customType: "regex",
       description: "Process min_version in .mise.toml",
       managerFilePatterns: ["/\\.mise\\.toml$/"],
