@@ -2,6 +2,7 @@
   "name": "github",
   "image": "ghcr.io/devsecninja/dotfiles-devcontainer:latest@sha256:1e2c2c6b46ead49848397e236ec1dd54f4279fafc02c3697cd4d7783c4dc0a00",
   "features": {},
-  "postCreateCommand": "",
+  "postCreateCommand": "mise trust --all --yes && mise install",
+  "remoteUser": "vscode",
   "customizations": {}
 }
