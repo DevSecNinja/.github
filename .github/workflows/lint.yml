@@ -9,9 +9,10 @@ on:
         required: true
         type: string
       golangci-lint-version:
-        description: "golangci-lint version to install"
-        required: true
+        description: "golangci-lint version to install (required only when Go linting runs)"
+        required: false
         type: string
+        default: ""
       go-version-file:
         description: "Path to the Go version file"
         required: false
@@ -264,6 +265,12 @@ jobs:
             echo "::notice::${GO_VERSION_FILE} not found; skipping Go linter"
             echo "exists=false" >> "${GITHUB_OUTPUT}"
           fi
+
+      - name: Validate golangci-lint version
+        if: ${{ steps.go-version-file.outputs.exists == 'true' && inputs.golangci-lint-version == '' }}
+        run: |-
+          echo "::error::Go linting is required (${{ inputs.go-version-file }} found) but no golangci-lint-version input was provided. Pass golangci-lint-version when calling this reusable workflow for Go repositories."
+          exit 1
 
       - name: Setup Go
         if: ${{ steps.go-version-file.outputs.exists == 'true' }}
