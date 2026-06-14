@@ -43,4 +43,9 @@
       password: "{{ secrets.MEND_DHI_PASSWORD }}",
     },
   ],
+  // Temp until this is fixed: https://github.com/renovatebot/renovate/discussions/43562#discussioncomment-17269402
+  allowedUnsafeExecutions: [
+    "gradleWrapper",
+    "mise",
+  ],
 }
