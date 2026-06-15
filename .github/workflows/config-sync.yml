@@ -171,7 +171,7 @@ jobs:
       - name: Create PR if configs changed
         if: steps.pull.outputs.updated == '1'
         # renovate: datasource=github-tags depName=DevSecNinja/.github
-        uses: DevSecNinja/.github/actions/open-pr@998ff283c3a431bbcb74421180121826cca8fdd7 # v1.4.0
+        uses: DevSecNinja/.github/actions/open-pr@8487f36bfcc8b040e5541937ba450411f6993e2b # v1.6.1
         with:
           branch: chore/config-sync
           title: 'chore: sync config files from central repo'
