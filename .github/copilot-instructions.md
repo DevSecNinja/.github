@@ -14,6 +14,7 @@
   calling repository owns the version (see
   [ADR 0001](https://github.com/DevSecNinja/.github/blob/main/docs/design-decisions/0001-reusable-workflow-version-inputs.md)).
 - **Security**: Never commit plaintext secrets. Use SOPS, Vault, or GitHub Secrets.
+- **Conventional commits**: Use conventional commits. Make sure that when a breaking change is added to a centralized component such as a new required input/parameter to a centralized workflow, it's logged as a major change. This will prevent that an automerged change by Renovate breaks a CI workflow.
 
 ## Tool Chain
 
