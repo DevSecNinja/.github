@@ -321,10 +321,10 @@ jobs:
 
           if [ -n "${EXCLUDE_PATTERN}" ]; then
             find "${repo_dir}" -name '*.sh' -not -path "${repo_dir}/${EXCLUDE_PATTERN}" -print0 |
-              (cd "${shellcheck_workdir}" && xargs -0 mise exec -- shellcheck)
+              (cd "${shellcheck_workdir}" && xargs -0 -r mise exec -- shellcheck)
           else
             find "${repo_dir}" -name '*.sh' -print0 |
-              (cd "${shellcheck_workdir}" && xargs -0 mise exec -- shellcheck)
+              (cd "${shellcheck_workdir}" && xargs -0 -r mise exec -- shellcheck)
           fi
 
   shfmt:
@@ -349,9 +349,9 @@ jobs:
           EXCLUDE_PATTERN: ${{ inputs.lint-shfmt-exclude }}
         run: |
           if [ -n "${EXCLUDE_PATTERN}" ]; then
-            find . -name '*.sh' -not -path "./${EXCLUDE_PATTERN}" -print0 | xargs -0 mise exec -- shfmt --diff
+            find . -name '*.sh' -not -path "./${EXCLUDE_PATTERN}" -print0 | xargs -0 -r mise exec -- shfmt --diff
           else
-            find . -name '*.sh' -print0 | xargs -0 mise exec -- shfmt --diff
+            find . -name '*.sh' -print0 | xargs -0 -r mise exec -- shfmt --diff
           fi
 
   checkov:
