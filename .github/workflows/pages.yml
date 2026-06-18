@@ -131,6 +131,9 @@ jobs:
     outputs:
       enabled: ${{ steps.detect.outputs.enabled }}
       project-name: ${{ steps.detect.outputs.project-name }}
+      # JSON array of production-style deploy targets ({target, environment,
+      # branch}) that should run for this event. Empty when nothing deploys.
+      targets: ${{ steps.detect.outputs.targets }}
     steps:
       - name: Detect Cloudflare secrets
         id: detect
@@ -138,8 +141,14 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_PRODUCTION: ${{ inputs.cloudflare-production }}
+          CLOUDFLARE_PRODUCTION_ON_RELEASE: ${{ inputs.cloudflare-production-on-release }}
           CLOUDFLARE_ACCEPTANCE: ${{ inputs.cloudflare-acceptance }}
           CLOUDFLARE_PREVIEW: ${{ inputs.cloudflare-preview }}
+          CLOUDFLARE_PRODUCTION_BRANCH: ${{ inputs.cloudflare-production-branch }}
+          CLOUDFLARE_ACCEPTANCE_BRANCH: ${{ inputs.cloudflare-acceptance-branch }}
+          PRODUCTION_BRANCH: ${{ inputs.production-branch }}
+          EVENT_NAME: ${{ github.event_name }}
+          GIT_REF: ${{ github.ref }}
           CONFIGURED_PROJECT_NAME: ${{ inputs.cloudflare-project-name }}
           REPOSITORY_NAME: ${{ github.event.repository.name }}
         run: |-
@@ -149,12 +158,14 @@ jobs:
 
           if [ "${CLOUDFLARE_PREVIEW}" != "true" ] && [ "${CLOUDFLARE_PRODUCTION}" != "true" ] && [ "${CLOUDFLARE_ACCEPTANCE}" != "true" ]; then
             echo "enabled=false" >>"${GITHUB_OUTPUT}"
+            echo "targets=[]" >>"${GITHUB_OUTPUT}"
             echo "Cloudflare Pages deployments are disabled by input."
             exit 0
           fi
 
           if [ -z "${CLOUDFLARE_API_TOKEN}" ] || [ -z "${CLOUDFLARE_ACCOUNT_ID}" ]; then
             echo "enabled=false" >>"${GITHUB_OUTPUT}"
+            echo "targets=[]" >>"${GITHUB_OUTPUT}"
             if [ "${CLOUDFLARE_PRODUCTION}" = "true" ] || [ "${CLOUDFLARE_ACCEPTANCE}" = "true" ]; then
               echo "::error::cloudflare-production or cloudflare-acceptance is enabled, but CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID is missing."
               exit 1
@@ -174,9 +185,45 @@ jobs:
             exit 1
           fi
 
-          echo "project-name=${project_name}" >>"${GITHUB_OUTPUT}"
-          echo "enabled=true" >>"${GITHUB_OUTPUT}"
-          echo "Cloudflare Pages deployments are configured."
+          # Work out which production-style targets deploy for this event.
+          # Pull request previews are handled by a separate job.
+          is_production_branch="false"
+          if [ "${EVENT_NAME}" != "pull_request" ] && [ "${GIT_REF}" = "refs/heads/${PRODUCTION_BRANCH}" ]; then
+            is_production_branch="true"
+          fi
+
+          deploy_production="false"
+          if [ "${CLOUDFLARE_PRODUCTION}" = "true" ]; then
+            if [ "${CLOUDFLARE_PRODUCTION_ON_RELEASE}" = "true" ]; then
+              [ "${EVENT_NAME}" = "release" ] && deploy_production="true"
+            else
+              [ "${is_production_branch}" = "true" ] && deploy_production="true"
+            fi
+          fi
+
+          deploy_acceptance="false"
+          if [ "${CLOUDFLARE_ACCEPTANCE}" = "true" ] && [ "${is_production_branch}" = "true" ]; then
+            deploy_acceptance="true"
+          fi
+
+          targets="$(
+            jq -cn \
+              --arg prod_branch "${CLOUDFLARE_PRODUCTION_BRANCH}" \
+              --arg acc_branch "${CLOUDFLARE_ACCEPTANCE_BRANCH}" \
+              --argjson prod "${deploy_production}" \
+              --argjson acc "${deploy_acceptance}" \
+              '[
+                 (if $prod then {target: "production", environment: "cloudflare-pages", branch: $prod_branch} else empty end),
+                 (if $acc then {target: "acceptance", environment: "cloudflare-pages-acceptance", branch: $acc_branch} else empty end)
+               ]'
+          )"
+
+          {
+            echo "project-name=${project_name}"
+            echo "enabled=true"
+            echo "targets=${targets}"
+          } >>"${GITHUB_OUTPUT}"
+          echo "Cloudflare Pages deployments are configured (targets: ${targets})."
 
   test:
     name: Run tests
@@ -298,29 +345,27 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
 
-  deploy-cloudflare-production:
-    name: Deploy Cloudflare production
+  deploy-cloudflare:
+    name: Deploy Cloudflare ${{ matrix.target }}
     needs:
       - detect-cloudflare
       - test
     if: >-
-      inputs.cloudflare-production &&
       needs.detect-cloudflare.outputs.enabled == 'true' &&
-      (
-        (inputs.cloudflare-production-on-release && github.event_name == 'release') ||
-        (
-          !inputs.cloudflare-production-on-release &&
-          github.event_name != 'pull_request' &&
-          github.ref == format('refs/heads/{0}', inputs.production-branch)
-        )
-      )
+      needs.detect-cloudflare.outputs.targets != '[]'
+    strategy:
+      fail-fast: false
+      # Production and acceptance share the same build and deploy steps; the
+      # detect-cloudflare job decides which targets run for this event.
+      matrix:
+        include: ${{ fromJSON(needs.detect-cloudflare.outputs.targets) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     concurrency:
-      group: cloudflare-pages-${{ github.repository }}
+      group: cloudflare-pages-${{ matrix.target }}-${{ github.repository }}
       cancel-in-progress: false
     environment:
-      name: cloudflare-pages
+      name: ${{ matrix.environment }}
       url: ${{ steps.deploy.outputs.deployment-url }}
     permissions:
       contents: read
@@ -339,7 +384,9 @@ jobs:
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: ${{ inputs.node-version }}
-          cache: ${{ inputs.node-cache }}
+          # Disable the package-manager cache on deploy jobs so a poisoned
+          # cache cannot influence the published artifact (zizmor audit).
+          package-manager-cache: false
 
       - name: Install dependencies
         if: ${{ inputs.build-command != '' && inputs.install-command != '' }}
@@ -379,85 +426,7 @@ jobs:
           command: >-
             pages deploy ${{ inputs.artifact-path }}
             --project-name=${{ needs.detect-cloudflare.outputs.project-name }}
-            --branch=${{ inputs.cloudflare-production-branch }}
-          wranglerVersion: ${{ inputs.wrangler-version }}
-
-  deploy-cloudflare-acceptance:
-    name: Deploy Cloudflare acceptance
-    needs:
-      - detect-cloudflare
-      - test
-    if: >-
-      inputs.cloudflare-acceptance &&
-      github.event_name != 'pull_request' &&
-      github.ref == format('refs/heads/{0}', inputs.production-branch) &&
-      needs.detect-cloudflare.outputs.enabled == 'true'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    concurrency:
-      group: cloudflare-pages-acceptance-${{ github.repository }}
-      cancel-in-progress: false
-    environment:
-      name: cloudflare-pages-acceptance
-      url: ${{ steps.deploy.outputs.deployment-url }}
-    permissions:
-      contents: read
-      deployments: write
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-        with:
-          persist-credentials: false
-          # Fetch tags so builds can read the release tag at HEAD
-          # (footer/version metadata). Safe when no tags exist.
-          fetch-tags: true
-
-      - name: Setup Node.js
-        if: ${{ inputs.build-command != '' }}
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        with:
-          node-version: ${{ inputs.node-version }}
-          cache: ${{ inputs.node-cache }}
-
-      - name: Install dependencies
-        if: ${{ inputs.build-command != '' && inputs.install-command != '' }}
-        env:
-          INSTALL_COMMAND: ${{ inputs.install-command }}
-        run: bash -euo pipefail -c "${INSTALL_COMMAND}"
-
-      - name: Build site
-        if: ${{ inputs.build-command != '' }}
-        env:
-          BUILD_COMMAND: ${{ inputs.build-command }}
-        run: bash -euo pipefail -c "${BUILD_COMMAND}"
-
-      - name: Run pre-deploy command
-        if: ${{ inputs.pre-deploy-command != '' }}
-        env:
-          PRE_DEPLOY_COMMAND: ${{ inputs.pre-deploy-command }}
-        run: bash -euo pipefail -c "${PRE_DEPLOY_COMMAND}"
-
-      - name: Ensure Cloudflare Pages project exists
-        uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0 # v4.0.0
-        continue-on-error: true
-        with:
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          command: >-
-            pages project create ${{ needs.detect-cloudflare.outputs.project-name }}
-            --production-branch ${{ inputs.cloudflare-production-branch }}
-          wranglerVersion: ${{ inputs.wrangler-version }}
-
-      - name: Deploy to Cloudflare Pages
-        id: deploy
-        uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0 # v4.0.0
-        with:
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          command: >-
-            pages deploy ${{ inputs.artifact-path }}
-            --project-name=${{ needs.detect-cloudflare.outputs.project-name }}
-            --branch=${{ inputs.cloudflare-acceptance-branch }}
+            --branch=${{ matrix.branch }}
           wranglerVersion: ${{ inputs.wrangler-version }}
 
   deploy-preview:
