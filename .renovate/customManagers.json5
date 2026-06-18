@@ -70,5 +70,20 @@
       depNameTemplate: "DevSecNinja/dotfiles",
       datasourceTemplate: "github-releases",
     },
+    {
+      // Track dprint WASM plugin versions in dprint config files. The plugin
+      // URL is pinned with an integrity checksum (…wasm@<sha256>); Renovate can
+      // bump the version but cannot recompute the checksum, so a plugin update
+      // PR will fail the dprint check until the hash is refreshed with
+      // `dprint config update`. That red check is the intended signal.
+      customType: "regex",
+      description: "Update dprint WASM plugin versions in dprint config files",
+      managerFilePatterns: ["/(^|/)\\.?dprint\\.jsonc?$/"],
+      matchStrings: [
+        "https://plugins\\.dprint\\.dev/(?<depName>[a-z0-9-]+?)-(?<currentValue>\\d+\\.\\d+\\.\\d+)\\.wasm",
+      ],
+      depNameTemplate: "dprint/dprint-plugin-{{{depName}}}",
+      datasourceTemplate: "github-releases",
+    },
   ],
 }

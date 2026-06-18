@@ -126,6 +126,14 @@ jobs:
           install_args: "dprint"
           version: ${{ inputs.mise-version }}
 
+      - name: Cache dprint plugins
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: ~/.cache/dprint
+          key: dprint-${{ runner.os }}-${{ hashFiles('**/dprint.json', '**/.dprint.json', '**/dprint.jsonc', '**/.dprint.jsonc') }}
+          restore-keys: |
+            dprint-${{ runner.os }}-
+
       - name: Check formatting with dprint
         env:
           CONFIG_DIR: ${{ inputs.lint-config-dir }}
