@@ -51,6 +51,12 @@
       pinDigests: false,
     },
     {
+      description: "The node-version datasource returns versions with a leading \"v\" (e.g. v24.17.0), but mise expects them without it (24.17.0). Strip the prefix so pinning .mise.toml produces valid versions.",
+      matchManagers: ["mise"],
+      matchDepNames: ["node"],
+      extractVersion: "^v?(?<version>.+)$",
+    },
+    {
       matchDatasources: ["github-releases"],
       minimumReleaseAge: "14 days",
     },
