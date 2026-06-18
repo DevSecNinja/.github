@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.7.0](https://github.com/DevSecNinja/.github/compare/v1.6.1...v1.7.0) (2026-06-18)
+
+
+### Features
+
+* **deps:** update dependency wrangler ( 4.95.0 ➔ 4.97.0 ) [automerge] ([#158](https://github.com/DevSecNinja/.github/issues/158)) ([3d14dd6](https://github.com/DevSecNinja/.github/commit/3d14dd698e29b57dd7a0623cea6aae6433d86acc))
+* **deps:** update dependency wrangler ( 4.97.0 ➔ 4.98.0 ) [automerge] ([#162](https://github.com/DevSecNinja/.github/issues/162)) ([c04ee2c](https://github.com/DevSecNinja/.github/commit/c04ee2c1334c6a9846ad87b6f82c56772fd7ca0a))
+* **deps:** update dependency wrangler ( 4.98.0 ➔ 4.100.0 ) [automerge] ([#174](https://github.com/DevSecNinja/.github/issues/174)) ([416eecb](https://github.com/DevSecNinja/.github/commit/416eecb2672f49bda501bab70cb18ba8da8cb81b))
+* **renovate:** add digest-pinned container image custom manager ([#172](https://github.com/DevSecNinja/.github/issues/172)) ([aa43930](https://github.com/DevSecNinja/.github/commit/aa43930230d408f1a80393414001cff8a6d8466e))
+* **renovate:** branch-automerge dotfiles devcontainer digest updates without tests ([#161](https://github.com/DevSecNinja/.github/issues/161)) ([5657813](https://github.com/DevSecNinja/.github/commit/56578137cb1f20e832f041a07866d7e76543f175))
+* **renovate:** merge dotfiles devcontainer digests anytime and fix dprint failure ([#164](https://github.com/DevSecNinja/.github/issues/164)) ([a0618e2](https://github.com/DevSecNinja/.github/commit/a0618e21b2f3373f69168c9fa9a0fe382e1f2935))
+
+
+### Bug Fixes
+
+* **github-release:** update mise ( v2026.5.11 ➔ v2026.5.14 ) [automerge] ([#153](https://github.com/DevSecNinja/.github/issues/153)) ([56550d3](https://github.com/DevSecNinja/.github/commit/56550d3af0675aba1747f4f47c42885b7d7ff0c4))
+* **github-release:** update mise ( v2026.5.14 ➔ v2026.5.15 ) [automerge] ([#159](https://github.com/DevSecNinja/.github/issues/159)) ([334758a](https://github.com/DevSecNinja/.github/commit/334758a71a71c9fcfbc7cfcf6a643dc07d454add))
+* **github-release:** update mise ( v2026.5.15 ➔ v2026.5.16 ) [automerge] ([#167](https://github.com/DevSecNinja/.github/issues/167)) ([7b793ad](https://github.com/DevSecNinja/.github/commit/7b793ada5b7348ca90447006d6f4493325ace6fa))
+* make go-lint version optional since we don't always lint go ([61a23c2](https://github.com/DevSecNinja/.github/commit/61a23c2b98ecf387ecd2828d26a5be89f8c39105))
+* **mise:** update tool lefthook ( 2.1.6 ➔ 2.1.8 ) [automerge] ([#154](https://github.com/DevSecNinja/.github/issues/154)) ([947b145](https://github.com/DevSecNinja/.github/commit/947b1456f750b625eac6d9f1bb8e848c9e83460b))
+* **mise:** update tool lefthook ( 2.1.8 ➔ 2.1.9 ) [automerge] ([#169](https://github.com/DevSecNinja/.github/issues/169)) ([566ce48](https://github.com/DevSecNinja/.github/commit/566ce4867ae945b215900dc72620bca8ac4acc02))
+* **mise:** update tool pipx:checkov ( 3.2.529 ➔ 3.2.530 ) [automerge] ([#168](https://github.com/DevSecNinja/.github/issues/168)) ([11841c5](https://github.com/DevSecNinja/.github/commit/11841c5bf7d1563748c0b0226a663cda5baba18c))
+* prevent shellcheck/shfmt failure when no shell scripts exist ([42655d5](https://github.com/DevSecNinja/.github/commit/42655d55283d693b9e7242cdf501ac0d7a063162))
+* **renovate:** add minimumReleaseAge 0 to autoMerge configuration ([40ac871](https://github.com/DevSecNinja/.github/commit/40ac87193708e50cec2ca48595c763378c31600c))
+* **renovate:** expand CODEOWNERS bot-bump exceptions to cover manifests ([df89220](https://github.com/DevSecNinja/.github/commit/df89220437aa52c20d5239583e509b9c01a80b65))
+* **renovate:** strip leading v from mise node version pins ([#176](https://github.com/DevSecNinja/.github/issues/176)) ([ec1a62a](https://github.com/DevSecNinja/.github/commit/ec1a62a44dde7dfb5e057b759f2618ef72a44e6f))
+* temp update base.json5 to allow unsafe executions ([652fcb3](https://github.com/DevSecNinja/.github/commit/652fcb33d2cb45cc85ce6165bca4b1ba23d49f52))
+
 ## [1.6.1](https://github.com/DevSecNinja/.github/compare/v1.6.0...v1.6.1) (2026-06-01)
 
 
