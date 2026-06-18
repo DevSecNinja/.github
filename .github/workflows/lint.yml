@@ -112,6 +112,7 @@ jobs:
     if: ${{ inputs.lint-dprint }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -122,6 +123,7 @@ jobs:
         uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
         with:
           install: true
+          install_args: "dprint"
           version: ${{ inputs.mise-version }}
 
       - name: Check formatting with dprint
@@ -142,6 +144,7 @@ jobs:
     if: ${{ inputs.lint-yamlfmt }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -152,6 +155,7 @@ jobs:
         uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
         with:
           install: true
+          install_args: "yamlfmt"
           version: ${{ inputs.mise-version }}
 
       - name: Check YAML formatting
@@ -171,6 +175,7 @@ jobs:
     if: ${{ inputs.lint-yamllint }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -181,6 +186,7 @@ jobs:
         uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
         with:
           install: true
+          install_args: "uv pipx:yamllint"
           version: ${{ inputs.mise-version }}
 
       - name: Run yamllint
@@ -200,6 +206,7 @@ jobs:
     if: ${{ inputs.lint-actionlint }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -210,6 +217,7 @@ jobs:
         uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
         with:
           install: true
+          install_args: "actionlint"
           version: ${{ inputs.mise-version }}
 
       - name: Run actionlint
@@ -220,6 +228,7 @@ jobs:
     if: ${{ inputs.lint-gitleaks }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -231,6 +240,7 @@ jobs:
         uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
         with:
           install: true
+          install_args: "gitleaks"
           version: ${{ inputs.mise-version }}
 
       - name: Run gitleaks
@@ -248,6 +258,7 @@ jobs:
     if: ${{ inputs.lint-go }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -289,6 +300,7 @@ jobs:
     if: ${{ inputs.lint-shellcheck }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -299,6 +311,7 @@ jobs:
         uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
         with:
           install: true
+          install_args: "shellcheck"
           version: ${{ inputs.mise-version }}
 
       - name: Run shellcheck
@@ -332,6 +345,7 @@ jobs:
     if: ${{ inputs.lint-shfmt }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -342,6 +356,7 @@ jobs:
         uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
         with:
           install: true
+          install_args: "shfmt"
           version: ${{ inputs.mise-version }}
 
       - name: Run shfmt
@@ -359,6 +374,7 @@ jobs:
     if: ${{ inputs.lint-checkov }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     permissions:
       contents: read
       security-events: write
@@ -372,6 +388,7 @@ jobs:
         uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
         with:
           install: true
+          install_args: "uv pipx:checkov"
           version: ${{ inputs.mise-version }}
 
       - name: Run checkov
@@ -403,6 +420,7 @@ jobs:
     if: ${{ inputs.lint-trivy }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     permissions:
       contents: read
       security-events: write
@@ -416,6 +434,7 @@ jobs:
         uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
         with:
           install: true
+          install_args: "trivy"
           version: ${{ inputs.mise-version }}
 
       - name: Run trivy
@@ -443,6 +462,7 @@ jobs:
     if: ${{ inputs.lint-zizmor }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     permissions:
       contents: read
       security-events: write
@@ -456,6 +476,7 @@ jobs:
         uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
         with:
           install: true
+          install_args: "zizmor"
           version: ${{ inputs.mise-version }}
 
       - name: Run zizmor
@@ -473,6 +494,7 @@ jobs:
     if: ${{ inputs.lint-config-drift }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
