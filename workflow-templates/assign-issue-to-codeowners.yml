@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   assign:
-    uses: DevSecNinja/.github/.github/workflows/assign-issue-to-codeowners.yml@8487f36bfcc8b040e5541937ba450411f6993e2b # v1.6.1
+    uses: DevSecNinja/.github/.github/workflows/assign-issue-to-codeowners.yml@c1725a7573e1cb5277889d925901b477ee814352 # v1.7.0
     with:
       issue-number: ${{ inputs.issue-number || 0 }}
     permissions:
