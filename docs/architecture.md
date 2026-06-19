@@ -136,6 +136,11 @@ optionally deploys same-repository pull request previews to Cloudflare Pages.
 Cloudflare jobs detect missing Cloudflare secrets before any deploy work. Missing
 secrets fail production Cloudflare deploys and skip preview-only deploys.
 
+Build, pre-deploy, and pre-preview commands run with an `APP_COMMIT_SHA`
+environment variable set to `${{ github.event.pull_request.head.sha || github.sha }}`.
+On `pull_request` events `github.sha` is the ephemeral merge commit, so builds
+should read `APP_COMMIT_SHA` to stamp the real PR head commit in previews.
+
 | Input                          | Description                                                                           |
 | ------------------------------ | ------------------------------------------------------------------------------------- |
 | `node-version`                 | **Required.** Node.js version to install.                                             |
