@@ -170,7 +170,6 @@ jobs:
               --force
       - name: Create PR if configs changed
         if: steps.pull.outputs.updated == '1'
-        # renovate: datasource=github-tags depName=DevSecNinja/.github
         uses: DevSecNinja/.github/actions/open-pr@c1725a7573e1cb5277889d925901b477ee814352 # v1.7.0
         with:
           branch: chore/config-sync
