@@ -39,6 +39,11 @@
       commitMessageTopic: "release {{depName}}",
     },
     {
+      matchDatasources: ["github-tags"],
+      semanticCommitScope: "github-tag",
+      commitMessageTopic: "tag {{depName}}",
+    },
+    {
       matchManagers: ["mise"],
       semanticCommitScope: "mise",
       commitMessageTopic: "tool {{depName}}",
