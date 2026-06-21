@@ -33,7 +33,9 @@ jobs:
       contents: write
       pull-requests: write
     with:
-      # renovate: datasource=pypi depName=apm-cli
+      # The reusable installs the apm CLI from the official aka.ms installer,
+      # which pulls the microsoft/apm GitHub release.
+      # renovate: datasource=github-releases depName=microsoft/apm
       apm-version: "0.21.0"
       app-id: ${{ vars.RELEASE_PLEASE_APP_ID }}
     secrets:
