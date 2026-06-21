@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   labeler:
-    uses: DevSecNinja/.github/.github/workflows/labeler.yml@8487f36bfcc8b040e5541937ba450411f6993e2b # v1.6.1
+    uses: DevSecNinja/.github/.github/workflows/labeler.yml@7f2abdd838a855dba31a2b2de6358529fdcef09d # v1.8.0
     permissions:
       contents: read
       pull-requests: write

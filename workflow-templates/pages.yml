@@ -23,7 +23,7 @@ permissions:
 
 jobs:
   pages:
-    uses: DevSecNinja/.github/.github/workflows/pages.yml@8487f36bfcc8b040e5541937ba450411f6993e2b # v1.6.1
+    uses: DevSecNinja/.github/.github/workflows/pages.yml@7f2abdd838a855dba31a2b2de6358529fdcef09d # v1.8.0
     permissions:
       contents: read
       deployments: write
@@ -35,7 +35,7 @@ jobs:
       # renovate: datasource=node-version depName=node
       node-version: "24"
       # renovate: datasource=npm depName=wrangler
-      wrangler-version: "4.100.0"
+      wrangler-version: "4.102.0"
       artifact-path: "."
       test-setup-command: npx playwright install webkit --with-deps
       test-command: |-

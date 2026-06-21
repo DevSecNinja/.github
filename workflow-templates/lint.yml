@@ -12,13 +12,13 @@ permissions:
 
 jobs:
   lint:
-    uses: DevSecNinja/.github/.github/workflows/lint.yml@8487f36bfcc8b040e5541937ba450411f6993e2b # v1.6.1
+    uses: DevSecNinja/.github/.github/workflows/lint.yml@7f2abdd838a855dba31a2b2de6358529fdcef09d # v1.8.0
     permissions:
       contents: read
       security-events: write
     with:
       # renovate: datasource=github-releases depName=jdx/mise
-      mise-version: "2026.5.16"
+      mise-version: "2026.6.1"
       # renovate: datasource=github-releases depName=golangci/golangci-lint
       golangci-lint-version: "v2.12.2"
       # Optional: use configs from a non-root directory.

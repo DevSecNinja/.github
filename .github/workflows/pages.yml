@@ -280,6 +280,10 @@ jobs:
       contents: read
       id-token: write
       pages: write
+    env:
+      # Real commit being built; on pull_request events github.sha is the
+      # ephemeral merge commit, so prefer the PR head SHA when present.
+      APP_COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - name: Checkout code
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -370,6 +374,10 @@ jobs:
     permissions:
       contents: read
       deployments: write
+    env:
+      # Real commit being built; on pull_request events github.sha is the
+      # ephemeral merge commit, so prefer the PR head SHA when present.
+      APP_COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - name: Checkout code
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -452,6 +460,10 @@ jobs:
       deployments: write
       issues: write
       pull-requests: write
+    env:
+      # Real commit being built; on pull_request events github.sha is the
+      # ephemeral merge commit, so prefer the PR head SHA when present.
+      APP_COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - name: Checkout code
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3

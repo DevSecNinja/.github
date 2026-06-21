@@ -160,6 +160,10 @@ secrets fail production Cloudflare deploys and skip preview-only deploys.
 | `cloudflare-project-name`          | Cloudflare Pages project; lowercase letters, numbers, and hyphens only.                         |
 | `cloudflare-production-branch`     | Cloudflare production branch. Default: `main`.                                                  |
 | `preview-comment-marker`           | Marker used to update the preview PR comment.                                                   |
+Build, pre-deploy, and pre-preview commands run with an `APP_COMMIT_SHA`
+environment variable set to `${{ github.event.pull_request.head.sha || github.sha }}`.
+On `pull_request` events `github.sha` is the ephemeral merge commit, so builds
+should read `APP_COMMIT_SHA` to stamp the real PR head commit in previews.
 
 **Example caller:**
 

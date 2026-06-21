@@ -1,0 +1,50 @@
+lockfile_version: '1'
+generated_at: '2026-06-21T14:06:51.243988+00:00'
+apm_version: 0.21.0
+dependencies:
+- repo_url: DevSecNinja/ai-toolkit
+  host: github.com
+  resolved_commit: d02062e3b60a4558ba75106b5ddda1c5e31d22f8
+  resolved_ref: v0.3.0
+  package_type: apm_package
+  deployed_files:
+  - .agents/skills/commit-and-release
+  - .agents/skills/commit-and-release/SKILL.md
+  - .github/agents/dutch-real-estate-agent.agent.md
+  - .github/instructions/devsecninja-conventions.instructions.md
+  - .github/prompts/analysis-data-analysis.prompt.md
+  - .github/prompts/coding-code-review-assistant.prompt.md
+  - .github/prompts/coding-debug-helper.prompt.md
+  - .github/prompts/home-assistant-automation-renamer.prompt.md
+  - .github/prompts/home-assistant-notification-optimizer.prompt.md
+  - .github/prompts/productivity-email-follow-up-tracker.prompt.md
+  - .github/prompts/productivity-focus-time-blocker.prompt.md
+  - .github/prompts/productivity-ooo-task-handoff-planner.prompt.md
+  - .github/prompts/productivity-outlook-inbox-zero-triage.prompt.md
+  - .github/prompts/writing-technical-documentation.prompt.md
+  deployed_file_hashes:
+    .agents/skills/commit-and-release/SKILL.md: sha256:516d74b4fa5d4bad4ed764e5cf98604d1da9802294809f424d9295a0a8dd62c3
+    .github/agents/dutch-real-estate-agent.agent.md: sha256:37a7b75908da5f55536df4c15f71f52ed7c887c29d7ed72cadd914907f362fcf
+    .github/instructions/devsecninja-conventions.instructions.md: sha256:6e3d4b911a6b96952ca8cf60e4650a43812851b86e0ee20625ac3a6193493492
+    .github/prompts/analysis-data-analysis.prompt.md: sha256:69d6937edf871d9ea7237781366b91591ecc2376e272159a2fc7de05120d6cfd
+    .github/prompts/coding-code-review-assistant.prompt.md: sha256:376f12ebda3742fe23e907f5bd5fbb22dedfe1f5e726a55c3b830d2fe0d1f535
+    .github/prompts/coding-debug-helper.prompt.md: sha256:ee870ea4e04fb6dc90529576c5b43e77a844aaef69dbf53041e090f1e72e12a0
+    .github/prompts/home-assistant-automation-renamer.prompt.md: sha256:fe65b8df8184dd21fe84e6d9b9873fa2ef407553d5f7bbe8c9ad50fb3b3bc2b2
+    .github/prompts/home-assistant-notification-optimizer.prompt.md: sha256:bef7b8a47605fd61dcdd6eb1e60b8294e9f25f5bf2a60662e1cfa7a8c7e2b64a
+    .github/prompts/productivity-email-follow-up-tracker.prompt.md: sha256:4e501fd8358ec2c23338b58869862495a4aebe71cb671c70075bf21cd7ce0a2b
+    .github/prompts/productivity-focus-time-blocker.prompt.md: sha256:97bab0bd3a275742721781d809ac0dde1ffea7e4c5295963c74512dab7a920ed
+    .github/prompts/productivity-ooo-task-handoff-planner.prompt.md: sha256:ab9b02aa560c1b57594815a69058891c3de75fbf586bcd87d4c6b15c3b0baa04
+    .github/prompts/productivity-outlook-inbox-zero-triage.prompt.md: sha256:e388bc47c03d5f0735756be485537bc53fda77d31bb4befca8ba2a19c022657e
+    .github/prompts/writing-technical-documentation.prompt.md: sha256:7d002cfe2038cdc3362fa0c519486b3e326ab2638599025652817e87ec48bb02
+  content_hash: sha256:efc1f1de490724ae95764bafd34184bcced1180feb2e1a4ba8675b5f5f2c2309
+mcp_servers:
+- io.github.github/github-mcp-server
+- microsoft-learn
+mcp_configs:
+  io.github.github/github-mcp-server:
+    name: io.github.github/github-mcp-server
+  microsoft-learn:
+    name: microsoft-learn
+    transport: http
+    registry: false
+    url: https://learn.microsoft.com/api/mcp

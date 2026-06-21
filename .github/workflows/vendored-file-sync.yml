@@ -149,8 +149,7 @@ jobs:
       - name: Open or update vendored-file sync PR
         id: open-pr
         if: ${{ inputs.create-pr && steps.detect.outputs.changed == 'true' }}
-        # renovate: datasource=github-tags depName=DevSecNinja/.github
-        uses: DevSecNinja/.github/actions/open-pr@8487f36bfcc8b040e5541937ba450411f6993e2b # v1.6.1
+        uses: DevSecNinja/.github/actions/open-pr@7f2abdd838a855dba31a2b2de6358529fdcef09d # v1.8.0
         with:
           branch: ${{ inputs.branch }}
           base: ${{ inputs.base }}
