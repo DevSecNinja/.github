@@ -79,13 +79,13 @@ comments let Renovate bump both the reusable and the `apm` CLI version.
 
 ### Optional inputs
 
-| Input           | Default          | Purpose                                                        |
-| --------------- | ---------------- | -------------------------------------------------------------- |
-| `apm-version`   | _(required)_     | `apm` CLI release to install.                                  |
-| `packages`      | _(all)_          | Space-separated package names to update; empty refreshes all.  |
-| `target-branch` | `main`           | Base branch the PR targets.                                    |
-| `pr-branch`     | `chore/apm-sync` | Working branch for the sync PR.                                |
-| `app-id`        | _(empty)_        | GitHub App ID so the PR triggers required CI.                  |
+| Input           | Default          | Purpose                                                       |
+| --------------- | ---------------- | ------------------------------------------------------------- |
+| `apm-version`   | _(required)_     | `apm` CLI release to install.                                 |
+| `packages`      | _(all)_          | Space-separated package names to update; empty refreshes all. |
+| `target-branch` | `main`           | Base branch the PR targets.                                   |
+| `pr-branch`     | `chore/apm-sync` | Working branch for the sync PR.                               |
+| `app-id`        | _(empty)_        | GitHub App ID so the PR triggers required CI.                 |
 
 ---
 
