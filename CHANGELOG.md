@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.8.0](https://github.com/DevSecNinja/.github/compare/v1.7.0...v1.8.0) (2026-06-21)
+
+
+### Features
+
+* **apm:** add reusable APM sync workflow + onboarding ([#194](https://github.com/DevSecNinja/.github/issues/194)) ([2fe813b](https://github.com/DevSecNinja/.github/commit/2fe813bc202e7626225aa998b65ecc115d1f0c1f))
+* **apm:** onboard repositority into my apm ([6d2632d](https://github.com/DevSecNinja/.github/commit/6d2632dade381193582cd23e4465c8572e86577b))
+* **deps:** update dependency wrangler ( 4.100.0 ➔ 4.101.0 ) [automerge] ([#190](https://github.com/DevSecNinja/.github/issues/190)) ([3c349e9](https://github.com/DevSecNinja/.github/commit/3c349e94af35436e9f15cd8d79aacb01a43cd90b))
+
+
+### Bug Fixes
+
+* **mise:** update tool pipx:checkov ( 3.2.530 ➔ 3.2.533 ) [automerge] ([#182](https://github.com/DevSecNinja/.github/issues/182)) ([c588e8b](https://github.com/DevSecNinja/.github/commit/c588e8b8569b741ce33837d2ea1312721c046bce))
+* **pages:** stamp real head commit on PR preview builds ([#185](https://github.com/DevSecNinja/.github/issues/185)) ([d88fa46](https://github.com/DevSecNinja/.github/commit/d88fa46e77859f6e89dba504fdecf1217463d0e6))
+
 ## [1.7.0](https://github.com/DevSecNinja/.github/compare/v1.6.1...v1.7.0) (2026-06-18)
 
 
