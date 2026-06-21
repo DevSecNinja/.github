@@ -4,7 +4,7 @@ description: APM project for .github
 author: Jean-Paul van Ravensberg
 dependencies:
   apm:
-  - DevSecNinja/ai-toolkit#v0.1.0
+  - DevSecNinja/ai-toolkit#v0.1.1
   mcp: []
 includes: auto
 scripts: {}

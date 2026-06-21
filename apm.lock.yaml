@@ -4,8 +4,8 @@ apm_version: 0.21.0
 dependencies:
 - repo_url: DevSecNinja/ai-toolkit
   host: github.com
-  resolved_commit: 4784926533e993bac86eb482211138dcdde8d977
-  resolved_ref: v0.1.0
+  resolved_commit: c58d57f907dcbbeacf152fefeaac52d1b135df69
+  resolved_ref: v0.1.1
   package_type: apm_package
   deployed_files:
   - .github/prompts/analysis-data-analysis.prompt.md
@@ -29,4 +29,4 @@ dependencies:
     .github/prompts/productivity-ooo-task-handoff-planner.prompt.md: sha256:9b4f940ae047f79eb98447ae9cc5ebb322b7e11a519a134336fcf6c9978e75db
     .github/prompts/productivity-outlook-inbox-zero-triage.prompt.md: sha256:3dd1bf8dc3c011d4b90018c7938f2040a16ae2e98e4cc3972c100fc25f07c003
     .github/prompts/writing-technical-documentation.prompt.md: sha256:5b26378be6937c81384ce9f1d1cbd93983a7b3debc0b68df988f67f7041f47e4
-  content_hash: sha256:570205cb2d60521bb26b7c1b8cfba09dc5dfd8eec357694711ab16319ca7ad5d
+  content_hash: sha256:66fe1b46f91b2bdee6404a4c21bcf6bff0343000a569dadedaae9ccfd8daad13
