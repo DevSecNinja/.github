@@ -1,0 +1,112 @@
+---
+name: APM Materialize
+
+# Renovate maintains the `owner/repo#vX.Y.Z` tag pins under dependencies.apm in
+# apm.yml (see .renovate/customManagers.json5), but it only edits the manifest
+# text — apm.lock.yaml and the deployed primitives under .github/ stay stale.
+# This workflow runs on any PR that touches apm.yml, executes `apm install` to
+# materialize the pinned version (re-resolve the lockfile + redeploy the harness
+# files), and commits the result back onto the PR branch so the bump is complete.
+#
+# Why a workflow and not a Renovate postUpgradeTask: this org uses Mend-hosted
+# Renovate, which does not run arbitrary postUpgrade commands.
+#
+# The commit is pushed with a GitHub App token so required CI re-runs on the
+# updated PR (a push with the default GITHUB_TOKEN would not retrigger it).
+
+on:
+  pull_request:
+    paths:
+      - apm.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apm-materialize-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  materialize:
+    name: Materialize APM primitives
+    runs-on: ubuntu-24.04
+    # Forks can't be pushed to; only run for same-repo PR branches (or manual).
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: write
+    steps:
+      - name: Harden runner
+        # renovate: datasource=github-tags depName=DevSecNinja/.github
+        uses: DevSecNinja/.github/actions/harden-runner@7f2abdd838a855dba31a2b2de6358529fdcef09d # v1.8.0
+
+      - name: Generate App token
+        id: app-token
+        # renovate: datasource=github-releases depName=actions/create-github-app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ vars.RELEASE_PLEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
+          permission-contents: write
+
+      - name: Checkout PR branch
+        # zizmor: ignore[artipacked]
+        # Persisted credentials are required: the final step pushes the
+        # materialized files back to the PR branch. This job runs no untrusted
+        # code — it installs the pinned apm CLI and runs `apm install` over the
+        # repo's own apm.yml.
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref }}
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Check for apm.yml
+        id: precheck
+        run: |
+          if [ ! -f apm.yml ]; then
+            echo "::notice::No apm.yml in this repo; nothing to materialize."
+            echo "skip=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "skip=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Set up Python
+        if: steps.precheck.outputs.skip != 'true'
+        uses: actions/setup-python@e348410e00f449b9e9b49e9c50d52f29a7e3650a # v6.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install apm CLI
+        if: steps.precheck.outputs.skip != 'true'
+        env:
+          # renovate: datasource=pypi depName=apm-cli
+          apm_cli_version: "0.21.0"
+        run: |
+          set -euo pipefail
+          python3 -m pip install --user "apm-cli==${apm_cli_version}"
+          echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+
+      - name: Materialize primitives (apm install)
+        if: steps.precheck.outputs.skip != 'true'
+        run: |
+          set -euo pipefail
+          apm --version
+          apm install
+
+      - name: Commit materialized files back to the PR branch
+        if: steps.precheck.outputs.skip != 'true'
+        env:
+          BRANCH: ${{ github.event.pull_request.head.ref || github.ref_name }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Already materialized — nothing to commit."
+            exit 0
+          fi
+          git commit -m "chore: materialize APM primitives for apm.yml change"
+          git push origin "HEAD:${BRANCH}"
