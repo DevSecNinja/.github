@@ -14,6 +14,7 @@ repositories.
 | Design decisions (ADRs)      | [`docs/design-decisions/`](docs/design-decisions/README.md)                    |
 | Architecture & usage guide   | [`docs/architecture.md`](docs/architecture.md)                                 |
 | Release Please onboarding    | [`docs/release-please-onboarding.md`](docs/release-please-onboarding.md)       |
+| APM Sync onboarding          | [`docs/apm-sync-onboarding.md`](docs/apm-sync-onboarding.md)                   |
 | Workflow trigger conventions | [`docs/workflow-trigger-conventions.md`](docs/workflow-trigger-conventions.md) |
 
 ## Development
