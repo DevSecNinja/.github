@@ -1,13 +1,14 @@
 lockfile_version: '1'
-generated_at: '2026-06-21T09:27:27.881582+00:00'
+generated_at: '2026-06-21T13:43:31.487649+00:00'
 apm_version: 0.21.0
 dependencies:
 - repo_url: DevSecNinja/ai-toolkit
   host: github.com
-  resolved_commit: c58d57f907dcbbeacf152fefeaac52d1b135df69
-  resolved_ref: v0.1.1
+  resolved_commit: 7a43b79695162f048cf18f662dffd43980310c63
+  resolved_ref: v0.2.0
   package_type: apm_package
   deployed_files:
+  - .github/instructions/devsecninja-conventions.instructions.md
   - .github/prompts/analysis-data-analysis.prompt.md
   - .github/prompts/coding-code-review-assistant.prompt.md
   - .github/prompts/coding-debug-helper.prompt.md
@@ -19,14 +20,15 @@ dependencies:
   - .github/prompts/productivity-outlook-inbox-zero-triage.prompt.md
   - .github/prompts/writing-technical-documentation.prompt.md
   deployed_file_hashes:
-    .github/prompts/analysis-data-analysis.prompt.md: sha256:f8abc008acce18c5fc7314e212a5bec76525e022f8125c7d83fc0654ebd9ba96
-    .github/prompts/coding-code-review-assistant.prompt.md: sha256:79cf5eba576d2f6c596211dd784396bc99c1565f156b2accdd631751a3634036
-    .github/prompts/coding-debug-helper.prompt.md: sha256:e4c9b8ede2e7870928314939b956454a5e2dec3f88867da5bd5f7d004670c6f8
-    .github/prompts/home-assistant-automation-renamer.prompt.md: sha256:dce2d61ce6aa32062f4a4547a157abcba0ee96cad1f3a90ca13a5c80f908eff9
-    .github/prompts/home-assistant-notification-optimizer.prompt.md: sha256:3109ed96a5a17fa8c8d7e7a47f35174e3769bfc0e1fac2a6fd8e008dcb52beca
-    .github/prompts/productivity-email-follow-up-tracker.prompt.md: sha256:9f81dd6c0dffce9d29cafbb2b96653aeac748813197be8b268daf5597626b9db
-    .github/prompts/productivity-focus-time-blocker.prompt.md: sha256:0fec70ae1484d72d68c1d6337f2a7f1227bb90c6a0c68ef6aad3840d1c152bd0
-    .github/prompts/productivity-ooo-task-handoff-planner.prompt.md: sha256:9b4f940ae047f79eb98447ae9cc5ebb322b7e11a519a134336fcf6c9978e75db
-    .github/prompts/productivity-outlook-inbox-zero-triage.prompt.md: sha256:3dd1bf8dc3c011d4b90018c7938f2040a16ae2e98e4cc3972c100fc25f07c003
-    .github/prompts/writing-technical-documentation.prompt.md: sha256:5b26378be6937c81384ce9f1d1cbd93983a7b3debc0b68df988f67f7041f47e4
-  content_hash: sha256:66fe1b46f91b2bdee6404a4c21bcf6bff0343000a569dadedaae9ccfd8daad13
+    .github/instructions/devsecninja-conventions.instructions.md: sha256:6e3d4b911a6b96952ca8cf60e4650a43812851b86e0ee20625ac3a6193493492
+    .github/prompts/analysis-data-analysis.prompt.md: sha256:69d6937edf871d9ea7237781366b91591ecc2376e272159a2fc7de05120d6cfd
+    .github/prompts/coding-code-review-assistant.prompt.md: sha256:376f12ebda3742fe23e907f5bd5fbb22dedfe1f5e726a55c3b830d2fe0d1f535
+    .github/prompts/coding-debug-helper.prompt.md: sha256:ee870ea4e04fb6dc90529576c5b43e77a844aaef69dbf53041e090f1e72e12a0
+    .github/prompts/home-assistant-automation-renamer.prompt.md: sha256:fe65b8df8184dd21fe84e6d9b9873fa2ef407553d5f7bbe8c9ad50fb3b3bc2b2
+    .github/prompts/home-assistant-notification-optimizer.prompt.md: sha256:bef7b8a47605fd61dcdd6eb1e60b8294e9f25f5bf2a60662e1cfa7a8c7e2b64a
+    .github/prompts/productivity-email-follow-up-tracker.prompt.md: sha256:4e501fd8358ec2c23338b58869862495a4aebe71cb671c70075bf21cd7ce0a2b
+    .github/prompts/productivity-focus-time-blocker.prompt.md: sha256:97bab0bd3a275742721781d809ac0dde1ffea7e4c5295963c74512dab7a920ed
+    .github/prompts/productivity-ooo-task-handoff-planner.prompt.md: sha256:ab9b02aa560c1b57594815a69058891c3de75fbf586bcd87d4c6b15c3b0baa04
+    .github/prompts/productivity-outlook-inbox-zero-triage.prompt.md: sha256:e388bc47c03d5f0735756be485537bc53fda77d31bb4befca8ba2a19c022657e
+    .github/prompts/writing-technical-documentation.prompt.md: sha256:7d002cfe2038cdc3362fa0c519486b3e326ab2638599025652817e87ec48bb02
+  content_hash: sha256:a7b3eb7f3f70b1f068d18fffec15d84521311753dc0260d6231acce5fef3ee81
