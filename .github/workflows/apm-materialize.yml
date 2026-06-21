@@ -3,19 +3,24 @@ name: APM Materialize
 
 # Renovate maintains the `owner/repo#vX.Y.Z` tag pins under dependencies.apm in
 # apm.yml (see .renovate/customManagers.json5), but it only edits the manifest
-# text — apm.lock.yaml and the deployed primitives under .github/ stay stale.
-# This workflow runs on any PR that touches apm.yml, executes `apm install` to
-# materialize the pinned version (re-resolve the lockfile + redeploy the harness
-# files), and commits the result back onto the PR branch so the bump is complete.
+# text — apm.lock.yaml and the deployed primitives under .github/ (and other
+# harness dirs) stay stale. This workflow materializes them.
 #
-# Why a workflow and not a Renovate postUpgradeTask: this org uses Mend-hosted
-# Renovate, which does not run arbitrary postUpgrade commands.
+# IMPORTANT — runs POST-MERGE on main, never on the PR:
+# An earlier version triggered on `pull_request` and pushed the materialized
+# files back onto the PR branch. For Renovate's own bump PRs that corrupted
+# Renovate's branch ownership — it stopped rebasing/automerging and refused to
+# autoclose superseded PRs ("branch already modified"). So instead this runs
+# AFTER apm.yml lands on main and opens a SEPARATE `chore: materialize` PR via
+# the open-pr composite. Renovate's bump PR stays pristine and merges/automerges
+# normally; this follow-up PR carries the lockfile + deployed files.
 #
-# The commit is pushed with a GitHub App token so required CI re-runs on the
-# updated PR (a push with the default GITHUB_TOKEN would not retrigger it).
+# The PR is opened with a GitHub App token so required CI fires on it.
 
 on:
-  pull_request:
+  push:
+    branches:
+      - main
     paths:
       - apm.yml
   workflow_dispatch:
@@ -24,19 +29,16 @@ permissions:
   contents: read
 
 concurrency:
-  group: apm-materialize-${{ github.event.pull_request.number || github.ref }}
+  group: apm-materialize
   cancel-in-progress: false
 
 jobs:
   materialize:
     name: Materialize APM primitives
     runs-on: ubuntu-24.04
-    # Forks can't be pushed to; only run for same-repo PR branches (or manual).
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      github.event.pull_request.head.repo.full_name == github.repository
     permissions:
       contents: write
+      pull-requests: write
     steps:
       - name: Harden runner
         # renovate: datasource=github-tags depName=DevSecNinja/.github
@@ -50,16 +52,16 @@ jobs:
           app-id: ${{ vars.RELEASE_PLEASE_APP_ID }}
           private-key: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
           permission-contents: write
+          permission-pull-requests: write
 
-      - name: Checkout PR branch
+      - name: Checkout main
         # zizmor: ignore[artipacked]
-        # Persisted credentials are required: the final step pushes the
-        # materialized files back to the PR branch. This job runs no untrusted
-        # code — it installs the pinned apm CLI and runs `apm install` over the
-        # repo's own apm.yml.
+        # Persisted credentials are required: the open-pr step below pushes the
+        # materialize branch using the token checkout writes into the remote URL.
+        # This job runs no untrusted code — it installs the pinned apm CLI and
+        # runs `apm install` over the repo's own committed apm.yml.
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
-          ref: ${{ github.event.pull_request.head.ref || github.ref }}
           token: ${{ steps.app-token.outputs.token }}
 
       - name: Check for apm.yml
@@ -90,18 +92,24 @@ jobs:
           apm --version
           apm install
 
-      - name: Commit materialized files back to the PR branch
+      - name: Open materialize PR
         if: steps.precheck.outputs.skip != 'true'
-        env:
-          BRANCH: ${{ github.event.pull_request.head.ref || github.ref_name }}
-        run: |-
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          if git diff --cached --quiet; then
-            echo "Already materialized — nothing to commit."
-            exit 0
-          fi
-          git commit -m "chore: materialize APM primitives for apm.yml change"
-          git push origin "HEAD:${BRANCH}"
+        # renovate: datasource=github-tags depName=DevSecNinja/.github
+        uses: DevSecNinja/.github/actions/open-pr@7f2abdd838a855dba31a2b2de6358529fdcef09d # v1.8.0
+        with:
+          branch: chore/apm-materialize
+          base: main
+          title: "chore: materialize APM primitives"
+          commit-message: "chore: materialize APM primitives from apm.yml"
+          labels: apm-sync
+          github-token: ${{ steps.app-token.outputs.token }}
+          # Stage the lockfile and deployed harness files. apm.yml itself is
+          # unchanged (already on main); apm_modules/ is gitignored.
+          if-no-changes: skip
+          body: |
+            Automated PR — materializes the APM primitives for the current
+            `apm.yml`. Runs `apm install` to refresh `apm.lock.yaml` and redeploy
+            the primitives into the harness directories after an `apm.yml` change
+            landed on `main` (e.g. a Renovate tag bump).
+
+            Triggered by `${{ github.workflow }}` at commit `${{ github.sha }}`.
