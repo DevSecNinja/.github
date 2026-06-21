@@ -82,6 +82,24 @@ on:
         required: false
         type: boolean
         default: false
+      cloudflare-production-on-release:
+        description: >-
+          Deploy Cloudflare production only on GitHub release events instead of
+          on every production-branch commit. The caller must also trigger the
+          workflow on the release event.
+        required: false
+        type: boolean
+        default: false
+      cloudflare-acceptance:
+        description: "Deploy an acceptance build to Cloudflare Pages on production-branch commits"
+        required: false
+        type: boolean
+        default: false
+      cloudflare-acceptance-branch:
+        description: "Cloudflare branch name used for acceptance deploys (gives a stable acceptance URL)"
+        required: false
+        type: string
+        default: "acceptance"
       cloudflare-project-name:
         description: "Cloudflare Pages project name; defaults to the repo name"
         required: false
@@ -113,6 +131,9 @@ jobs:
     outputs:
       enabled: ${{ steps.detect.outputs.enabled }}
       project-name: ${{ steps.detect.outputs.project-name }}
+      # JSON array of production-style deploy targets ({target, environment,
+      # branch}) that should run for this event. Empty when nothing deploys.
+      targets: ${{ steps.detect.outputs.targets }}
     steps:
       - name: Detect Cloudflare secrets
         id: detect
@@ -120,7 +141,14 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_PRODUCTION: ${{ inputs.cloudflare-production }}
+          CLOUDFLARE_PRODUCTION_ON_RELEASE: ${{ inputs.cloudflare-production-on-release }}
+          CLOUDFLARE_ACCEPTANCE: ${{ inputs.cloudflare-acceptance }}
           CLOUDFLARE_PREVIEW: ${{ inputs.cloudflare-preview }}
+          CLOUDFLARE_PRODUCTION_BRANCH: ${{ inputs.cloudflare-production-branch }}
+          CLOUDFLARE_ACCEPTANCE_BRANCH: ${{ inputs.cloudflare-acceptance-branch }}
+          PRODUCTION_BRANCH: ${{ inputs.production-branch }}
+          EVENT_NAME: ${{ github.event_name }}
+          GIT_REF: ${{ github.ref }}
           CONFIGURED_PROJECT_NAME: ${{ inputs.cloudflare-project-name }}
           REPOSITORY_NAME: ${{ github.event.repository.name }}
         run: |-
@@ -128,16 +156,18 @@ jobs:
 
           project_name="${CONFIGURED_PROJECT_NAME:-$REPOSITORY_NAME}"
 
-          if [ "${CLOUDFLARE_PREVIEW}" != "true" ] && [ "${CLOUDFLARE_PRODUCTION}" != "true" ]; then
+          if [ "${CLOUDFLARE_PREVIEW}" != "true" ] && [ "${CLOUDFLARE_PRODUCTION}" != "true" ] && [ "${CLOUDFLARE_ACCEPTANCE}" != "true" ]; then
             echo "enabled=false" >>"${GITHUB_OUTPUT}"
+            echo "targets=[]" >>"${GITHUB_OUTPUT}"
             echo "Cloudflare Pages deployments are disabled by input."
             exit 0
           fi
 
           if [ -z "${CLOUDFLARE_API_TOKEN}" ] || [ -z "${CLOUDFLARE_ACCOUNT_ID}" ]; then
             echo "enabled=false" >>"${GITHUB_OUTPUT}"
-            if [ "${CLOUDFLARE_PRODUCTION}" = "true" ]; then
-              echo "::error::cloudflare-production is enabled, but CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID is missing."
+            echo "targets=[]" >>"${GITHUB_OUTPUT}"
+            if [ "${CLOUDFLARE_PRODUCTION}" = "true" ] || [ "${CLOUDFLARE_ACCEPTANCE}" = "true" ]; then
+              echo "::error::cloudflare-production or cloudflare-acceptance is enabled, but CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID is missing."
               exit 1
             fi
 
@@ -155,9 +185,45 @@ jobs:
             exit 1
           fi
 
-          echo "project-name=${project_name}" >>"${GITHUB_OUTPUT}"
-          echo "enabled=true" >>"${GITHUB_OUTPUT}"
-          echo "Cloudflare Pages deployments are configured."
+          # Work out which production-style targets deploy for this event.
+          # Pull request previews are handled by a separate job.
+          is_production_branch="false"
+          if [ "${EVENT_NAME}" != "pull_request" ] && [ "${GIT_REF}" = "refs/heads/${PRODUCTION_BRANCH}" ]; then
+            is_production_branch="true"
+          fi
+
+          deploy_production="false"
+          if [ "${CLOUDFLARE_PRODUCTION}" = "true" ]; then
+            if [ "${CLOUDFLARE_PRODUCTION_ON_RELEASE}" = "true" ]; then
+              [ "${EVENT_NAME}" = "release" ] && deploy_production="true"
+            else
+              [ "${is_production_branch}" = "true" ] && deploy_production="true"
+            fi
+          fi
+
+          deploy_acceptance="false"
+          if [ "${CLOUDFLARE_ACCEPTANCE}" = "true" ] && [ "${is_production_branch}" = "true" ]; then
+            deploy_acceptance="true"
+          fi
+
+          targets="$(
+            jq -cn \
+              --arg prod_branch "${CLOUDFLARE_PRODUCTION_BRANCH}" \
+              --arg acc_branch "${CLOUDFLARE_ACCEPTANCE_BRANCH}" \
+              --argjson prod "${deploy_production}" \
+              --argjson acc "${deploy_acceptance}" \
+              '[
+                 (if $prod then {target: "production", environment: "cloudflare-pages", branch: $prod_branch} else empty end),
+                 (if $acc then {target: "acceptance", environment: "cloudflare-pages-acceptance", branch: $acc_branch} else empty end)
+               ]'
+          )"
+
+          {
+            echo "project-name=${project_name}"
+            echo "enabled=true"
+            echo "targets=${targets}"
+          } >>"${GITHUB_OUTPUT}"
+          echo "Cloudflare Pages deployments are configured (targets: ${targets})."
 
   test:
     name: Run tests
@@ -287,23 +353,27 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
 
-  deploy-cloudflare-production:
-    name: Deploy Cloudflare production
+  deploy-cloudflare:
+    name: Deploy Cloudflare ${{ matrix.target }}
     needs:
       - detect-cloudflare
       - test
     if: >-
-      inputs.cloudflare-production &&
-      github.event_name != 'pull_request' &&
-      github.ref == format('refs/heads/{0}', inputs.production-branch) &&
-      needs.detect-cloudflare.outputs.enabled == 'true'
+      needs.detect-cloudflare.outputs.enabled == 'true' &&
+      needs.detect-cloudflare.outputs.targets != '[]'
+    strategy:
+      fail-fast: false
+      # Production and acceptance share the same build and deploy steps; the
+      # detect-cloudflare job decides which targets run for this event.
+      matrix:
+        include: ${{ fromJSON(needs.detect-cloudflare.outputs.targets) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     concurrency:
-      group: cloudflare-pages-${{ github.repository }}
+      group: cloudflare-pages-${{ matrix.target }}-${{ github.repository }}
       cancel-in-progress: false
     environment:
-      name: cloudflare-pages
+      name: ${{ matrix.environment }}
       url: ${{ steps.deploy.outputs.deployment-url }}
     permissions:
       contents: read
@@ -370,7 +440,7 @@ jobs:
           command: >-
             pages deploy ${{ inputs.artifact-path }}
             --project-name=${{ needs.detect-cloudflare.outputs.project-name }}
-            --branch=${{ inputs.cloudflare-production-branch }}
+            --branch=${{ matrix.branch }}
           wranglerVersion: ${{ inputs.wrangler-version }}
 
   deploy-preview:
