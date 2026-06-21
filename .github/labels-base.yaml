@@ -10,6 +10,8 @@
   color: "027fa0"
 - name: renovate/github-release
   color: "027fa0"
+- name: renovate/github-tag
+  color: "027fa0"
 - name: renovate/gomod
   color: "027fa0"
 - name: renovate/mise

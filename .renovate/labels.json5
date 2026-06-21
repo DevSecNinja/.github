@@ -30,6 +30,10 @@
       addLabels: ["renovate/github-release"],
     },
     {
+      matchDatasources: ["github-tags"],
+      addLabels: ["renovate/github-tag"],
+    },
+    {
       matchManagers: ["gomod"],
       addLabels: ["renovate/gomod"],
     },
