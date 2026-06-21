@@ -25,7 +25,7 @@ jobs:
         with:
           install: true
           # renovate: datasource=github-releases depName=jdx/mise
-          version: "2026.5.16"
+          version: "2026.6.1"
 
       - name: Verify custom-manager governance coverage
         run: mise run test
