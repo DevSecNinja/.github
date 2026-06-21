@@ -1,0 +1,10 @@
+name: .github
+version: 0.1.0
+description: APM project for .github
+author: Jean-Paul van Ravensberg
+dependencies:
+  apm:
+  - DevSecNinja/ai-toolkit#v0.1.0
+  mcp: []
+includes: auto
+scripts: {}

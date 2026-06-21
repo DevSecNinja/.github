@@ -1,0 +1,32 @@
+lockfile_version: '1'
+generated_at: '2026-06-21T09:27:27.881582+00:00'
+apm_version: 0.21.0
+dependencies:
+- repo_url: DevSecNinja/ai-toolkit
+  host: github.com
+  resolved_commit: 4784926533e993bac86eb482211138dcdde8d977
+  resolved_ref: v0.1.0
+  package_type: apm_package
+  deployed_files:
+  - .github/prompts/analysis-data-analysis.prompt.md
+  - .github/prompts/coding-code-review-assistant.prompt.md
+  - .github/prompts/coding-debug-helper.prompt.md
+  - .github/prompts/home-assistant-automation-renamer.prompt.md
+  - .github/prompts/home-assistant-notification-optimizer.prompt.md
+  - .github/prompts/productivity-email-follow-up-tracker.prompt.md
+  - .github/prompts/productivity-focus-time-blocker.prompt.md
+  - .github/prompts/productivity-ooo-task-handoff-planner.prompt.md
+  - .github/prompts/productivity-outlook-inbox-zero-triage.prompt.md
+  - .github/prompts/writing-technical-documentation.prompt.md
+  deployed_file_hashes:
+    .github/prompts/analysis-data-analysis.prompt.md: sha256:f8abc008acce18c5fc7314e212a5bec76525e022f8125c7d83fc0654ebd9ba96
+    .github/prompts/coding-code-review-assistant.prompt.md: sha256:79cf5eba576d2f6c596211dd784396bc99c1565f156b2accdd631751a3634036
+    .github/prompts/coding-debug-helper.prompt.md: sha256:e4c9b8ede2e7870928314939b956454a5e2dec3f88867da5bd5f7d004670c6f8
+    .github/prompts/home-assistant-automation-renamer.prompt.md: sha256:dce2d61ce6aa32062f4a4547a157abcba0ee96cad1f3a90ca13a5c80f908eff9
+    .github/prompts/home-assistant-notification-optimizer.prompt.md: sha256:3109ed96a5a17fa8c8d7e7a47f35174e3769bfc0e1fac2a6fd8e008dcb52beca
+    .github/prompts/productivity-email-follow-up-tracker.prompt.md: sha256:9f81dd6c0dffce9d29cafbb2b96653aeac748813197be8b268daf5597626b9db
+    .github/prompts/productivity-focus-time-blocker.prompt.md: sha256:0fec70ae1484d72d68c1d6337f2a7f1227bb90c6a0c68ef6aad3840d1c152bd0
+    .github/prompts/productivity-ooo-task-handoff-planner.prompt.md: sha256:9b4f940ae047f79eb98447ae9cc5ebb322b7e11a519a134336fcf6c9978e75db
+    .github/prompts/productivity-outlook-inbox-zero-triage.prompt.md: sha256:3dd1bf8dc3c011d4b90018c7938f2040a16ae2e98e4cc3972c100fc25f07c003
+    .github/prompts/writing-technical-documentation.prompt.md: sha256:5b26378be6937c81384ce9f1d1cbd93983a7b3debc0b68df988f67f7041f47e4
+  content_hash: sha256:570205cb2d60521bb26b7c1b8cfba09dc5dfd8eec357694711ab16319ca7ad5d
