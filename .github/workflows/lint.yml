@@ -279,8 +279,10 @@ jobs:
 
       - name: Validate golangci-lint version
         if: ${{ steps.go-version-file.outputs.exists == 'true' && inputs.golangci-lint-version == '' }}
+        env:
+          GO_VERSION_FILE: ${{ inputs.go-version-file }}
         run: |-
-          echo "::error::Go linting is required (${{ inputs.go-version-file }} found) but no golangci-lint-version input was provided. Pass golangci-lint-version when calling this reusable workflow for Go repositories."
+          echo "::error::Go linting is required (${GO_VERSION_FILE} found) but no golangci-lint-version input was provided. Pass golangci-lint-version when calling this reusable workflow for Go repositories."
           exit 1
 
       - name: Setup Go
