@@ -72,12 +72,6 @@ jobs:
             echo "skip=false" >> "${GITHUB_OUTPUT}"
           fi
 
-      - name: Set up Python
-        if: steps.precheck.outputs.skip != 'true'
-        uses: actions/setup-python@e348410e00f449b9e9b49e9c50d52f29a7e3650a # v6.0.0
-        with:
-          python-version: "3.12"
-
       - name: Install apm CLI
         if: steps.precheck.outputs.skip != 'true'
         env:
@@ -85,6 +79,7 @@ jobs:
           apm_cli_version: "0.21.0"
         run: |
           set -euo pipefail
+          # ubuntu-24.04 ships python3 + pip; install the pinned apm-cli for this user.
           python3 -m pip install --user "apm-cli==${apm_cli_version}"
           echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
 
