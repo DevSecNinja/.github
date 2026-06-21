@@ -8,6 +8,7 @@
     "apm_modules/**",
     ".github/prompts/**",
     ".github/instructions/**",
+    ".github/agents/**",
     ".github/chatmodes/**",
     ".claude/**",
     ".cursor/**",
