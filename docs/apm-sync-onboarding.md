@@ -4,7 +4,7 @@ How to keep a repo's installed [APM (Agent Package Manager)](https://microsoft.g
 primitives — prompts, instructions, agents, skills — up to date with their
 upstream packages (e.g. `DevSecNinja/ai-toolkit`).
 
-**The model: Renovate bumps the pin, a workflow materializes it.**
+**The model: Renovate bumps the pin, a post-merge workflow materializes it.**
 
 APM dependencies are pinned to an exact tag in `apm.yml`
 (`DevSecNinja/ai-toolkit#v0.1.1`). That gives reproducible installs, but it means
@@ -13,16 +13,21 @@ use the same tool that versions everything else in the org:
 
 1. **Renovate** maintains the `#vX.Y.Z` tag pin in `apm.yml` (via a custom manager
    in [`.renovate/customManagers.json5`](../.renovate/customManagers.json5)).
-   It opens a normal `v0.1.1 → v0.2.0` PR — version-aware, with the usual soak,
-   grouping, and changelog links.
-2. The [`apm-materialize.yml`](../.github/workflows/apm-materialize.yml) workflow
-   runs on that PR, executes `apm install` to re-resolve `apm.lock.yaml` and
-   redeploy the primitives into the harness directories, and commits the result
-   back onto the PR branch. You review the complete diff and merge.
+   It opens a normal `v0.1.1 → v0.2.0` PR that changes **only the manifest text**,
+   so it rebases, automerges, and autocloses like any other Renovate PR.
+2. Once that bump lands on `main`, the
+   [`apm-materialize.yml`](../.github/workflows/apm-materialize.yml) workflow runs
+   `apm install` to re-resolve `apm.lock.yaml` and redeploy the primitives, and
+   opens a **separate** `chore: materialize APM primitives` PR with the result.
 
-> Why a workflow and not a Renovate `postUpgradeTask`: this org uses **Mend-hosted
-> Renovate**, which doesn't run arbitrary postUpgrade commands. The workflow does
-> the materialization instead.
+> **Why post-merge, not on the Renovate PR:** pushing the materialized files onto
+> Renovate's own branch corrupts Renovate's branch ownership — it stops rebasing
+> and automerging the PR and refuses to autoclose it when superseded
+> ("branch already modified"). So the materialize step never touches the bump PR;
+> it runs after merge and opens its own PR.
+>
+> (A Renovate `postUpgradeTask` would fold both into one commit, but this org uses
+> **Mend-hosted Renovate**, which doesn't run arbitrary postUpgrade commands.)
 
 This is the agentic-primitive counterpart to
 [config-sync](../.github/workflows/config-sync.yml): config-sync distributes
@@ -37,7 +42,7 @@ primitives.
   commit the result:
 
   ```sh
-  apm install DevSecNinja/ai-toolkit#v0.2.0 --target copilot
+  apm install DevSecNinja/ai-toolkit#v0.3.0 --target copilot
   git add apm.yml apm.lock.yaml .github/   # plus any other harness dirs APM wrote
   git commit -m "feat: install ai-toolkit APM primitives"
   ```
@@ -46,8 +51,8 @@ primitives.
   > package cache — APM adds it to `.gitignore` on first install; don't commit it.
 
 - The `RELEASE_PLEASE_APP_ID` variable + `RELEASE_PLEASE_APP_PRIVATE_KEY` secret
-  (the same App used for release-please). The materialize workflow commits with
-  the App token so required CI re-runs on the updated PR.
+  (the same App used for release-please). The materialize workflow opens its PR
+  with the App token so required CI runs on it.
 
 - The repo extends the org Renovate presets (so it inherits the apm.yml custom
   manager):
@@ -64,57 +69,41 @@ primitives.
 
 ## Per-repo adoption
 
-Add the materialize workflow. Pin it to a release tag of `DevSecNinja/.github`.
+Copy the materialize workflow into the consuming repo and pin the action SHAs.
+The reference implementation lives in `DevSecNinja/.github` at
+[`.github/workflows/apm-materialize.yml`](../.github/workflows/apm-materialize.yml).
 
-### `.github/workflows/apm-materialize.yml`
-
-```yaml
----
-name: APM Materialize
-on:
-  pull_request:
-    paths:
-      - apm.yml
-  workflow_dispatch:
-permissions:
-  contents: read
-jobs:
-  materialize:
-    # renovate: datasource=github-tags depName=DevSecNinja/.github
-    uses: DevSecNinja/.github/.github/workflows/apm-materialize.yml@<sha> # vX.Y.Z
-    permissions:
-      contents: write
-    secrets: inherit
-```
-
-> The reference implementation currently lives as a repo-local workflow in
-> `DevSecNinja/.github` itself (it pushes back to the PR branch, so it isn't a
-> `workflow_call` reusable yet). Copy
-> [`.github/workflows/apm-materialize.yml`](../.github/workflows/apm-materialize.yml)
-> into the consuming repo and pin the action SHAs.
+It triggers on `push` to `main` (paths: `apm.yml`) plus `workflow_dispatch`, runs
+`apm install`, and opens a separate PR via the `open-pr` composite. It is not a
+`workflow_call` reusable yet (it opens a PR rather than returning outputs); if a
+second consumer adopts it, extract a reusable + config-sync template.
 
 ---
 
 ## What a run does
 
-1. Triggers on any PR that changes `apm.yml` (Renovate's bump PR, or a manual edit).
+1. Triggers **after** an `apm.yml` change lands on `main` (a merged Renovate bump,
+   or a manual edit) — or via `workflow_dispatch`.
 2. Installs the pinned `apm` CLI (`pip install apm-cli`).
 3. Runs `apm install` — re-resolves `apm.lock.yaml` to the new pin and redeploys
    the primitives into the harness directories (`.github/`, `.claude/`, …).
-4. Commits the materialized files back onto the PR branch (via the App token, so
-   CI re-runs). When nothing changed, it's a no-op.
+4. Opens a separate `chore: materialize APM primitives` PR (App token → CI runs).
+   When nothing changed, it's a no-op (no PR).
 
-You review the combined diff (pin bump + lockfile + deployed files) and merge.
+Net flow per upstream release: **Renovate bump PR** (manifest only, automerges) →
+**materialize PR** (lockfile + deployed files, you review and merge). `main` is
+briefly ahead on `apm.yml` until the materialize PR merges — harmless for
+agent-context files.
 
 ---
 
 ## Troubleshooting
 
-### The materialize commit lands but no CI runs on it
+### The materialize PR opens but no CI runs on it
 
-The push used `GITHUB_TOKEN` instead of the App. Confirm `RELEASE_PLEASE_APP_ID`
-(variable) + `RELEASE_PLEASE_APP_PRIVATE_KEY` (secret) exist and the workflow's
-App-token step is wired. Quick unblock: a human closes and reopens the PR.
+The PR was opened with `GITHUB_TOKEN` instead of the App. Confirm
+`RELEASE_PLEASE_APP_ID` (variable) + `RELEASE_PLEASE_APP_PRIVATE_KEY` (secret)
+exist and the workflow's App-token step is wired.
 
 ### Renovate isn't opening apm.yml bump PRs
 
