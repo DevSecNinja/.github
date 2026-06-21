@@ -94,7 +94,7 @@ jobs:
         if: steps.precheck.outputs.skip != 'true'
         env:
           BRANCH: ${{ github.event.pull_request.head.ref || github.ref_name }}
-        run: |
+        run: |-
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

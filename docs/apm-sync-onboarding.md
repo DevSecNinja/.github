@@ -8,7 +8,7 @@ upstream packages (e.g. `DevSecNinja/ai-toolkit`).
 
 APM dependencies are pinned to an exact tag in `apm.yml`
 (`DevSecNinja/ai-toolkit#v0.1.1`). That gives reproducible installs, but it means
-`apm update` can't advance them — it only re-resolves the *same* exact tag. So we
+`apm update` can't advance them — it only re-resolves the _same_ exact tag. So we
 use the same tool that versions everything else in the org:
 
 1. **Renovate** maintains the `#vX.Y.Z` tag pin in `apm.yml` (via a custom manager
