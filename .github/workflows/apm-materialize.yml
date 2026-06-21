@@ -106,7 +106,7 @@ jobs:
           # Stage the lockfile and deployed harness files. apm.yml itself is
           # unchanged (already on main); apm_modules/ is gitignored.
           if-no-changes: skip
-          body: |
+          body: |-
             Automated PR — materializes the APM primitives for the current
             `apm.yml`. Runs `apm install` to refresh `apm.lock.yaml` and redeploy
             the primitives into the harness directories after an `apm.yml` change
