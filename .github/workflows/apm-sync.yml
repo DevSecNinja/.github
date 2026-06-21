@@ -102,6 +102,14 @@ jobs:
           permission-pull-requests: write
 
       - name: Checkout calling repository
+        # zizmor: ignore[artipacked]
+        # Persisted credentials are required: the `actions/open-pr` step below
+        # invokes `git push --force-with-lease`, which relies on the bearer
+        # token that `actions/checkout` writes into the remote URL. Setting
+        # `persist-credentials: false` here breaks PR creation without offering
+        # meaningful isolation — this job runs no untrusted code (it only
+        # installs the pinned apm CLI and runs `apm update` over the repo's own
+        # committed apm.yml/apm.lock.yaml).
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           token: ${{ steps.app-token.outputs.token || github.token }}
