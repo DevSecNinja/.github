@@ -122,7 +122,6 @@ concurrency:
   cancel-in-progress: false
 jobs:
   release-please:
-    # renovate: datasource=github-tags depName=DevSecNinja/.github
     uses: DevSecNinja/.github/.github/workflows/release-please.yml@<sha> # vX.Y.Z
     permissions:
       contents: write
@@ -134,7 +133,11 @@ jobs:
 ```
 
 Pin `<sha>` to a release-tagged commit of `DevSecNinja/.github`. The
-`# renovate:` comment lets Renovate auto-bump it when new tags ship.
+`# vX.Y.Z` version comment on the `uses:` line is all Renovate needs:
+its GitHub Actions manager tracks reusable-workflow callers natively and
+auto-bumps both the pinned SHA and the comment when new tags ship. No
+separate `# renovate:` annotation is required (and adding one is dropped
+on the next bump).
 
 #### `release-please-config.json`
 
