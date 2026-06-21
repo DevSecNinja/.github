@@ -1,0 +1,160 @@
+---
+name: Reusable — APM Sync
+
+# Refreshes installed APM (Agent Package Manager) primitives in the calling
+# repo and opens a PR when anything changed — the agentic-primitive equivalent
+# of the config-sync workflow (which only handles static config files).
+#
+# What it does on each run:
+#   1. Installs a pinned `apm` CLI.
+#   2. Runs `apm update --yes`, which re-resolves every dependency in apm.yml to
+#      its latest matching Git ref, rewrites apm.lock.yaml, and redeploys the
+#      compiled primitives into the harness directories (.github/, .claude/, …).
+#   3. Opens (or force-updates) a PR with the result, via the central
+#      actions/open-pr composite. Branch protection is fully respected — the bot
+#      opens a PR and a human (or auto-merge with required checks) merges it.
+#
+# Prerequisite: the calling repo must already depend on at least one APM package
+# (run `apm install <owner>/<repo>` once and commit apm.yml + apm.lock.yaml). If
+# apm.yml is absent the job is a no-op.
+#
+# Authentication: open-pr defaults to GITHUB_TOKEN. Pushes made with
+# GITHUB_TOKEN do NOT retrigger workflows on the opened PR (GitHub design), so
+# under branch protection required checks won't run automatically. Pass `app-id`
+# + `app-private-key` to open the PR via a GitHub App identity so required CI
+# fires — same pattern as the release-please reusable.
+#
+# See also: DevSecNinja/.github docs/apm-sync-onboarding.md
+
+on:
+  workflow_call:
+    inputs:
+      apm-version:
+        description: |
+          Version of the `apm` CLI to install (e.g. v0.13.0). Required — the
+          caller owns the version (see ADR 0001). Accepts `vX.Y.Z` or `X.Y.Z`.
+        required: true
+        type: string
+      packages:
+        description: |
+          Optional space-separated list of package names to update (e.g.
+          "DevSecNinja/ai-toolkit"). When empty, every dependency in apm.yml is
+          refreshed.
+        required: false
+        type: string
+        default: ""
+      target-branch:
+        description: "Base branch the PR targets (defaults to main)."
+        required: false
+        type: string
+        default: main
+      pr-branch:
+        description: "Working branch the sync PR is pushed to."
+        required: false
+        type: string
+        default: chore/apm-sync
+      app-id:
+        description: |
+          GitHub App ID used to open the PR so required CI fires on it. When
+          unset, falls back to GITHUB_TOKEN (PR opens but won't retrigger CI).
+        required: false
+        type: string
+        default: ""
+    secrets:
+      app-private-key:
+        description: "PEM contents of the GitHub App private key, paired with app-id."
+        required: false
+    outputs:
+      changed:
+        description: "`true` when the sync produced changes and a PR was opened/updated."
+        value: ${{ jobs.apm-sync.outputs.changed }}
+      pr-url:
+        description: "URL of the PR that was opened or reused, if any."
+        value: ${{ jobs.apm-sync.outputs.pr-url }}
+
+permissions:
+  contents: read
+
+jobs:
+  apm-sync:
+    name: Sync APM primitives
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      changed: ${{ steps.open-pr.outputs.changed }}
+      pr-url: ${{ steps.open-pr.outputs.pr-url }}
+    steps:
+      - name: Harden runner
+        # renovate: datasource=github-tags depName=DevSecNinja/.github
+        uses: DevSecNinja/.github/actions/harden-runner@c1725a7573e1cb5277889d925901b477ee814352 # v1.7.0
+
+      - name: Generate App token
+        id: app-token
+        if: inputs.app-id != ''
+        # renovate: datasource=github-releases depName=actions/create-github-app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ inputs.app-id }}
+          private-key: ${{ secrets.app-private-key }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Checkout calling repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          token: ${{ steps.app-token.outputs.token || github.token }}
+
+      - name: Check for apm.yml
+        id: precheck
+        run: |
+          if [ ! -f apm.yml ]; then
+            echo "::notice::No apm.yml in this repo; nothing to sync."
+            echo "skip=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "skip=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Install apm CLI
+        if: steps.precheck.outputs.skip != 'true'
+        env:
+          VERSION: ${{ inputs.apm-version }}
+          APM_INSTALL_DIR: ${{ runner.temp }}/apm/bin
+          APM_LIB_DIR: ${{ runner.temp }}/apm/lib/apm
+        run: |
+          set -euo pipefail
+          curl -sSL https://aka.ms/apm-unix | sh
+          echo "${APM_INSTALL_DIR}" >> "${GITHUB_PATH}"
+
+      - name: Refresh APM primitives
+        if: steps.precheck.outputs.skip != 'true'
+        env:
+          PACKAGES: ${{ inputs.packages }}
+        run: |
+          set -euo pipefail
+          apm --version
+          # shellcheck disable=SC2086 # PACKAGES is an intentional arg list.
+          apm update --yes ${PACKAGES}
+
+      - name: Open sync PR
+        id: open-pr
+        if: steps.precheck.outputs.skip != 'true'
+        # renovate: datasource=github-tags depName=DevSecNinja/.github
+        uses: DevSecNinja/.github/actions/open-pr@c1725a7573e1cb5277889d925901b477ee814352 # v1.7.0
+        with:
+          branch: ${{ inputs.pr-branch }}
+          base: ${{ inputs.target-branch }}
+          title: "chore: sync APM primitives"
+          commit-message: "chore: sync APM primitives from upstream packages"
+          labels: apm-sync
+          github-token: ${{ steps.app-token.outputs.token || github.token }}
+          body: |
+            Automated PR — refreshed APM primitives via `apm update`.
+
+            Installed primitives were re-resolved to the latest matching refs of
+            the packages in `apm.yml` and redeployed into the harness
+            directories. Review the diff and merge to adopt.
+
+            Triggered by `${{ github.workflow }}` on `${{ github.ref_name }}`
+            at commit `${{ github.sha }}`.
