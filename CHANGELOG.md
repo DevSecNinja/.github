@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0](https://github.com/DevSecNinja/.github/compare/v1.9.0...v2.0.0) (2026-06-23)
+
+
+### ⚠ BREAKING CHANGES
+
+* **pages:** require artifact-path input ([#207](https://github.com/DevSecNinja/.github/issues/207))
+
+### Features
+
+* **pages:** require artifact-path input ([#207](https://github.com/DevSecNinja/.github/issues/207)) ([6197650](https://github.com/DevSecNinja/.github/commit/6197650cb86e334c7fbd1f8c49239474a4449ec7))
+
 ## [1.9.0](https://github.com/DevSecNinja/.github/compare/v1.8.0...v1.9.0) (2026-06-23)
 
 
