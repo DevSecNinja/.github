@@ -37,9 +37,8 @@ on:
         default: true
       artifact-path:
         description: "Path uploaded to GitHub Pages or Cloudflare Pages"
-        required: false
+        required: true
         type: string
-        default: "."
       install-command:
         description: "Dependency installation command"
         required: false
