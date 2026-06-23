@@ -69,5 +69,10 @@
       versioning: "regex:^(version)(?<compatibility>.*?)-(?<major>v?\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)[\\.-]*r?(?<build>\\d+)*-*r?(?<release>\\w+)|^latest*",
       matchPackageNames: ["/^lscr\\.io\\/linuxserver\\//"],
     },
+    {
+      description: "Group .chezmoiversion and .mise.toml chezmoi pin updates into one PR so both files are always updated atomically and CI stays green.",
+      groupName: "chezmoi",
+      matchDepNames: ["twpayne/chezmoi", "chezmoi"],
+    },
   ],
 }
