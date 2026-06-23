@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.9.0](https://github.com/DevSecNinja/.github/compare/v1.8.0...v1.9.0) (2026-06-23)
+
+
+### Features
+
+* **apm:** activate apm-sync on the .github consumer ([#195](https://github.com/DevSecNinja/.github/issues/195)) ([ec157a4](https://github.com/DevSecNinja/.github/commit/ec157a4b34198865e139caa58a9552ed645e5400))
+* **deps:** update dependency wrangler ( 4.101.0 ➔ 4.102.0 ) [automerge] ([#203](https://github.com/DevSecNinja/.github/issues/203)) ([d00a875](https://github.com/DevSecNinja/.github/commit/d00a8753dda4d80dece76e47b96009df9e2378a7))
+* **github-release:** update mise ( v2026.5.16 ➔ v2026.6.1 ) [automerge] ([#187](https://github.com/DevSecNinja/.github/issues/187)) ([0486962](https://github.com/DevSecNinja/.github/commit/04869625dbbbed485ecee01622c196140162faa7))
+* **labels:** add apm-sync base label for materialize PRs ([#205](https://github.com/DevSecNinja/.github/issues/205)) ([13bbc73](https://github.com/DevSecNinja/.github/commit/13bbc73faf011796addeeceaa4d73281c8b0f399))
+* **mise:** update tool trivy ( 0.70.0 ➔ 0.71.0 ) [automerge] ([#189](https://github.com/DevSecNinja/.github/issues/189)) ([38532b6](https://github.com/DevSecNinja/.github/commit/38532b6ef72ab400109bfd1359b10880bd4a3309))
+* **pages:** add Cloudflare acceptance deploy and release-gated production ([#181](https://github.com/DevSecNinja/.github/issues/181)) ([da8af05](https://github.com/DevSecNinja/.github/commit/da8af05e48d6940336264dd025a3fb2811c57384))
+* **pages:** make node-version and wrangler-version optional ([#206](https://github.com/DevSecNinja/.github/issues/206)) ([3fdcae5](https://github.com/DevSecNinja/.github/commit/3fdcae5460d36c23f1f21e604cb16b0cc2220838))
+
+
+### Bug Fixes
+
+* **apm:** maintain ai-toolkit pin via Renovate + materialize workflow ([#199](https://github.com/DevSecNinja/.github/issues/199)) ([5f9bb48](https://github.com/DevSecNinja/.github/commit/5f9bb48c8f05d5acf2a76ee4caedb2f22da388b7))
+* **apm:** materialize post-merge in a separate PR, not on the Renovate branch ([#202](https://github.com/DevSecNinja/.github/issues/202)) ([fbc6913](https://github.com/DevSecNinja/.github/commit/fbc6913410b11a28741d6621f6ccd5545853a21e))
+* **ci:** resolve zizmor template-injection, artipacked, and cache-poisoning alerts ([#204](https://github.com/DevSecNinja/.github/issues/204)) ([8a5b1ee](https://github.com/DevSecNinja/.github/commit/8a5b1ee8d2617a58b4ada10217da9833204f3b8c))
+
 ## [1.8.0](https://github.com/DevSecNinja/.github/compare/v1.7.0...v1.8.0) (2026-06-21)
 
 
