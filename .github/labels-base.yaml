@@ -46,6 +46,9 @@
   description: Release Please — release tagged
 - name: config-sync
   color: "0075ca"
+- name: apm-sync
+  color: "0075ca"
+  description: Automated APM materialize PR
 - name: todo-to-issue
   color: "0075ca"
 
