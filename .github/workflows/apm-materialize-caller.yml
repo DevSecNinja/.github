@@ -1,0 +1,38 @@
+---
+name: APM Materialize
+
+# Materializes this repo's APM primitives after an apm.yml change lands on main
+# (e.g. a Renovate tag bump), via the central reusable. Opens a separate
+# `chore: materialize` PR with the refreshed lockfile + deployed primitives.
+#
+# Onboarding guide: docs/apm-sync-onboarding.md
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - apm.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apm-materialize
+  cancel-in-progress: false
+
+jobs:
+  materialize:
+    # Self-reference: same repo, pinned to the SHA that introduced the reusable.
+    # Re-pin to the next vX.Y.Z tag once cut.
+    uses: DevSecNinja/.github/.github/workflows/apm-materialize.yml@e4d59a2d16de7704b5d837d0ed35bc992cf2958f # main
+    permissions:
+      contents: write
+      pull-requests: write
+    with:
+      # renovate: datasource=pypi depName=apm-cli
+      apm-cli-version: "0.21.0"
+      app-id: ${{ vars.RELEASE_PLEASE_APP_ID }}
+    secrets:
+      app-private-key: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
