@@ -69,14 +69,43 @@ primitives.
 
 ## Per-repo adoption
 
-Copy the materialize workflow into the consuming repo and pin the action SHAs.
-The reference implementation lives in `DevSecNinja/.github` at
-[`.github/workflows/apm-materialize.yml`](../.github/workflows/apm-materialize.yml).
+Add a thin caller workflow that invokes the central `apm-materialize` reusable on
+pushes to `main` that touch `apm.yml`. Pin it to a release tag of
+`DevSecNinja/.github`.
 
-It triggers on `push` to `main` (paths: `apm.yml`) plus `workflow_dispatch`, runs
-`apm install`, and opens a separate PR via the `open-pr` composite. It is not a
-`workflow_call` reusable yet (it opens a PR rather than returning outputs); if a
-second consumer adopts it, extract a reusable + config-sync template.
+### `.github/workflows/apm-materialize.yml`
+
+```yaml
+---
+name: APM Materialize
+on:
+  push:
+    branches: [main]
+    paths:
+      - apm.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: apm-materialize
+  cancel-in-progress: false
+jobs:
+  materialize:
+    # renovate: datasource=github-tags depName=DevSecNinja/.github
+    uses: DevSecNinja/.github/.github/workflows/apm-materialize.yml@<sha> # vX.Y.Z
+    permissions:
+      contents: write
+      pull-requests: write
+    with:
+      # renovate: datasource=pypi depName=apm-cli
+      apm-cli-version: "0.21.0"
+      app-id: ${{ vars.RELEASE_PLEASE_APP_ID }}
+    secrets:
+      app-private-key: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
+```
+
+Pin `<sha>` to a release-tagged commit of `DevSecNinja/.github`; the `# renovate:`
+comments let Renovate bump both the reusable and the `apm` CLI version.
 
 ---
 
