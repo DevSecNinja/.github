@@ -65,8 +65,7 @@ jobs:
           done
 
           if [ -z "${config_files}" ]; then
-              echo "::error::No label config files found (looked for" \
-                  "'${BASE_LABELS_FILE}' and '${LABELS_FILE}')"
+              echo "::error::No label config files found (looked for '${BASE_LABELS_FILE}' and '${LABELS_FILE}')"
               exit 1
           fi
 
