@@ -12,6 +12,7 @@ that `DevSecNinja/.github` is the single source of truth. Examples:
 - `dprint.json` → `<repo>/dprint.json`
 - `renovate.json5` → `<repo>/renovate.json5`
 - `.github/CODEOWNERS` → `<repo>/.github/CODEOWNERS`
+- `.github/labels-base.yaml` → `<repo>/.github/labels-base.yaml`
 
 To opt a single repo out of a specific path, list it in
 `.github/.config-sync-ignore` at the repo root. One path per line,

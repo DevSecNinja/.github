@@ -14,12 +14,12 @@ repositories use it.
 │   ├── ISSUE_TEMPLATE/
 │   ├── PULL_REQUEST_TEMPLATE.md
 │   ├── SECURITY.md
-│   ├── copilot-instructions.md   # Org-wide Copilot coding standards
-│   └── labels-base.yaml          # Base label set synced to all repos
+│   └── copilot-instructions.md   # Org-wide Copilot coding standards
 ├── .renovate/              # Renovate shared preset fragments
 ├── actions/                # Composite actions (run inside the caller's job)
 ├── config-sync/
 │   ├── files/              # Files auto-synced to every repo (read-only)
+│   │   └── .github/labels-base.yaml  # Base label set synced to all repos
 │   └── templates/          # Starting-point files — copy & adapt per repo
 ├── docs/
 │   └── design-decisions/   # Architecture Decision Records (ADRs)
@@ -528,19 +528,20 @@ The directory tree mirrors the layout in the calling repo: a file at
 repo out of a specific path, list it in `.github/.config-sync-ignore` at
 the repo root.
 
-| File                 | Purpose                                       |
-| -------------------- | --------------------------------------------- |
-| `.editorconfig`      | Editor formatting defaults                    |
-| `.github/CODEOWNERS` | Canonical CODEOWNERS (default `@DevSecNinja`) |
-| `.gitleaks.toml`     | Gitleaks allow-list                           |
-| `.markdownlint.yaml` | Markdown lint rules                           |
-| `.shellcheckrc`      | ShellCheck configuration                      |
-| `.yamlfmt.yaml`      | yamlfmt formatting rules                      |
-| `.yamllint.yaml`     | yamllint rules                                |
-| `dprint.json`        | dprint Markdown formatter config              |
-| `issue-labeler.yaml` | Issue auto-label rules                        |
-| `pr-labeler.yaml`    | PR auto-label rules                           |
-| `renovate.json5`     | Renovate base config reference                |
+| File                       | Purpose                                       |
+| -------------------------- | --------------------------------------------- |
+| `.editorconfig`            | Editor formatting defaults                    |
+| `.github/CODEOWNERS`       | Canonical CODEOWNERS (default `@DevSecNinja`) |
+| `.github/labels-base.yaml` | Base label set synced to all repos            |
+| `.gitleaks.toml`           | Gitleaks allow-list                           |
+| `.markdownlint.yaml`       | Markdown lint rules                           |
+| `.shellcheckrc`            | ShellCheck configuration                      |
+| `.yamlfmt.yaml`            | yamlfmt formatting rules                      |
+| `.yamllint.yaml`           | yamllint rules                                |
+| `dprint.json`              | dprint Markdown formatter config              |
+| `issue-labeler.yaml`       | Issue auto-label rules                        |
+| `pr-labeler.yaml`          | PR auto-label rules                           |
+| `renovate.json5`           | Renovate base config reference                |
 
 ### Templates (`config-sync/templates/`)
 
