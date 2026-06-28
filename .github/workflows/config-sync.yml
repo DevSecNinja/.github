@@ -170,7 +170,7 @@ jobs:
               --force
       - name: Create PR if configs changed
         if: steps.pull.outputs.updated == '1'
-        uses: DevSecNinja/.github/actions/open-pr@7f2abdd838a855dba31a2b2de6358529fdcef09d # v1.8.0
+        uses: DevSecNinja/.github/actions/open-pr@27fd66740c629ea38380dcd3bf93e7bc74c54247 # v1.9.0
         with:
           branch: chore/config-sync
           title: 'chore: sync config files from central repo'
