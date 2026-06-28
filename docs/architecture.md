@@ -320,8 +320,18 @@ jobs:
 
 ### Label Sync (`label-sync.yml`)
 
-Syncs the repository's `.github/labels.yaml` (merged with the org base labels)
-to the actual GitHub labels on the repo.
+Syncs the repository's labels to the actual GitHub labels on the repo. By
+default it merges the org-wide base label set
+(`.github/labels-base.yaml`, kept current by config-sync) with the
+repository's own `.github/labels.yaml`. Either file is optional —
+whichever exist are merged, and with `delete-other-labels` (default
+`true`) any label not present in the union is removed.
+
+| Input                 | Description                                                       |
+| --------------------- | ----------------------------------------------------------------- |
+| `base-labels-file`    | Shared base labels file. Default: `.github/labels-base.yaml`.     |
+| `labels-file`         | Repo-specific labels file. Default: `.github/labels.yaml`.        |
+| `delete-other-labels` | Delete labels not present in the config file(s). Default: `true`. |
 
 **Example caller:**
 

@@ -21,4 +21,4 @@ jobs:
       contents: read
       issues: write
     with:
-      labels-file: config-sync/files/.github/labels-base.yaml
+      base-labels-file: config-sync/files/.github/labels-base.yaml
