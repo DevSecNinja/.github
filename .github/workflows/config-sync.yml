@@ -169,7 +169,7 @@ jobs:
               --color "0075ca" \
               --description "Automated config sync PR" \
               --force; then
-            echo "::warning::Could not create config-sync label (check issues:write permission). The PR will be created without it."
+            echo "::warning::Could not create/update config-sync label (transient error or org policy). The PR will be created without it."
           fi
       - name: Create PR if configs changed
         if: steps.pull.outputs.updated == '1'
