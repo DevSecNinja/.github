@@ -39,6 +39,7 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: write
+      issues: write
       pull-requests: write
     steps:
       - name: Checkout calling repository
@@ -164,10 +165,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |-
-          gh label create "config-sync" \
+          if ! gh label create "config-sync" \
               --color "0075ca" \
               --description "Automated config sync PR" \
-              --force
+              --force; then
+            echo "::warning::Could not create/update config-sync label (transient error or org policy). The PR will be created without it."
+          fi
       - name: Create PR if configs changed
         if: steps.pull.outputs.updated == '1'
         uses: DevSecNinja/.github/actions/open-pr@27fd66740c629ea38380dcd3bf93e7bc74c54247 # v1.9.0
