@@ -7,7 +7,7 @@ on:
     branches:
       - main
     paths:
-      - .github/labels-base.yaml
+      - config-sync/files/.github/labels-base.yaml
   schedule:
     - cron: "0 0 * * *"
 
@@ -21,4 +21,4 @@ jobs:
       contents: read
       issues: write
     with:
-      labels-file: .github/labels-base.yaml
+      base-labels-file: config-sync/files/.github/labels-base.yaml

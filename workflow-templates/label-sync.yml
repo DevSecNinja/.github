@@ -8,6 +8,7 @@ on:
       - $default-branch
     paths:
       - .github/labels.yaml
+      - .github/labels-base.yaml
   schedule:
     - cron: "0 0 * * *"
 

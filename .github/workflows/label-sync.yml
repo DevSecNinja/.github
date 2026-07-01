@@ -1,16 +1,27 @@
 ---
 name: Reusable — Label Sync
 
+# Syncs GitHub labels from one or more YAML config files. By default it
+# merges the org-wide base label set (`.github/labels-base.yaml`, kept in
+# sync by config-sync) with the repository's own `.github/labels.yaml`.
+# Either file is optional: whichever files exist are merged, and with
+# `delete-other-labels: true` any label not present in the union is removed.
+
 on:
   workflow_call:
     inputs:
       labels-file:
-        description: "Path to labels YAML config file"
+        description: "Path to the repository-specific labels YAML config file"
         required: false
         type: string
         default: ".github/labels.yaml"
+      base-labels-file:
+        description: "Path to the shared base labels YAML config file (synced from DevSecNinja/.github)"
+        required: false
+        type: string
+        default: ".github/labels-base.yaml"
       delete-other-labels:
-        description: "Delete labels not present in the config file"
+        description: "Delete labels not present in the config file(s)"
         required: false
         type: boolean
         default: true
@@ -30,11 +41,43 @@ jobs:
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
-          sparse-checkout: ${{ inputs.labels-file }}
+          sparse-checkout: |
+            ${{ inputs.base-labels-file }}
+            ${{ inputs.labels-file }}
+
+      - name: Resolve label config files
+        id: resolve
+        env:
+          BASE_LABELS_FILE: ${{ inputs.base-labels-file }}
+          LABELS_FILE: ${{ inputs.labels-file }}
+        run: |-
+          set -euo pipefail
+
+          config_files=""
+          for file in "${BASE_LABELS_FILE}" "${LABELS_FILE}"; do
+              [ -z "${file}" ] && continue
+              if [ -f "${file}" ]; then
+                  echo "  ✓ including ${file}"
+                  config_files="${config_files}${file}"$'\n'
+              else
+                  echo "  ⊘ skipping ${file} (not found)"
+              fi
+          done
+
+          if [ -z "${config_files}" ]; then
+              echo "::error::No label config files found (looked for '${BASE_LABELS_FILE}' and '${LABELS_FILE}')"
+              exit 1
+          fi
+
+          {
+              echo "config-files<<EOF"
+              printf '%s' "${config_files}"
+              echo "EOF"
+          } >> "${GITHUB_OUTPUT}"
 
       - name: Sync Labels
         uses: EndBug/label-sync@52074158190acb45f3077f9099fea818aa43f97a # v2.3.3
         with:
-          config-file: ${{ inputs.labels-file }}
+          config-file: ${{ steps.resolve.outputs.config-files }}
           delete-other-labels: ${{ inputs.delete-other-labels }}
           token: ${{ secrets.GITHUB_TOKEN }}

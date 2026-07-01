@@ -14,12 +14,12 @@ repositories use it.
 │   ├── ISSUE_TEMPLATE/
 │   ├── PULL_REQUEST_TEMPLATE.md
 │   ├── SECURITY.md
-│   ├── copilot-instructions.md   # Org-wide Copilot coding standards
-│   └── labels-base.yaml          # Base label set synced to all repos
+│   └── copilot-instructions.md   # Org-wide Copilot coding standards
 ├── .renovate/              # Renovate shared preset fragments
 ├── actions/                # Composite actions (run inside the caller's job)
 ├── config-sync/
 │   ├── files/              # Files auto-synced to every repo (read-only)
+│   │   └── .github/labels-base.yaml  # Base label set synced to all repos
 │   └── templates/          # Starting-point files — copy & adapt per repo
 ├── docs/
 │   └── design-decisions/   # Architecture Decision Records (ADRs)
@@ -320,8 +320,18 @@ jobs:
 
 ### Label Sync (`label-sync.yml`)
 
-Syncs the repository's `.github/labels.yaml` (merged with the org base labels)
-to the actual GitHub labels on the repo.
+Syncs the repository's labels to the actual GitHub labels on the repo. By
+default it merges the org-wide base label set
+(`.github/labels-base.yaml`, kept current by config-sync) with the
+repository's own `.github/labels.yaml`. Either file is optional —
+whichever exist are merged, and with `delete-other-labels` (default
+`true`) any label not present in the union is removed.
+
+| Input                 | Description                                                       |
+| --------------------- | ----------------------------------------------------------------- |
+| `base-labels-file`    | Shared base labels file. Default: `.github/labels-base.yaml`.     |
+| `labels-file`         | Repo-specific labels file. Default: `.github/labels.yaml`.        |
+| `delete-other-labels` | Delete labels not present in the config file(s). Default: `true`. |
 
 **Example caller:**
 
@@ -528,19 +538,20 @@ The directory tree mirrors the layout in the calling repo: a file at
 repo out of a specific path, list it in `.github/.config-sync-ignore` at
 the repo root.
 
-| File                 | Purpose                                       |
-| -------------------- | --------------------------------------------- |
-| `.editorconfig`      | Editor formatting defaults                    |
-| `.github/CODEOWNERS` | Canonical CODEOWNERS (default `@DevSecNinja`) |
-| `.gitleaks.toml`     | Gitleaks allow-list                           |
-| `.markdownlint.yaml` | Markdown lint rules                           |
-| `.shellcheckrc`      | ShellCheck configuration                      |
-| `.yamlfmt.yaml`      | yamlfmt formatting rules                      |
-| `.yamllint.yaml`     | yamllint rules                                |
-| `dprint.json`        | dprint Markdown formatter config              |
-| `issue-labeler.yaml` | Issue auto-label rules                        |
-| `pr-labeler.yaml`    | PR auto-label rules                           |
-| `renovate.json5`     | Renovate base config reference                |
+| File                       | Purpose                                       |
+| -------------------------- | --------------------------------------------- |
+| `.editorconfig`            | Editor formatting defaults                    |
+| `.github/CODEOWNERS`       | Canonical CODEOWNERS (default `@DevSecNinja`) |
+| `.github/labels-base.yaml` | Base label set synced to all repos            |
+| `.gitleaks.toml`           | Gitleaks allow-list                           |
+| `.markdownlint.yaml`       | Markdown lint rules                           |
+| `.shellcheckrc`            | ShellCheck configuration                      |
+| `.yamlfmt.yaml`            | yamlfmt formatting rules                      |
+| `.yamllint.yaml`           | yamllint rules                                |
+| `dprint.json`              | dprint Markdown formatter config              |
+| `issue-labeler.yaml`       | Issue auto-label rules                        |
+| `pr-labeler.yaml`          | PR auto-label rules                           |
+| `renovate.json5`           | Renovate base config reference                |
 
 ### Templates (`config-sync/templates/`)
 
