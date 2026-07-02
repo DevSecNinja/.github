@@ -17,18 +17,6 @@
       minimumReleaseAge: "0",
     },
     {
-      description: "Auto-merge dotfiles devcontainer image updates via branch without tests, ignoring the global schedule so they can always merge",
-      matchManagers: ["devcontainer"],
-      matchDatasources: ["docker"],
-      matchDepTypes: ["image"],
-      matchPackageNames: ["ghcr.io/devsecninja/dotfiles-devcontainer"],
-      matchUpdateTypes: ["digest"],
-      automerge: true,
-      automergeType: "branch",
-      ignoreTests: true,
-      schedule: ["at any time"],
-    },
-    {
       description: "Disable Docker lookups for official Dev Container feature references",
       matchManagers: ["devcontainer"],
       matchDatasources: ["docker"],
@@ -63,6 +51,19 @@
     {
       matchDatasources: ["docker"],
       minimumReleaseAge: "14 days",
+    },
+    {
+      description: "Auto-merge dotfiles devcontainer image digest, patch, and minor updates via branch without tests, ignoring the global schedule and release-age soak so they can always merge. Placed after the generic docker minimumReleaseAge rule so its minimumReleaseAge:0 wins. Major bumps are intentionally excluded and left for manual review.",
+      matchManagers: ["devcontainer"],
+      matchDatasources: ["docker"],
+      matchDepTypes: ["image"],
+      matchPackageNames: ["ghcr.io/devsecninja/dotfiles-devcontainer"],
+      matchUpdateTypes: ["digest", "patch", "minor"],
+      automerge: true,
+      automergeType: "branch",
+      ignoreTests: true,
+      minimumReleaseAge: "0",
+      schedule: ["at any time"],
     },
     {
       description: "Use custom versioning for linuxserver images",
