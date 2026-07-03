@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.0](https://github.com/DevSecNinja/.github/compare/v2.0.0...v2.1.0) (2026-07-03)
+
+
+### Features
+
+* **deps:** update dependency apm-cli ( 0.21.0 ➔ 0.22.0 ) [automerge] ([#214](https://github.com/DevSecNinja/.github/issues/214)) ([a9c7e67](https://github.com/DevSecNinja/.github/commit/a9c7e6701d1da32a05c9718d1a4a1610bb1a70b5))
+* **deps:** update dependency apm-cli ( 0.22.0 ➔ 0.23.1 ) [automerge] ([#236](https://github.com/DevSecNinja/.github/issues/236)) ([1c2c307](https://github.com/DevSecNinja/.github/commit/1c2c307bf27ea3df1700f080d564aec9f8f124d1))
+* **deps:** update dependency wrangler ( 4.102.0 ➔ 4.105.0 ) [automerge] ([#213](https://github.com/DevSecNinja/.github/issues/213)) ([0ea0bbe](https://github.com/DevSecNinja/.github/commit/0ea0bbe63654e04dedd544b2803578d255da85bb))
+* **github-tag:** update tag devsecninja/ai-toolkit ( v0.3.0 ➔ v0.6.2 ) [automerge] ([#215](https://github.com/DevSecNinja/.github/issues/215)) ([2cac081](https://github.com/DevSecNinja/.github/commit/2cac08183aa57fefc1a0a687e1a4a8b8916ee481))
+* **github-tag:** update tag devsecninja/ai-toolkit ( v0.6.2 ➔ v0.7.0 ) [automerge] ([#237](https://github.com/DevSecNinja/.github/issues/237)) ([46e0c28](https://github.com/DevSecNinja/.github/commit/46e0c28e0e04c23c1985fb0064a88d6a677d6263))
+* **mise:** update tool pipx:checkov ( 3.2.533 ➔ 3.3.1 ) [automerge] ([#217](https://github.com/DevSecNinja/.github/issues/217)) ([7bbbe00](https://github.com/DevSecNinja/.github/commit/7bbbe00c8e86fa69123d4947e25a96d641cb06f9))
+* **sync:** distribute and consume labels-base.yaml via config-sync ([#223](https://github.com/DevSecNinja/.github/issues/223)) ([f219d42](https://github.com/DevSecNinja/.github/commit/f219d4217f2055f44506306bfc397b18f0c3ade0))
+
+
+### Bug Fixes
+
+* **ci:** config-sync only fails when pipeline fails, not when changes detected ([#225](https://github.com/DevSecNinja/.github/issues/225)) ([1b46a68](https://github.com/DevSecNinja/.github/commit/1b46a688747352ecd4851336a58da307b23066b0))
+* fetch materialize branch in workflow ([de33b8c](https://github.com/DevSecNinja/.github/commit/de33b8cad9375ebeb34e57b2b4d283ee049764f6))
+* **github-release:** update release jdx/mise ( v2026.6.1 ➔ v2026.6.3 ) [automerge] ([#210](https://github.com/DevSecNinja/.github/issues/210)) ([88053b4](https://github.com/DevSecNinja/.github/commit/88053b4c46435fc5e758103910dcaf08d762f989))
+* **github-release:** update release jdx/mise ( v2026.6.3 ➔ v2026.6.4 ) [automerge] ([#218](https://github.com/DevSecNinja/.github/issues/218)) ([c91478b](https://github.com/DevSecNinja/.github/commit/c91478b32676e1b347e96afe319cda88078f4662))
+* **github-release:** update release jdx/mise ( v2026.6.4 ➔ v2026.6.5 ) [automerge] ([#219](https://github.com/DevSecNinja/.github/issues/219)) ([f3539ca](https://github.com/DevSecNinja/.github/commit/f3539ca7107cb66c051e8c31905ec003e62364fb))
+* **github-release:** update release jdx/mise ( v2026.6.5 ➔ v2026.6.6 ) [automerge] ([#220](https://github.com/DevSecNinja/.github/issues/220)) ([65b20fe](https://github.com/DevSecNinja/.github/commit/65b20feed043bc2c4bff07845b8e57fe7240aa9b))
+* **github-release:** update release jdx/mise ( v2026.6.6 ➔ v2026.6.9 ) [automerge] ([#221](https://github.com/DevSecNinja/.github/issues/221)) ([df6f420](https://github.com/DevSecNinja/.github/commit/df6f420c7987f86f2593b24cdef521925b97c9a5))
+* **github-release:** update release jdx/mise ( v2026.6.9 ➔ v2026.6.11 ) [automerge] ([#232](https://github.com/DevSecNinja/.github/issues/232)) ([63e120b](https://github.com/DevSecNinja/.github/commit/63e120b29c51906836558fcb953a5bff2ebbda9b))
+* **lint:** install caller-pinned mise tools; friendly error when a tool isn't pinned ([#239](https://github.com/DevSecNinja/.github/issues/239)) ([56235e1](https://github.com/DevSecNinja/.github/commit/56235e16683e74b5a826c4656be6953dd798d4a4))
+* **mise:** update tool trivy ( 0.71.0 ➔ 0.71.2 ) [automerge] ([#233](https://github.com/DevSecNinja/.github/issues/233)) ([2636596](https://github.com/DevSecNinja/.github/commit/2636596da4b010c75caa39c5f82a87228a209994))
+* **mise:** update tool uv ( 0.11.21 ➔ 0.11.22 ) [automerge] ([#234](https://github.com/DevSecNinja/.github/issues/234)) ([f5fb5c7](https://github.com/DevSecNinja/.github/commit/f5fb5c752e5bc82b03fef619c57152c37afdd869))
+
 ## [2.0.0](https://github.com/DevSecNinja/.github/compare/v1.9.0...v2.0.0) (2026-06-23)
 
 
