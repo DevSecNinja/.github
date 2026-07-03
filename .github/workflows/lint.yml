@@ -366,8 +366,8 @@ jobs:
             echo "::error::No mise config found. Add a Renovate-managed mise.toml (or .mise.toml) that pins your lint tools."
             exit 1
           fi
-          if ! mise which shellcheck) >/dev/null 2>&1; then
-            echo "::error::'shellcheck)' is not pinned in this repository's mise config. Add it (Renovate-managed), e.g. 'mise use shellcheck)@<version>', so this lint job can run it."
+          if ! mise which shellcheck >/dev/null 2>&1; then
+            echo "::error::'shellcheck' is not pinned in this repository's mise config. Add it (Renovate-managed), e.g. 'mise use shellcheck@<version>', so this lint job can run it."
             exit 1
           fi
           repo_dir="${GITHUB_WORKSPACE:-$PWD}"
