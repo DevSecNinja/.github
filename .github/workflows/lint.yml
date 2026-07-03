@@ -132,7 +132,7 @@ jobs:
           # Lint tool versions are owned by the consuming repo: pinned and
           # Renovate-managed in its mise config. Fail early with guidance when
           # the tool this job needs is missing, rather than a cryptic mise error.
-          if ! ls mise.toml .mise.toml .config/mise/config.toml .config/mise.toml >/dev/null 2>&1; then
+          if [ ! -f mise.toml ] && [ ! -f .mise.toml ] && [ ! -f .config/mise/config.toml ] && [ ! -f .config/mise.toml ]; then
             echo "::error::No mise config found. Add a Renovate-managed mise.toml (or .mise.toml) that pins your lint tools."
             exit 1
           fi
@@ -174,7 +174,7 @@ jobs:
           # Lint tool versions are owned by the consuming repo: pinned and
           # Renovate-managed in its mise config. Fail early with guidance when
           # the tool this job needs is missing, rather than a cryptic mise error.
-          if ! ls mise.toml .mise.toml .config/mise/config.toml .config/mise.toml >/dev/null 2>&1; then
+          if [ ! -f mise.toml ] && [ ! -f .mise.toml ] && [ ! -f .config/mise/config.toml ] && [ ! -f .config/mise.toml ]; then
             echo "::error::No mise config found. Add a Renovate-managed mise.toml (or .mise.toml) that pins your lint tools."
             exit 1
           fi
@@ -215,7 +215,7 @@ jobs:
           # Lint tool versions are owned by the consuming repo: pinned and
           # Renovate-managed in its mise config. Fail early with guidance when
           # the tool this job needs is missing, rather than a cryptic mise error.
-          if ! ls mise.toml .mise.toml .config/mise/config.toml .config/mise.toml >/dev/null 2>&1; then
+          if [ ! -f mise.toml ] && [ ! -f .mise.toml ] && [ ! -f .config/mise/config.toml ] && [ ! -f .config/mise.toml ]; then
             echo "::error::No mise config found. Add a Renovate-managed mise.toml (or .mise.toml) that pins your lint tools."
             exit 1
           fi
@@ -278,7 +278,7 @@ jobs:
           # Lint tool versions are owned by the consuming repo: pinned and
           # Renovate-managed in its mise config. Fail early with guidance when
           # the tool this job needs is missing, rather than a cryptic mise error.
-          if ! ls mise.toml .mise.toml .config/mise/config.toml .config/mise.toml >/dev/null 2>&1; then
+          if [ ! -f mise.toml ] && [ ! -f .mise.toml ] && [ ! -f .config/mise/config.toml ] && [ ! -f .config/mise.toml ]; then
             echo "::error::No mise config found. Add a Renovate-managed mise.toml (or .mise.toml) that pins your lint tools."
             exit 1
           fi
@@ -362,7 +362,7 @@ jobs:
           # Lint tool versions are owned by the consuming repo: pinned and
           # Renovate-managed in its mise config. Fail early with guidance when
           # the tool this job needs is missing, rather than a cryptic mise error.
-          if ! ls mise.toml .mise.toml .config/mise/config.toml .config/mise.toml >/dev/null 2>&1; then
+          if [ ! -f mise.toml ] && [ ! -f .mise.toml ] && [ ! -f .config/mise/config.toml ] && [ ! -f .config/mise.toml ]; then
             echo "::error::No mise config found. Add a Renovate-managed mise.toml (or .mise.toml) that pins your lint tools."
             exit 1
           fi
@@ -416,7 +416,7 @@ jobs:
           # Lint tool versions are owned by the consuming repo: pinned and
           # Renovate-managed in its mise config. Fail early with guidance when
           # the tool this job needs is missing, rather than a cryptic mise error.
-          if ! ls mise.toml .mise.toml .config/mise/config.toml .config/mise.toml >/dev/null 2>&1; then
+          if [ ! -f mise.toml ] && [ ! -f .mise.toml ] && [ ! -f .config/mise/config.toml ] && [ ! -f .config/mise.toml ]; then
             echo "::error::No mise config found. Add a Renovate-managed mise.toml (or .mise.toml) that pins your lint tools."
             exit 1
           fi
@@ -503,7 +503,7 @@ jobs:
           # Lint tool versions are owned by the consuming repo: pinned and
           # Renovate-managed in its mise config. Fail early with guidance when
           # the tool this job needs is missing, rather than a cryptic mise error.
-          if ! ls mise.toml .mise.toml .config/mise/config.toml .config/mise.toml >/dev/null 2>&1; then
+          if [ ! -f mise.toml ] && [ ! -f .mise.toml ] && [ ! -f .config/mise/config.toml ] && [ ! -f .config/mise.toml ]; then
             echo "::error::No mise config found. Add a Renovate-managed mise.toml (or .mise.toml) that pins your lint tools."
             exit 1
           fi
