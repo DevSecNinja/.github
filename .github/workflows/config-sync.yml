@@ -51,9 +51,9 @@ jobs:
         # offering meaningful isolation, since this job never executes
         # content fetched from the central repo (it only reads files
         # from `.config-sync-source/` to copy them).
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Checkout central config source
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: DevSecNinja/.github
           ref: ${{ inputs.central-ref }}
