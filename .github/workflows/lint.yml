@@ -123,13 +123,23 @@ jobs:
         uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
         with:
           install: true
-          install_args: "dprint"
           version: ${{ inputs.mise-version }}
 
       - name: Check formatting with dprint
         env:
           CONFIG_DIR: ${{ inputs.lint-config-dir }}
         run: |-
+          # Lint tool versions are owned by the consuming repo: pinned and
+          # Renovate-managed in its mise config. Fail early with guidance when
+          # the tool this job needs is missing, rather than a cryptic mise error.
+          if [ ! -f mise.toml ] && [ ! -f .mise.toml ] && [ ! -f .config/mise/config.toml ] && [ ! -f .config/mise.toml ]; then
+            echo "::error::No mise config found. Add a Renovate-managed mise.toml (or .mise.toml) that pins your lint tools."
+            exit 1
+          fi
+          if ! mise which dprint >/dev/null 2>&1; then
+            echo "::error::'dprint' is not pinned in this repository's mise config. Add it (Renovate-managed), e.g. 'mise use dprint@<version>', so this lint job can run it."
+            exit 1
+          fi
           if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/dprint.json" ]; then
             mise exec -- dprint check \
               --config "${CONFIG_DIR}/dprint.json" \
@@ -155,13 +165,23 @@ jobs:
         uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
         with:
           install: true
-          install_args: "yamlfmt"
           version: ${{ inputs.mise-version }}
 
       - name: Check YAML formatting
         env:
           CONFIG_DIR: ${{ inputs.lint-config-dir }}
         run: |-
+          # Lint tool versions are owned by the consuming repo: pinned and
+          # Renovate-managed in its mise config. Fail early with guidance when
+          # the tool this job needs is missing, rather than a cryptic mise error.
+          if [ ! -f mise.toml ] && [ ! -f .mise.toml ] && [ ! -f .config/mise/config.toml ] && [ ! -f .config/mise.toml ]; then
+            echo "::error::No mise config found. Add a Renovate-managed mise.toml (or .mise.toml) that pins your lint tools."
+            exit 1
+          fi
+          if ! mise which yamlfmt >/dev/null 2>&1; then
+            echo "::error::'yamlfmt' is not pinned in this repository's mise config. Add it (Renovate-managed), e.g. 'mise use yamlfmt@<version>', so this lint job can run it."
+            exit 1
+          fi
           if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/.yamlfmt.yaml" ]; then
             find . \( -name '*.yaml' -o -name '*.yml' \) -print0 |
               xargs -0 mise exec -- yamlfmt -conf "${CONFIG_DIR}/.yamlfmt.yaml" -lint
@@ -186,13 +206,23 @@ jobs:
         uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
         with:
           install: true
-          install_args: "uv pipx:yamllint"
           version: ${{ inputs.mise-version }}
 
       - name: Run yamllint
         env:
           CONFIG_DIR: ${{ inputs.lint-config-dir }}
         run: |-
+          # Lint tool versions are owned by the consuming repo: pinned and
+          # Renovate-managed in its mise config. Fail early with guidance when
+          # the tool this job needs is missing, rather than a cryptic mise error.
+          if [ ! -f mise.toml ] && [ ! -f .mise.toml ] && [ ! -f .config/mise/config.toml ] && [ ! -f .config/mise.toml ]; then
+            echo "::error::No mise config found. Add a Renovate-managed mise.toml (or .mise.toml) that pins your lint tools."
+            exit 1
+          fi
+          if ! mise which yamllint >/dev/null 2>&1; then
+            echo "::error::'yamllint' is not pinned in this repository's mise config. Add it (Renovate-managed), e.g. 'mise use yamllint@<version>', so this lint job can run it."
+            exit 1
+          fi
           if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/.yamllint.yaml" ]; then
             find . \( -name '*.yaml' -o -name '*.yml' \) -print0 |
               xargs -0 mise exec -- yamllint -c "${CONFIG_DIR}/.yamllint.yaml"
@@ -217,7 +247,6 @@ jobs:
         uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
         with:
           install: true
-          install_args: "actionlint"
           version: ${{ inputs.mise-version }}
 
       - name: Run actionlint
@@ -240,13 +269,23 @@ jobs:
         uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
         with:
           install: true
-          install_args: "gitleaks"
           version: ${{ inputs.mise-version }}
 
       - name: Run gitleaks
         env:
           CONFIG_DIR: ${{ inputs.lint-config-dir }}
         run: |-
+          # Lint tool versions are owned by the consuming repo: pinned and
+          # Renovate-managed in its mise config. Fail early with guidance when
+          # the tool this job needs is missing, rather than a cryptic mise error.
+          if [ ! -f mise.toml ] && [ ! -f .mise.toml ] && [ ! -f .config/mise/config.toml ] && [ ! -f .config/mise.toml ]; then
+            echo "::error::No mise config found. Add a Renovate-managed mise.toml (or .mise.toml) that pins your lint tools."
+            exit 1
+          fi
+          if ! mise which gitleaks >/dev/null 2>&1; then
+            echo "::error::'gitleaks' is not pinned in this repository's mise config. Add it (Renovate-managed), e.g. 'mise use gitleaks@<version>', so this lint job can run it."
+            exit 1
+          fi
           if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/.gitleaks.toml" ]; then
             mise exec -- gitleaks detect --redact --config "${CONFIG_DIR}/.gitleaks.toml"
           else
@@ -313,7 +352,6 @@ jobs:
         uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
         with:
           install: true
-          install_args: "shellcheck"
           version: ${{ inputs.mise-version }}
 
       - name: Run shellcheck
@@ -321,6 +359,17 @@ jobs:
           CONFIG_DIR: ${{ inputs.lint-config-dir }}
           EXCLUDE_PATTERN: ${{ inputs.lint-shellcheck-exclude }}
         run: |
+          # Lint tool versions are owned by the consuming repo: pinned and
+          # Renovate-managed in its mise config. Fail early with guidance when
+          # the tool this job needs is missing, rather than a cryptic mise error.
+          if [ ! -f mise.toml ] && [ ! -f .mise.toml ] && [ ! -f .config/mise/config.toml ] && [ ! -f .config/mise.toml ]; then
+            echo "::error::No mise config found. Add a Renovate-managed mise.toml (or .mise.toml) that pins your lint tools."
+            exit 1
+          fi
+          if ! mise which shellcheck >/dev/null 2>&1; then
+            echo "::error::'shellcheck' is not pinned in this repository's mise config. Add it (Renovate-managed), e.g. 'mise use shellcheck@<version>', so this lint job can run it."
+            exit 1
+          fi
           repo_dir="${GITHUB_WORKSPACE:-$PWD}"
           shellcheck_workdir="${repo_dir}"
 
@@ -358,13 +407,23 @@ jobs:
         uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
         with:
           install: true
-          install_args: "shfmt"
           version: ${{ inputs.mise-version }}
 
       - name: Run shfmt
         env:
           EXCLUDE_PATTERN: ${{ inputs.lint-shfmt-exclude }}
         run: |
+          # Lint tool versions are owned by the consuming repo: pinned and
+          # Renovate-managed in its mise config. Fail early with guidance when
+          # the tool this job needs is missing, rather than a cryptic mise error.
+          if [ ! -f mise.toml ] && [ ! -f .mise.toml ] && [ ! -f .config/mise/config.toml ] && [ ! -f .config/mise.toml ]; then
+            echo "::error::No mise config found. Add a Renovate-managed mise.toml (or .mise.toml) that pins your lint tools."
+            exit 1
+          fi
+          if ! mise which shfmt >/dev/null 2>&1; then
+            echo "::error::'shfmt' is not pinned in this repository's mise config. Add it (Renovate-managed), e.g. 'mise use shfmt@<version>', so this lint job can run it."
+            exit 1
+          fi
           if [ -n "${EXCLUDE_PATTERN}" ]; then
             find . -name '*.sh' -not -path "./${EXCLUDE_PATTERN}" -print0 | xargs -0 -r mise exec -- shfmt --diff
           else
@@ -390,7 +449,6 @@ jobs:
         uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
         with:
           install: true
-          install_args: "uv pipx:checkov"
           version: ${{ inputs.mise-version }}
 
       - name: Run checkov
@@ -436,13 +494,23 @@ jobs:
         uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
         with:
           install: true
-          install_args: "trivy"
           version: ${{ inputs.mise-version }}
 
       - name: Run trivy
         env:
           CONFIG_DIR: ${{ inputs.lint-config-dir }}
         run: |-
+          # Lint tool versions are owned by the consuming repo: pinned and
+          # Renovate-managed in its mise config. Fail early with guidance when
+          # the tool this job needs is missing, rather than a cryptic mise error.
+          if [ ! -f mise.toml ] && [ ! -f .mise.toml ] && [ ! -f .config/mise/config.toml ] && [ ! -f .config/mise.toml ]; then
+            echo "::error::No mise config found. Add a Renovate-managed mise.toml (or .mise.toml) that pins your lint tools."
+            exit 1
+          fi
+          if ! mise which trivy >/dev/null 2>&1; then
+            echo "::error::'trivy' is not pinned in this repository's mise config. Add it (Renovate-managed), e.g. 'mise use trivy@<version>', so this lint job can run it."
+            exit 1
+          fi
           trivy_args=()
           if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/trivy.yaml" ]; then
             trivy_args+=(--config "${CONFIG_DIR}/trivy.yaml")
@@ -478,7 +546,6 @@ jobs:
         uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
         with:
           install: true
-          install_args: "zizmor"
           version: ${{ inputs.mise-version }}
 
       - name: Run zizmor
