@@ -131,12 +131,12 @@ jobs:
           CONFIG_DIR: ${{ inputs.lint-config-dir }}
         run: |-
           if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/dprint.json" ]; then
-            mise exec -- dprint check \
+            mise exec dprint@latest -- dprint check \
               --config "${CONFIG_DIR}/dprint.json" \
               --config-discovery=false \
               --allow-no-files
           else
-            mise exec -- dprint check --allow-no-files
+            mise exec dprint@latest -- dprint check --allow-no-files
           fi
 
   yamlfmt:
@@ -164,10 +164,10 @@ jobs:
         run: |-
           if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/.yamlfmt.yaml" ]; then
             find . \( -name '*.yaml' -o -name '*.yml' \) -print0 |
-              xargs -0 mise exec -- yamlfmt -conf "${CONFIG_DIR}/.yamlfmt.yaml" -lint
+              xargs -0 mise exec yamlfmt@latest -- yamlfmt -conf "${CONFIG_DIR}/.yamlfmt.yaml" -lint
           else
             find . \( -name '*.yaml' -o -name '*.yml' \) -print0 |
-              xargs -0 mise exec -- yamlfmt -lint
+              xargs -0 mise exec yamlfmt@latest -- yamlfmt -lint
           fi
 
   yamllint:
@@ -195,10 +195,10 @@ jobs:
         run: |-
           if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/.yamllint.yaml" ]; then
             find . \( -name '*.yaml' -o -name '*.yml' \) -print0 |
-              xargs -0 mise exec -- yamllint -c "${CONFIG_DIR}/.yamllint.yaml"
+              xargs -0 mise exec pipx:yamllint@latest -- yamllint -c "${CONFIG_DIR}/.yamllint.yaml"
           else
             find . \( -name '*.yaml' -o -name '*.yml' \) -print0 |
-              xargs -0 mise exec -- yamllint
+              xargs -0 mise exec pipx:yamllint@latest -- yamllint
           fi
 
   actionlint:
@@ -221,7 +221,7 @@ jobs:
           version: ${{ inputs.mise-version }}
 
       - name: Run actionlint
-        run: mise exec -- actionlint
+        run: mise exec actionlint@latest -- actionlint
 
   gitleaks:
     name: gitleaks
@@ -248,9 +248,9 @@ jobs:
           CONFIG_DIR: ${{ inputs.lint-config-dir }}
         run: |-
           if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/.gitleaks.toml" ]; then
-            mise exec -- gitleaks detect --redact --config "${CONFIG_DIR}/.gitleaks.toml"
+            mise exec gitleaks@latest -- gitleaks detect --redact --config "${CONFIG_DIR}/.gitleaks.toml"
           else
-            mise exec -- gitleaks detect --redact
+            mise exec gitleaks@latest -- gitleaks detect --redact
           fi
 
   go:
@@ -336,10 +336,10 @@ jobs:
 
           if [ -n "${EXCLUDE_PATTERN}" ]; then
             find "${repo_dir}" -name '*.sh' -not -path "${repo_dir}/${EXCLUDE_PATTERN}" -print0 |
-              (cd "${shellcheck_workdir}" && xargs -0 -r mise exec -- shellcheck)
+              (cd "${shellcheck_workdir}" && xargs -0 -r mise exec shellcheck@latest -- shellcheck)
           else
             find "${repo_dir}" -name '*.sh' -print0 |
-              (cd "${shellcheck_workdir}" && xargs -0 -r mise exec -- shellcheck)
+              (cd "${shellcheck_workdir}" && xargs -0 -r mise exec shellcheck@latest -- shellcheck)
           fi
 
   shfmt:
@@ -366,9 +366,9 @@ jobs:
           EXCLUDE_PATTERN: ${{ inputs.lint-shfmt-exclude }}
         run: |
           if [ -n "${EXCLUDE_PATTERN}" ]; then
-            find . -name '*.sh' -not -path "./${EXCLUDE_PATTERN}" -print0 | xargs -0 -r mise exec -- shfmt --diff
+            find . -name '*.sh' -not -path "./${EXCLUDE_PATTERN}" -print0 | xargs -0 -r mise exec shfmt@latest -- shfmt --diff
           else
-            find . -name '*.sh' -print0 | xargs -0 -r mise exec -- shfmt --diff
+            find . -name '*.sh' -print0 | xargs -0 -r mise exec shfmt@latest -- shfmt --diff
           fi
 
   checkov:
@@ -394,7 +394,7 @@ jobs:
           version: ${{ inputs.mise-version }}
 
       - name: Run checkov
-        run: mise exec -- checkov -d . --output sarif --output-file-path . || true
+        run: mise exec pipx:checkov@latest -- checkov -d . --output sarif --output-file-path . || true
 
       - name: Filter skipped checks from SARIF
         if: always()
@@ -448,7 +448,7 @@ jobs:
             trivy_args+=(--config "${CONFIG_DIR}/trivy.yaml")
           fi
 
-          mise exec -- trivy fs "${trivy_args[@]}" \
+          mise exec trivy@latest -- trivy fs "${trivy_args[@]}" \
             --scanners misconfig,secret \
             --format sarif \
             --output trivy.sarif . || true
@@ -482,7 +482,7 @@ jobs:
           version: ${{ inputs.mise-version }}
 
       - name: Run zizmor
-        run: mise exec -- zizmor --format sarif . > zizmor.sarif
+        run: mise exec zizmor@latest -- zizmor --format sarif . > zizmor.sarif
 
       - name: Upload SARIF report
         uses: github/codeql-action/upload-sarif@54f647b7e1bb85c95cddabcd46b0c578ec92bc1a # v4.36.3
