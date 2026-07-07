@@ -25,6 +25,10 @@ jobs:
       # lint-config-dir: config-sync/files
       # Optional: fail this workflow when a linter fails (default: false).
       # lint-fail-on-error: true
+      # Optional: upload checkov/trivy/zizmor results to GitHub code scanning
+      # (default: true, requires GitHub Advanced Security). Set false for
+      # private repos without GHAS to gate on exit codes with console output.
+      # upload-sarif: false
       # Optional: use a different Go version file.
       # go-version-file: go.mod
       # Toggle linters on/off (all default to true):
