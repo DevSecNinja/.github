@@ -99,9 +99,8 @@ on:
         type: boolean
         default: false
       upload-sarif:
-        description: "Upload checkov/trivy/zizmor results to GitHub code scanning (requires GitHub
-          Advanced Security). Set false for private repos without GHAS to gate on exit codes with
-          console output instead."
+        description: "Upload checkov/trivy/zizmor results to GitHub code scanning (requires GitHub Advanced Security). Set
+          false for private repos without GHAS to gate on exit codes with console output instead."
         required: false
         type: boolean
         default: true
