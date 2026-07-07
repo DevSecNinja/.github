@@ -98,6 +98,13 @@ on:
         required: false
         type: boolean
         default: false
+      upload-sarif:
+        description: "Upload checkov/trivy/zizmor results to GitHub code scanning (requires GitHub
+          Advanced Security). Set false for private repos without GHAS to gate on exit codes with
+          console output instead."
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -452,10 +459,18 @@ jobs:
           version: ${{ inputs.mise-version }}
 
       - name: Run checkov
-        run: mise exec -- checkov -d . --output sarif --output-file-path . || true
+        env:
+          UPLOAD_SARIF: ${{ inputs.upload-sarif }}
+        run: |-
+          if [ "${UPLOAD_SARIF}" = "true" ]; then
+            mise exec -- checkov -d . --output sarif --output-file-path . || true
+          else
+            # No GitHub Advanced Security: gate on exit code with console output.
+            mise exec -- checkov -d . --compact --quiet
+          fi
 
       - name: Filter skipped checks from SARIF
-        if: always()
+        if: ${{ always() && inputs.upload-sarif }}
         run: |-
           if [ -f results_sarif.sarif ]; then
             jq '
@@ -470,7 +485,7 @@ jobs:
 
       - name: Upload SARIF report
         uses: github/codeql-action/upload-sarif@54f647b7e1bb85c95cddabcd46b0c578ec92bc1a # v4.36.3
-        if: always()
+        if: ${{ always() && inputs.upload-sarif }}
         with:
           sarif_file: results_sarif.sarif
           category: checkov
@@ -499,6 +514,7 @@ jobs:
       - name: Run trivy
         env:
           CONFIG_DIR: ${{ inputs.lint-config-dir }}
+          UPLOAD_SARIF: ${{ inputs.upload-sarif }}
         run: |-
           # Lint tool versions are owned by the consuming repo: pinned and
           # Renovate-managed in its mise config. Fail early with guidance when
@@ -516,13 +532,21 @@ jobs:
             trivy_args+=(--config "${CONFIG_DIR}/trivy.yaml")
           fi
 
-          mise exec -- trivy fs "${trivy_args[@]}" \
-            --scanners misconfig,secret \
-            --format sarif \
-            --output trivy.sarif . || true
+          if [ "${UPLOAD_SARIF}" = "true" ]; then
+            mise exec -- trivy fs "${trivy_args[@]}" \
+              --scanners misconfig,secret \
+              --format sarif \
+              --output trivy.sarif . || true
+          else
+            # No GitHub Advanced Security: gate on exit code with console output.
+            mise exec -- trivy fs "${trivy_args[@]}" \
+              --scanners misconfig,secret \
+              --exit-code 1 .
+          fi
 
       - name: Upload SARIF report
         uses: github/codeql-action/upload-sarif@54f647b7e1bb85c95cddabcd46b0c578ec92bc1a # v4.36.3
+        if: ${{ inputs.upload-sarif }}
         with:
           sarif_file: trivy.sarif
           category: trivy
@@ -549,11 +573,19 @@ jobs:
           version: ${{ inputs.mise-version }}
 
       - name: Run zizmor
-        run: mise exec -- zizmor --format sarif . > zizmor.sarif
+        env:
+          UPLOAD_SARIF: ${{ inputs.upload-sarif }}
+        run: |-
+          if [ "${UPLOAD_SARIF}" = "true" ]; then
+            mise exec -- zizmor --format sarif . > zizmor.sarif
+          else
+            # No GitHub Advanced Security: gate on exit code with console output.
+            mise exec -- zizmor .
+          fi
 
       - name: Upload SARIF report
         uses: github/codeql-action/upload-sarif@54f647b7e1bb85c95cddabcd46b0c578ec92bc1a # v4.36.3
-        if: always()
+        if: ${{ always() && inputs.upload-sarif }}
         with:
           sarif_file: zizmor.sarif
           category: zizmor
