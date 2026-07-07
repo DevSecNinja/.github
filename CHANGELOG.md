@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.2.0](https://github.com/DevSecNinja/.github/compare/v2.1.0...v2.2.0) (2026-07-07)
+
+
+### Features
+
+* **deps:** update dependency apm-cli ( 0.23.1 ➔ 0.24.0 ) [automerge] ([#247](https://github.com/DevSecNinja/.github/issues/247)) ([dcb8c94](https://github.com/DevSecNinja/.github/commit/dcb8c946f16162040d40fd25554f21be6666b62f))
+* **deps:** update dependency wrangler ( 4.105.0 ➔ 4.106.0 ) [automerge] ([#241](https://github.com/DevSecNinja/.github/issues/241)) ([8b65ff6](https://github.com/DevSecNinja/.github/commit/8b65ff6f25b16c20e322de017fb7a9d9b43fd78f))
+* **deps:** update dependency wrangler ( 4.106.0 ➔ 4.107.0 ) [automerge] ([#248](https://github.com/DevSecNinja/.github/issues/248)) ([13630dd](https://github.com/DevSecNinja/.github/commit/13630dd537ab88cb15ffe4472b36f4ca055a1ec0))
+* **github-tag:** update tag devsecninja/ai-toolkit ( v0.7.0 ➔ v0.8.0 ) [automerge] ([#245](https://github.com/DevSecNinja/.github/issues/245)) ([0eb545a](https://github.com/DevSecNinja/.github/commit/0eb545afa3246c9600f64df3c55edc5b59e9296d))
+* **lint:** add upload-sarif input to skip GitHub code scanning upload ([#249](https://github.com/DevSecNinja/.github/issues/249)) ([30660c7](https://github.com/DevSecNinja/.github/commit/30660c73201c5ad1ffd96b9b447bf60c5fd88ac1))
+* **mise:** update tool pipx:json5 ( 0.14.0 ➔ 0.15.0 ) [automerge] ([#244](https://github.com/DevSecNinja/.github/issues/244)) ([d2cdf62](https://github.com/DevSecNinja/.github/commit/d2cdf620c62b979562ed4eb35a78fbb09de754fe))
+* **mise:** update tool zizmor ( 1.25.2 ➔ 1.26.1 ) [automerge] ([#246](https://github.com/DevSecNinja/.github/issues/246)) ([31bcb5f](https://github.com/DevSecNinja/.github/commit/31bcb5f5a35440948762946a1f2b6b81843b34d3))
+
+
+### Bug Fixes
+
+* **mise:** update tool uv ( 0.11.22 ➔ 0.11.23 ) [automerge] ([#242](https://github.com/DevSecNinja/.github/issues/242)) ([21344d2](https://github.com/DevSecNinja/.github/commit/21344d271e67aedb93fae6fb291032da1faf4fe8))
+
 ## [2.1.0](https://github.com/DevSecNinja/.github/compare/v2.0.0...v2.1.0) (2026-07-03)
 
 
