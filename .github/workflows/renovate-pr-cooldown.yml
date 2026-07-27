@@ -1,0 +1,138 @@
+---
+name: Reusable — Renovate PR cooldown
+
+# Enforces a "soak" period for Renovate PRs whose source registry does not
+# expose a trusted release timestamp (e.g. ghcr.io / lscr.io / quay.io). For
+# those registries the Renovate presets use `minimumReleaseAgeBehaviour:
+# timestamp-optional`, so Renovate opens the PR immediately instead of blocking
+# it forever. This workflow re-introduces the soak as a required
+# `pr-cooldown` status check that only turns green once the PR branch head
+# commit is at least `cooldown-days` old — measured from the commit so a rebase
+# to a newer version correctly restarts the clock. GitHub auto-merge
+# (Renovate `platformAutomerge`) then merges the PR once the check passes.
+#
+# Non-gated PRs (human PRs, or Renovate PRs from registries that DO provide a
+# trusted timestamp) always receive a passing status so the required check
+# never blocks them. See docs/design-decisions/0005-pr-age-cooldown-for-
+# untrusted-timestamps.md.
+
+on:
+  workflow_call:
+    inputs:
+      cooldown-days:
+        description: "Days a gated PR must soak before its status check passes."
+        required: false
+        type: number
+        default: 14
+      gated-branch-prefixes:
+        description: >-
+          Comma-separated Renovate branch prefixes to gate (registries without
+          a trusted release timestamp).
+        required: false
+        type: string
+        default: "renovate/ghcr.io-,renovate/lscr.io-,renovate/quay.io-"
+      renovate-bot-login:
+        description: "Login of the account that opens Renovate PRs."
+        required: false
+        type: string
+        default: "renovate[bot]"
+      status-context:
+        description: "Commit status context name (add this to required checks)."
+        required: false
+        type: string
+        default: "pr-cooldown"
+
+permissions:
+  contents: read
+
+jobs:
+  cooldown:
+    name: pr-cooldown
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: read
+      statuses: write
+    steps:
+      - name: Evaluate PR cooldown
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          COOLDOWN_DAYS: ${{ inputs.cooldown-days }}
+          GATED_PREFIXES: ${{ inputs.gated-branch-prefixes }}
+          BOT_LOGIN: ${{ inputs.renovate-bot-login }}
+          STATUS_CONTEXT: ${{ inputs.status-context }}
+        with:
+          script: |-
+            const cooldownDays = Number(process.env.COOLDOWN_DAYS) || 14;
+            const context_name = process.env.STATUS_CONTEXT || 'pr-cooldown';
+            const botLogin = process.env.BOT_LOGIN || 'renovate[bot]';
+            const prefixes = (process.env.GATED_PREFIXES || '')
+              .split(',')
+              .map((p) => p.trim())
+              .filter(Boolean);
+            const { owner, repo } = context.repo;
+            const dayMs = 24 * 60 * 60 * 1000;
+
+            const isGated = (branch) =>
+              prefixes.some((prefix) => branch.startsWith(prefix));
+
+            const setStatus = async (sha, state, description) => {
+              await github.rest.repos.createCommitStatus({
+                owner,
+                repo,
+                sha,
+                state,
+                context: context_name,
+                description: description.slice(0, 140),
+              });
+            };
+
+            let pulls;
+            if (context.eventName === 'pull_request') {
+              pulls = [context.payload.pull_request];
+            } else {
+              pulls = await github.paginate(github.rest.pulls.list, {
+                owner,
+                repo,
+                state: 'open',
+                per_page: 100,
+              });
+            }
+
+            for (const pr of pulls) {
+              const sha = pr.head.sha;
+              const branch = pr.head.ref;
+              const author = pr.user && pr.user.login;
+
+              if (author !== botLogin || !isGated(branch)) {
+                await setStatus(sha, 'success', 'No cooldown required');
+                continue;
+              }
+
+              const commit = await github.rest.repos.getCommit({
+                owner,
+                repo,
+                ref: sha,
+              });
+              const committedAt = new Date(commit.data.commit.committer.date);
+              const ageDays = (Date.now() - committedAt.getTime()) / dayMs;
+
+              if (ageDays >= cooldownDays) {
+                await setStatus(
+                  sha,
+                  'success',
+                  `Cooldown complete (${cooldownDays}-day soak met)`,
+                );
+                core.info(`PR #${pr.number} (${branch}): cooldown met`);
+              } else {
+                const remaining = Math.max(1, Math.ceil(cooldownDays - ageDays));
+                await setStatus(
+                  sha,
+                  'pending',
+                  `Soaking: ${remaining} day(s) left of ${cooldownDays}-day cooldown`,
+                );
+                core.info(
+                  `PR #${pr.number} (${branch}): ${remaining} day(s) left`,
+                );
+              }
+            }
