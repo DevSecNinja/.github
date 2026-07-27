@@ -53,6 +53,16 @@
       minimumReleaseAge: "14 days",
     },
     {
+      description: "ghcr.io / lscr.io / quay.io do not expose a trusted release timestamp, so the default timestamp-required behaviour marks every release 'pending' forever and no PR is ever created. Treat missing timestamps as stable so Renovate opens the PR (and enables automerge); the 14-day soak is instead enforced by the pr-cooldown required status check. Placed after the generic docker rule so it wins. See docs/design-decisions/0005-pr-age-cooldown-for-untrusted-timestamps.md.",
+      matchDatasources: ["docker"],
+      matchPackageNames: [
+        "/^ghcr\\.io\\//",
+        "/^lscr\\.io\\//",
+        "/^quay\\.io\\//",
+      ],
+      minimumReleaseAgeBehaviour: "timestamp-optional",
+    },
+    {
       description: "Auto-merge dotfiles devcontainer image digest, patch, and minor updates via branch without tests, ignoring the global schedule and release-age soak so they can always merge. Placed after the generic docker minimumReleaseAge rule so its minimumReleaseAge:0 wins. Major bumps are intentionally excluded and left for manual review.",
       matchManagers: ["devcontainer"],
       matchDatasources: ["docker"],

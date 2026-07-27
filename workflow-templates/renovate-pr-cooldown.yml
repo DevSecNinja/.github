@@ -1,0 +1,24 @@
+---
+name: Renovate PR cooldown
+
+on:
+  pull_request:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cooldown:
+    uses: DevSecNinja/.github/.github/workflows/renovate-pr-cooldown.yml@46c8d52b2f3ca613956756a583332ba84b7f938e # main
+    permissions:
+      contents: read
+      pull-requests: read
+      statuses: write
+      # Optional overrides (defaults shown):
+      # with:
+      #   cooldown-days: 14
+      #   gated-branch-prefixes: "renovate/ghcr.io-,renovate/lscr.io-,renovate/quay.io-"
+      #   status-context: "pr-cooldown"

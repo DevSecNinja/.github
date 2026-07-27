@@ -1,0 +1,20 @@
+---
+name: Renovate PR cooldown
+
+on:
+  pull_request:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cooldown:
+    # Local reference validates reusable workflow changes in this repository.
+    uses: ./.github/workflows/renovate-pr-cooldown.yml
+    permissions:
+      contents: read
+      pull-requests: read
+      statuses: write
