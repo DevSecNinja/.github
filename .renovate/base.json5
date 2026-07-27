@@ -8,6 +8,13 @@
   pinDigests: true,
   rangeStrategy: "pin",
   minimumReleaseAge: "14 days",
+  // Skip versions still inside their minimumReleaseAge soak and propose the
+  // highest already-soaked version instead of parking the update on the newest
+  // (still-pending) release. Without this, frequently-releasing dependencies
+  // stay stuck under the dependency dashboard's "Pending Status Checks" section
+  // and their PRs are never created (their renovate/stability-days check never
+  // clears). See DevSecNinja/truenas-apps#115.
+  internalChecksFilter: "strict",
   labels: ["dependencies"],
   osvVulnerabilityAlerts: true,
   timezone: 'Europe/Amsterdam',
