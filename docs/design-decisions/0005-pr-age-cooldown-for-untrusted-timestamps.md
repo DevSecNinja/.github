@@ -56,6 +56,15 @@ Age is measured from the **branch head commit**, not PR creation: when Renovate
 rebases the PR to a newer version the clock correctly restarts, so the exact
 content being merged has always soaked for the full period.
 
+Because the gate reads the branch head commit date, the gated rule also sets
+**`rebaseWhen: "conflicted"`**. Renovate's default (`auto`, which becomes
+`behind-base-branch` once automerge is enabled) would rebase the PR every time
+`main` advances, rewriting the head commit and resetting the cooldown clock
+forever on an active repo. `conflicted` limits rebases to genuine merge
+conflicts; branch protection is non-strict
+(`strict_required_status_checks_policy: false`), so a behind-base gated PR still
+auto-merges once the soak completes — no rebase required.
+
 Datasources that DO provide a trusted timestamp (docker.io, github
 tags/releases) are left on the default `timestamp-required` +
 `internalChecksFilter: strict` path — their soak is enforced natively and they
