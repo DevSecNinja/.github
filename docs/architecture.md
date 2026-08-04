@@ -136,30 +136,32 @@ optionally deploys same-repository pull request previews to Cloudflare Pages.
 Cloudflare jobs detect missing Cloudflare secrets before any deploy work. Missing
 secrets fail production Cloudflare deploys and skip preview-only deploys.
 
-| Input                              | Description                                                                                     |
-| ---------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `node-version`                     | **Required.** Node.js version to install.                                                       |
-| `node-cache`                       | Package manager cache for test and production jobs. Default: empty (disabled).                  |
-| `wrangler-version`                 | **Required.** Wrangler version to install for previews; inputs cannot be conditional.           |
-| `production-branch`                | Branch that deploys to production. Default: `main`.                                             |
-| `artifact-path`                    | Directory uploaded to Pages. Default: `.`.                                                      |
-| `install-command`                  | Dependency install command. Default: `npm ci`.                                                  |
-| `test-command`                     | Validation command block. Default: empty.                                                       |
-| `test-setup-command`               | Optional command after install and before tests.                                                |
-| `build-command`                    | Optional build command before deployment.                                                       |
-| `pre-deploy-command`               | Optional production-only pre-upload command.                                                    |
-| `pre-preview-command`              | Optional preview-only pre-deploy command.                                                       |
-| `update-sitemap-lastmod`           | Update sitemap `<lastmod>` dates. Default: `false`.                                             |
-| `sitemap-path`                     | Sitemap file path. Default: `sitemap.xml`.                                                      |
-| `github-pages`                     | Deploy production to GitHub Pages. Default: `true`.                                             |
-| `cloudflare-preview`               | Enable Cloudflare pull request previews. Default: `true`.                                       |
-| `cloudflare-production`            | Deploy production to Cloudflare Pages. Default: `false`.                                        |
-| `cloudflare-production-on-release` | Deploy Cloudflare production only on `release` events, not every main commit. Default: `false`. |
-| `cloudflare-acceptance`            | Deploy an acceptance build to Cloudflare on main commits. Default: `false`.                     |
-| `cloudflare-acceptance-branch`     | Cloudflare branch name for acceptance deploys. Default: `acceptance`.                           |
-| `cloudflare-project-name`          | Cloudflare Pages project; lowercase letters, numbers, and hyphens only.                         |
-| `cloudflare-production-branch`     | Cloudflare production branch. Default: `main`.                                                  |
-| `preview-comment-marker`           | Marker used to update the preview PR comment.                                                   |
+| Input                              | Description                                                                                      |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `node-version`                     | **Required.** Node.js version to install.                                                        |
+| `node-cache`                       | Package manager cache for test and production jobs. Default: empty (disabled).                   |
+| `go-version`                       | Go version to install before the build. Required for Hugo Modules. Default: empty (no Go setup). |
+| `go-version-file`                  | File to read the Go version from, used only when `go-version` is empty.                          |
+| `wrangler-version`                 | **Required.** Wrangler version to install for previews; inputs cannot be conditional.            |
+| `production-branch`                | Branch that deploys to production. Default: `main`.                                              |
+| `artifact-path`                    | Directory uploaded to Pages. Default: `.`.                                                       |
+| `install-command`                  | Dependency install command. Default: `npm ci`.                                                   |
+| `test-command`                     | Validation command block. Default: empty.                                                        |
+| `test-setup-command`               | Optional command after install and before tests.                                                 |
+| `build-command`                    | Optional build command before deployment.                                                        |
+| `pre-deploy-command`               | Optional production-only pre-upload command.                                                     |
+| `pre-preview-command`              | Optional preview-only pre-deploy command.                                                        |
+| `update-sitemap-lastmod`           | Update sitemap `<lastmod>` dates. Default: `false`.                                              |
+| `sitemap-path`                     | Sitemap file path. Default: `sitemap.xml`.                                                       |
+| `github-pages`                     | Deploy production to GitHub Pages. Default: `true`.                                              |
+| `cloudflare-preview`               | Enable Cloudflare pull request previews. Default: `true`.                                        |
+| `cloudflare-production`            | Deploy production to Cloudflare Pages. Default: `false`.                                         |
+| `cloudflare-production-on-release` | Deploy Cloudflare production only on `release` events, not every main commit. Default: `false`.  |
+| `cloudflare-acceptance`            | Deploy an acceptance build to Cloudflare on main commits. Default: `false`.                      |
+| `cloudflare-acceptance-branch`     | Cloudflare branch name for acceptance deploys. Default: `acceptance`.                            |
+| `cloudflare-project-name`          | Cloudflare Pages project; lowercase letters, numbers, and hyphens only.                          |
+| `cloudflare-production-branch`     | Cloudflare production branch. Default: `main`.                                                   |
+| `preview-comment-marker`           | Marker used to update the preview PR comment.                                                    |
 
 Build, pre-deploy, and pre-preview commands run with an `APP_COMMIT_SHA`
 environment variable set to `${{ github.event.pull_request.head.sha || github.sha }}`.
@@ -191,6 +193,10 @@ jobs:
       node-version: "24"
       # renovate: datasource=npm depName=wrangler
       wrangler-version: "3"
+      # Required when the site resolves a theme through Hugo Modules, which
+      # shells out to Go. Without it the runner's preinstalled Go is used.
+      # renovate: datasource=golang-version depName=go
+      go-version: "1.26.5"
       test-setup-command: npx playwright install webkit --with-deps
       test-command: |
         npm run test:unit
