@@ -387,6 +387,9 @@ jobs:
         with:
           go-version: ${{ inputs.go-version }}
           go-version-file: ${{ inputs.go-version-file }}
+          # Caching disabled on this privileged job to remove the
+          # cache-poisoning surface (zizmor), matching setup-node above.
+          cache: false
 
       - name: Install dependencies
         if: ${{ inputs.build-command != '' && inputs.install-command != '' }}
@@ -489,6 +492,9 @@ jobs:
         with:
           go-version: ${{ inputs.go-version }}
           go-version-file: ${{ inputs.go-version-file }}
+          # Caching disabled on this privileged job to remove the
+          # cache-poisoning surface (zizmor), matching setup-node above.
+          cache: false
 
       - name: Install dependencies
         if: ${{ inputs.build-command != '' && inputs.install-command != '' }}
@@ -580,6 +586,9 @@ jobs:
         with:
           go-version: ${{ inputs.go-version }}
           go-version-file: ${{ inputs.go-version-file }}
+          # Caching disabled on this privileged job to remove the
+          # cache-poisoning surface (zizmor), matching setup-node above.
+          cache: false
 
       - name: Install dependencies
         if: ${{ inputs.build-command != '' && inputs.install-command != '' }}
