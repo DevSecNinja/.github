@@ -140,6 +140,8 @@ secrets fail production Cloudflare deploys and skip preview-only deploys.
 | ---------------------------------- | ----------------------------------------------------------------------------------------------- |
 | `node-version`                     | **Required.** Node.js version to install.                                                       |
 | `node-cache`                       | Package manager cache for test and production jobs. Default: empty (disabled).                  |
+| `go-version`                       | Go version to install before the build. Required for Hugo Modules. Default: empty (no Go setup).|
+| `go-version-file`                  | File to read the Go version from, used only when `go-version` is empty.                         |
 | `wrangler-version`                 | **Required.** Wrangler version to install for previews; inputs cannot be conditional.           |
 | `production-branch`                | Branch that deploys to production. Default: `main`.                                             |
 | `artifact-path`                    | Directory uploaded to Pages. Default: `.`.                                                      |
@@ -191,6 +193,10 @@ jobs:
       node-version: "24"
       # renovate: datasource=npm depName=wrangler
       wrangler-version: "3"
+      # Required when the site resolves a theme through Hugo Modules, which
+      # shells out to Go. Without it the runner's preinstalled Go is used.
+      # renovate: datasource=golang-version depName=go
+      go-version: "1.26.5"
       test-setup-command: npx playwright install webkit --with-deps
       test-command: |
         npm run test:unit

@@ -17,6 +17,21 @@ on:
         required: false
         type: string
         default: ""
+      go-version:
+        description: >-
+          Go version to install before the build. Required for Hugo Modules and
+          any other build step that shells out to Go; leave empty to skip Go
+          setup. Without it the build silently uses whatever Go the runner
+          image happens to ship.
+        required: false
+        type: string
+        default: ""
+      go-version-file:
+        description: >-
+          File to read the Go version from, used only when go-version is empty.
+        required: false
+        type: string
+        default: ""
       wrangler-version:
         description: >-
           Wrangler version for Cloudflare Pages deploys. Required when
@@ -294,6 +309,13 @@ jobs:
           node-version: ${{ inputs.node-version }}
           cache: ${{ inputs.node-cache }}
 
+      - name: Setup Go
+        if: ${{ inputs.go-version != '' || inputs.go-version-file != '' }}
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version: ${{ inputs.go-version }}
+          go-version-file: ${{ inputs.go-version-file }}
+
       - name: Install dependencies
         if: ${{ inputs.install-command != '' }}
         env:
@@ -358,6 +380,13 @@ jobs:
           # These jobs run only on merge to the production branch, so the lost
           # package-download caching is negligible; test/preview keep it.
           package-manager-cache: false
+
+      - name: Setup Go
+        if: ${{ inputs.go-version != '' || inputs.go-version-file != '' }}
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version: ${{ inputs.go-version }}
+          go-version-file: ${{ inputs.go-version-file }}
 
       - name: Install dependencies
         if: ${{ inputs.build-command != '' && inputs.install-command != '' }}
@@ -454,6 +483,13 @@ jobs:
           # package-download caching is negligible; test/preview keep it.
           package-manager-cache: false
 
+      - name: Setup Go
+        if: ${{ inputs.go-version != '' || inputs.go-version-file != '' }}
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version: ${{ inputs.go-version }}
+          go-version-file: ${{ inputs.go-version-file }}
+
       - name: Install dependencies
         if: ${{ inputs.build-command != '' && inputs.install-command != '' }}
         env:
@@ -537,6 +573,13 @@ jobs:
         with:
           node-version: ${{ inputs.node-version }}
           package-manager-cache: false
+
+      - name: Setup Go
+        if: ${{ inputs.go-version != '' || inputs.go-version-file != '' }}
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version: ${{ inputs.go-version }}
+          go-version-file: ${{ inputs.go-version-file }}
 
       - name: Install dependencies
         if: ${{ inputs.build-command != '' && inputs.install-command != '' }}
