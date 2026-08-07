@@ -145,6 +145,7 @@ secrets fail production Cloudflare deploys and skip preview-only deploys.
 | `wrangler-version`                 | **Required.** Wrangler version to install for previews; inputs cannot be conditional.            |
 | `production-branch`                | Branch that deploys to production. Default: `main`.                                              |
 | `artifact-path`                    | Directory uploaded to Pages. Default: `.`.                                                       |
+| `artifact-name`                    | Deploy a prebuilt artifact from an earlier caller job instead of building. Default: empty.       |
 | `install-command`                  | Dependency install command. Default: `npm ci`.                                                   |
 | `test-command`                     | Validation command block. Default: empty.                                                        |
 | `test-setup-command`               | Optional command after install and before tests.                                                 |
@@ -167,6 +168,61 @@ Build, pre-deploy, and pre-preview commands run with an `APP_COMMIT_SHA`
 environment variable set to `${{ github.event.pull_request.head.sha || github.sha }}`.
 On `pull_request` events `github.sha` is the ephemeral merge commit, so builds
 should read `APP_COMMIT_SHA` to stamp the real PR head commit in previews.
+
+#### Deploying a prebuilt artifact
+
+This workflow provides a fixed build environment: Node, Go, an install command
+and a build command. A build that needs anything else — a `GITHUB_TOKEN` to
+read the API, a cloud credential, a toolchain that isn't here — should not try
+to smuggle it through more inputs. Build it in your own job and hand over the
+result:
+
+```yaml
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      issues: read          # whatever *your* build needs
+    steps:
+      - uses: actions/checkout@<sha>
+      - uses: actions/setup-node@<sha>
+        with:
+          node-version: "24"
+      - run: npm ci && npm test && npm run build
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - uses: actions/upload-artifact@<sha>
+        with:
+          name: site
+          path: dist
+          # v4+ omits dotfiles; needed for .well-known, .nojekyll, …
+          include-hidden-files: true
+
+  pages:
+    needs: build
+    uses: DevSecNinja/.github/.github/workflows/pages.yml@<sha> # vX.Y.Z
+    permissions:
+      contents: read
+      deployments: write
+      id-token: write
+      pages: write
+    with:
+      artifact-name: site
+      artifact-path: dist
+      cloudflare-project-name: my-site
+```
+
+`artifact-name` and `build-command` are mutually exclusive — the artifact is
+deployed exactly as uploaded. With `artifact-name` set the deploy jobs skip
+Node/Go setup, install and build entirely.
+
+Because artifacts are scoped to the workflow run and a reusable workflow's jobs
+run inside the caller's run, no extra permissions and no credential handoff are
+involved. Note that the same artifact is deployed to previews and to
+production; if previews must be built without credentials, branch on
+`github.event_name` in your own build job. See
+[ADR 0006](design-decisions/0006-prebuilt-artifact-deploys.md).
 
 **Example caller:**
 

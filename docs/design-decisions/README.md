@@ -18,3 +18,4 @@ that supersedes the old one.
 | [0003](0003-task-runner-choice.md)                       | Use mise tasks as the task runner                                  | Accepted |
 | [0004](0004-automerge-non-major-after-soak.md)           | Auto-merge all non-major updates after a soak period               | Accepted |
 | [0005](0005-pr-age-cooldown-for-untrusted-timestamps.md) | PR-age cooldown for registries without a trusted release timestamp | Accepted |
+| [0006](0006-prebuilt-artifact-deploys.md)                | Deploy prebuilt artifacts instead of passing credentials into builds | Accepted |
