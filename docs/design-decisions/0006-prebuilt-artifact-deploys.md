@@ -25,7 +25,7 @@ There is a more general problem behind it. `pages.yml` already carries
 `test-setup-command`, `test-command` and `build-command`. Every build need that
 the workflow does not anticipate becomes another input and another pull request
 against this repository. The genuinely reusable part of the workflow is
-*deploying a directory* to GitHub Pages and Cloudflare Pages, including project
+_deploying a directory_ to GitHub Pages and Cloudflare Pages, including project
 creation, preview lifecycle, PR comments and environment wiring. Building is the
 part that varies per repository.
 
