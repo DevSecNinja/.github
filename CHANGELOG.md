@@ -2,6 +2,53 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.3.0](https://github.com/DevSecNinja/.github/compare/v2.2.0...v2.3.0) (2026-08-07)
+
+
+### Features
+
+* **deps:** update dependency apm-cli ( 0.24.1 ➔ 0.25.0 ) [automerge] ([#264](https://github.com/DevSecNinja/.github/issues/264)) ([5ee03b1](https://github.com/DevSecNinja/.github/commit/5ee03b18f938ccfb1afd6843081221ee004e99f9))
+* **deps:** update dependency apm-cli ( 0.25.0 ➔ 0.26.0 ) [automerge] ([#274](https://github.com/DevSecNinja/.github/issues/274)) ([dca6f71](https://github.com/DevSecNinja/.github/commit/dca6f7114e52d99b308ebdfb6ee1284c19c744d4))
+* **deps:** update dependency wrangler ( 4.107.1 ➔ 4.110.0 ) [automerge] ([#265](https://github.com/DevSecNinja/.github/issues/265)) ([c17a963](https://github.com/DevSecNinja/.github/commit/c17a963931367d6c9b0993d171dac363bee5f582))
+* **deps:** update dependency wrangler ( 4.110.0 ➔ 4.111.0 ) [automerge] ([#273](https://github.com/DevSecNinja/.github/issues/273)) ([0396f6e](https://github.com/DevSecNinja/.github/commit/0396f6ec97fe3fb4b7578e21d4fdf915fb3db1ca))
+* **deps:** update dependency wrangler ( 4.111.0 ➔ 4.113.0 ) [automerge] ([#282](https://github.com/DevSecNinja/.github/issues/282)) ([fbc501b](https://github.com/DevSecNinja/.github/commit/fbc501b66f651dd896cc2b46ea4fdb4c2ff309f4))
+* **deps:** update dependency wrangler ( 4.113.0 ➔ 4.114.0 ) [automerge] ([#283](https://github.com/DevSecNinja/.github/issues/283)) ([1a236b2](https://github.com/DevSecNinja/.github/commit/1a236b2ab2d5070e06ada4e7a4a76e0dc6c48afd))
+* **deps:** update dependency wrangler ( 4.114.0 ➔ 4.115.0 ) [automerge] ([#296](https://github.com/DevSecNinja/.github/issues/296)) ([77f2284](https://github.com/DevSecNinja/.github/commit/77f2284942371e3f1030fdf563a1605b40882225))
+* **deps:** update dependency wrangler ( 4.115.0 ➔ 4.116.0 ) [automerge] ([#297](https://github.com/DevSecNinja/.github/issues/297)) ([accf876](https://github.com/DevSecNinja/.github/commit/accf876d6cdd85dede6d1f791ff87675914fd62b))
+* **deps:** update dependency wrangler ( 4.116.0 ➔ 4.118.0 ) [automerge] ([#301](https://github.com/DevSecNinja/.github/issues/301)) ([b953424](https://github.com/DevSecNinja/.github/commit/b953424e09e534de9394b2e3abd2f2a4e983463f))
+* **github-release:** update release jdx/mise ( v2026.6.14 ➔ v2026.7.0 ) [automerge] ([#271](https://github.com/DevSecNinja/.github/issues/271)) ([c558dca](https://github.com/DevSecNinja/.github/commit/c558dcaa22964ec99051c32f655543916b305545))
+* **mise:** update tool dprint ( 0.54.0 ➔ 0.55.0 ) [automerge] ([#262](https://github.com/DevSecNinja/.github/issues/262)) ([7aeefdf](https://github.com/DevSecNinja/.github/commit/7aeefdf92526c37e76b9d3add3bb126c9e171dd1))
+* **mise:** update tool trivy ( 0.71.2 ➔ 0.72.0 ) [automerge] ([#272](https://github.com/DevSecNinja/.github/issues/272)) ([46d7b4f](https://github.com/DevSecNinja/.github/commit/46d7b4f3e9a550ee5f88c245817a55065331ebe1))
+* **mise:** update tool zizmor ( 1.26.1 ➔ 1.27.0 ) [automerge] ([#292](https://github.com/DevSecNinja/.github/issues/292)) ([d82cecd](https://github.com/DevSecNinja/.github/commit/d82cecd90abb19272438d9b9cd5ec14c5fb18754))
+* **pages:** add optional go-version input ([#298](https://github.com/DevSecNinja/.github/issues/298)) ([53ed8b3](https://github.com/DevSecNinja/.github/commit/53ed8b358bfa9a518c14e87e4a6c8b046c6f81f0))
+* **pages:** deploy prebuilt artifacts via artifact-name ([#304](https://github.com/DevSecNinja/.github/issues/304)) ([0a2b9f0](https://github.com/DevSecNinja/.github/commit/0a2b9f0a231c8319d3c53a82071a58d767b99046))
+* **renovate:** PR-age cooldown for registries without trusted timestamps ([#286](https://github.com/DevSecNinja/.github/issues/286)) ([1465118](https://github.com/DevSecNinja/.github/commit/14651183caf76526c7596e60fce70437f6ad1831))
+
+
+### Bug Fixes
+
+* **deps:** update dependency apm-cli ( 0.24.0 ➔ 0.24.1 ) [automerge] ([#259](https://github.com/DevSecNinja/.github/issues/259)) ([9f63c58](https://github.com/DevSecNinja/.github/commit/9f63c58c32375fd8f49e3a6da101f622cd13706c))
+* **deps:** update dependency wrangler ( 4.107.0 ➔ 4.107.1 ) [automerge] ([#260](https://github.com/DevSecNinja/.github/issues/260)) ([96f8a37](https://github.com/DevSecNinja/.github/commit/96f8a37b5e1c9a75c6cb7d340bf8ddf14101e62f))
+* **github-release:** update release jdx/mise ( v2026.6.11 ➔ v2026.6.14 ) [automerge] ([#251](https://github.com/DevSecNinja/.github/issues/251)) ([ee62ce3](https://github.com/DevSecNinja/.github/commit/ee62ce394d04fe899de11baa1a13b8fe680da010))
+* **github-release:** update release jdx/mise ( v2026.7.0 ➔ v2026.7.5 ) [automerge] ([#277](https://github.com/DevSecNinja/.github/issues/277)) ([b41a91b](https://github.com/DevSecNinja/.github/commit/b41a91b896fec163d117b7c2fdee70b996a20d22))
+* **github-release:** update release jdx/mise ( v2026.7.5 ➔ v2026.7.7 ) [automerge] ([#289](https://github.com/DevSecNinja/.github/issues/289)) ([045fd61](https://github.com/DevSecNinja/.github/commit/045fd610864d0a5f669b24ac50316f95834b5246))
+* **github-release:** update release jdx/mise ( v2026.7.7 ➔ v2026.7.12 ) [automerge] ([#299](https://github.com/DevSecNinja/.github/issues/299)) ([920fcc6](https://github.com/DevSecNinja/.github/commit/920fcc64393f0617ac37bf7d44edd16a991b8ac2))
+* **mise:** update tool dprint ( 0.55.0 ➔ 0.55.1 ) [automerge] ([#263](https://github.com/DevSecNinja/.github/issues/263)) ([de4fa66](https://github.com/DevSecNinja/.github/commit/de4fa663aef51dd1ab3adc01a9e5658ba08dd24f))
+* **mise:** update tool dprint ( 0.55.1 ➔ 0.55.2 ) [automerge] ([#290](https://github.com/DevSecNinja/.github/issues/290)) ([5f0ca1a](https://github.com/DevSecNinja/.github/commit/5f0ca1a6169d0f711e827d1d049ada5ab66777f7))
+* **mise:** update tool lefthook ( 2.1.9 ➔ 2.1.10 ) [automerge] ([#278](https://github.com/DevSecNinja/.github/issues/278)) ([889aaba](https://github.com/DevSecNinja/.github/commit/889aaba3f77cce884db0f609c63a51af9714c284))
+* **mise:** update tool pipx:checkov ( 3.3.1 ➔ 3.3.2 ) [automerge] ([#252](https://github.com/DevSecNinja/.github/issues/252)) ([276dd10](https://github.com/DevSecNinja/.github/commit/276dd10e72db8bd2f544e6aefd2b9bf8beb6925c))
+* **mise:** update tool pipx:checkov ( 3.3.2 ➔ 3.3.6 ) [automerge] ([#268](https://github.com/DevSecNinja/.github/issues/268)) ([38f0253](https://github.com/DevSecNinja/.github/commit/38f02539b12f5240dd165eb6822a93c58498ff7c))
+* **mise:** update tool pipx:checkov ( 3.3.6 ➔ 3.3.8 ) [automerge] ([#279](https://github.com/DevSecNinja/.github/issues/279)) ([17cd014](https://github.com/DevSecNinja/.github/commit/17cd014a75772cc3c3e1df5035f9b156f690095f))
+* **mise:** update tool uv ( 0.11.23 ➔ 0.11.24 ) [automerge] ([#253](https://github.com/DevSecNinja/.github/issues/253)) ([0d40409](https://github.com/DevSecNinja/.github/commit/0d40409106c2a2b5ae1a5167cc057bb9c15fff66))
+* **mise:** update tool uv ( 0.11.24 ➔ 0.11.25 ) [automerge] ([#261](https://github.com/DevSecNinja/.github/issues/261)) ([ee9e92b](https://github.com/DevSecNinja/.github/commit/ee9e92bb172b6d853b2404df5bef4cce9b6960aa))
+* **mise:** update tool uv ( 0.11.25 ➔ 0.11.26 ) [automerge] ([#269](https://github.com/DevSecNinja/.github/issues/269)) ([cd723be](https://github.com/DevSecNinja/.github/commit/cd723be11f04e96b461c509c7fe395021e2d85f0))
+* **mise:** update tool uv ( 0.11.26 ➔ 0.11.28 ) [automerge] ([#280](https://github.com/DevSecNinja/.github/issues/280)) ([15d7e11](https://github.com/DevSecNinja/.github/commit/15d7e1169693e9b496ec8d4278ef0fb865a7504a))
+* **mise:** update tool uv ( 0.11.28 ➔ 0.11.29 ) [automerge] ([#291](https://github.com/DevSecNinja/.github/issues/291)) ([2df23c1](https://github.com/DevSecNinja/.github/commit/2df23c1b038cda83fe2088ff8278d75d69193c07))
+* **mise:** update tool uv ( 0.11.29 ➔ 0.11.32 ) [automerge] ([#300](https://github.com/DevSecNinja/.github/issues/300)) ([1d48a4e](https://github.com/DevSecNinja/.github/commit/1d48a4ef54f190a5a6a3e17795f0da49ce2fe19b))
+* **renovate:** drop invalid minimumReleaseAge override on automerge rule ([#285](https://github.com/DevSecNinja/.github/issues/285)) ([37b3eb0](https://github.com/DevSecNinja/.github/commit/37b3eb0f42e407d1200c8a52f3500e0578fc9e40))
+* **renovate:** set internalChecksFilter to strict ([#284](https://github.com/DevSecNinja/.github/issues/284)) ([46c8d52](https://github.com/DevSecNinja/.github/commit/46c8d52b2f3ca613956756a583332ba84b7f938e))
+* **renovate:** stop behind-base rebases resetting the pr-cooldown clock ([#287](https://github.com/DevSecNinja/.github/issues/287)) ([53f8930](https://github.com/DevSecNinja/.github/commit/53f89301b4b90aab188a8751731b5d8f7e0c8255))
+
 ## [2.2.0](https://github.com/DevSecNinja/.github/compare/v2.1.0...v2.2.0) (2026-07-07)
 
 
