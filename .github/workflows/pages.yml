@@ -486,7 +486,9 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     concurrency:
-      group: cloudflare-pages-${{ matrix.target }}-${{ github.repository }}
+      # Scoped per Cloudflare project: a repository may call this workflow once
+      # per site, and those deploys are independent of each other.
+      group: cloudflare-pages-${{ matrix.target }}-${{ github.repository }}-${{ needs.detect-cloudflare.outputs.project-name }}
       cancel-in-progress: false
     environment:
       name: ${{ matrix.environment }}
@@ -597,7 +599,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     concurrency:
-      group: preview-${{ github.repository }}-${{ github.event.pull_request.number }}
+      # Scoped per Cloudflare project, as above. Without the project name two
+      # calls from one repository share a group and, because this one cancels
+      # in progress, the second preview kills the first.
+      group: preview-${{ github.repository }}-${{ github.event.pull_request.number }}-${{ needs.detect-cloudflare.outputs.project-name }}
       cancel-in-progress: true
     permissions:
       contents: read
