@@ -54,6 +54,20 @@ on:
         description: "Path uploaded to GitHub Pages or Cloudflare Pages"
         required: true
         type: string
+      artifact-name:
+        description: >-
+          Name of an artifact, uploaded by an earlier job in the calling
+          workflow, that already contains the built site. When set, the deploy
+          jobs download it into `artifact-path` instead of running
+          `install-command` / `build-command`.
+
+          Use this when the build needs credentials or tooling this workflow
+          does not provide: the build then runs in the caller's own job, where
+          the caller controls the environment, and this workflow only deploys.
+          The calling job must `needs:` the job that uploads the artifact.
+        required: false
+        type: string
+        default: ""
       install-command:
         description: "Dependency installation command"
         required: false
@@ -160,6 +174,7 @@ jobs:
           TEST_SETUP_COMMAND: ${{ inputs.test-setup-command }}
           TEST_COMMAND: ${{ inputs.test-command }}
           BUILD_COMMAND: ${{ inputs.build-command }}
+          ARTIFACT_NAME: ${{ inputs.artifact-name }}
           CLOUDFLARE_PREVIEW: ${{ inputs.cloudflare-preview }}
           CLOUDFLARE_PRODUCTION: ${{ inputs.cloudflare-production }}
           CLOUDFLARE_ACCEPTANCE: ${{ inputs.cloudflare-acceptance }}
@@ -173,6 +188,11 @@ jobs:
             [ -n "${BUILD_COMMAND}" ]
           }; then
             echo "::error::node-version is required when install-command, test-setup-command, test-command, or build-command is set; provide node-version or clear those commands."
+            exit 1
+          fi
+
+          if [ -n "${ARTIFACT_NAME}" ] && [ -n "${BUILD_COMMAND}" ]; then
+            echo "::error::artifact-name and build-command are mutually exclusive; the artifact is deployed as-is."
             exit 1
           fi
 
@@ -382,7 +402,9 @@ jobs:
           package-manager-cache: false
 
       - name: Setup Go
-        if: ${{ inputs.go-version != '' || inputs.go-version-file != '' }}
+        if: >-
+          ${{ inputs.artifact-name == '' &&
+          (inputs.go-version != '' || inputs.go-version-file != '') }}
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version: ${{ inputs.go-version }}
@@ -402,6 +424,16 @@ jobs:
         env:
           BUILD_COMMAND: ${{ inputs.build-command }}
         run: bash -euo pipefail -c "${BUILD_COMMAND}"
+
+      # Artifacts are scoped to the workflow run, and a reusable workflow's jobs
+      # are part of the caller's run — so this picks up an artifact uploaded by
+      # an earlier caller job with no extra permissions and no token handoff.
+      - name: Download prebuilt site
+        if: ${{ inputs.artifact-name != '' }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ${{ inputs.artifact-path }}
 
       - name: Run pre-deploy command
         if: ${{ inputs.pre-deploy-command != '' }}
@@ -487,7 +519,9 @@ jobs:
           package-manager-cache: false
 
       - name: Setup Go
-        if: ${{ inputs.go-version != '' || inputs.go-version-file != '' }}
+        if: >-
+          ${{ inputs.artifact-name == '' &&
+          (inputs.go-version != '' || inputs.go-version-file != '') }}
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version: ${{ inputs.go-version }}
@@ -507,6 +541,16 @@ jobs:
         env:
           BUILD_COMMAND: ${{ inputs.build-command }}
         run: bash -euo pipefail -c "${BUILD_COMMAND}"
+
+      # Artifacts are scoped to the workflow run, and a reusable workflow's jobs
+      # are part of the caller's run — so this picks up an artifact uploaded by
+      # an earlier caller job with no extra permissions and no token handoff.
+      - name: Download prebuilt site
+        if: ${{ inputs.artifact-name != '' }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ${{ inputs.artifact-path }}
 
       - name: Run pre-deploy command
         if: ${{ inputs.pre-deploy-command != '' }}
@@ -581,7 +625,9 @@ jobs:
           package-manager-cache: false
 
       - name: Setup Go
-        if: ${{ inputs.go-version != '' || inputs.go-version-file != '' }}
+        if: >-
+          ${{ inputs.artifact-name == '' &&
+          (inputs.go-version != '' || inputs.go-version-file != '') }}
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version: ${{ inputs.go-version }}
@@ -601,6 +647,16 @@ jobs:
         env:
           BUILD_COMMAND: ${{ inputs.build-command }}
         run: bash -euo pipefail -c "${BUILD_COMMAND}"
+
+      # Artifacts are scoped to the workflow run, and a reusable workflow's jobs
+      # are part of the caller's run — so this picks up an artifact uploaded by
+      # an earlier caller job with no extra permissions and no token handoff.
+      - name: Download prebuilt site
+        if: ${{ inputs.artifact-name != '' }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ${{ inputs.artifact-path }}
 
       - name: Run pre-preview command
         if: ${{ inputs.pre-preview-command != '' }}
