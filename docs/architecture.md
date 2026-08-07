@@ -163,10 +163,35 @@ secrets fail production Cloudflare deploys and skip preview-only deploys.
 | `cloudflare-production-branch`     | Cloudflare production branch. Default: `main`.                                                   |
 | `preview-comment-marker`           | Marker used to update the preview PR comment.                                                    |
 
+| Secret                | Description                                                                          |
+| --------------------- | ------------------------------------------------------------------------------------ |
+| `CLOUDFLARE_API_TOKEN`  | Cloudflare API token. Required for any Cloudflare deploy.                            |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID. Required for any Cloudflare deploy.                           |
+| `BUILD_GITHUB_TOKEN`    | Optional. Exposed to `build-command` as `GITHUB_TOKEN` on production builds only.    |
+
 Build, pre-deploy, and pre-preview commands run with an `APP_COMMIT_SHA`
 environment variable set to `${{ github.event.pull_request.head.sha || github.sha }}`.
 On `pull_request` events `github.sha` is the ephemeral merge commit, so builds
 should read `APP_COMMIT_SHA` to stamp the real PR head commit in previews.
+
+**Builds that need the GitHub API.** Sites generated from repository data (for
+example a site built from GitHub Issues) can pass `BUILD_GITHUB_TOKEN`. It is
+exported as `GITHUB_TOKEN` for the `build-command` step of the GitHub Pages and
+Cloudflare production/acceptance deploy jobs *only* — never for the test job or
+for pull request previews, which build untrusted PR head code. Previews
+therefore build without a token and should fall back to committed fixture data.
+Scope the token with the caller's own `permissions:` block, e.g.:
+
+```yaml
+    permissions:
+      contents: read
+      issues: read
+      # …plus the deploy permissions
+    secrets:
+      BUILD_GITHUB_TOKEN: ${{ github.token }}
+```
+
+See [ADR 0006](design-decisions/0006-build-time-github-token.md).
 
 **Example caller:**
 

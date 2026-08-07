@@ -142,6 +142,15 @@ on:
         required: false
       CLOUDFLARE_ACCOUNT_ID:
         required: false
+      BUILD_GITHUB_TOKEN:
+        description: >-
+          Optional token exposed to `build-command` as `GITHUB_TOKEN`, for
+          builds that read the GitHub API (e.g. a site generated from Issues).
+          Only ever exposed to production-branch builds — never to the test job
+          or to pull request preview builds, which run untrusted PR head code.
+          Pass the caller's `github.token` and scope it with the caller job's
+          `permissions:` block, or supply a narrower token.
+        required: false
 
 permissions:
   contents: read
@@ -401,7 +410,17 @@ jobs:
         if: ${{ inputs.build-command != '' }}
         env:
           BUILD_COMMAND: ${{ inputs.build-command }}
-        run: bash -euo pipefail -c "${BUILD_COMMAND}"
+          BUILD_GITHUB_TOKEN: ${{ secrets.BUILD_GITHUB_TOKEN }}
+        run: |-
+          set -euo pipefail
+          # Opt-in: only export a token when the caller actually supplied one,
+          # so builds that need none never see an empty GITHUB_TOKEN. This job
+          # only runs on the production branch, so the build command is trusted
+          # default-branch code (unlike the preview job below).
+          if [ -n "${BUILD_GITHUB_TOKEN}" ]; then
+            export GITHUB_TOKEN="${BUILD_GITHUB_TOKEN}"
+          fi
+          bash -euo pipefail -c "${BUILD_COMMAND}"
 
       - name: Run pre-deploy command
         if: ${{ inputs.pre-deploy-command != '' }}
@@ -506,7 +525,17 @@ jobs:
         if: ${{ inputs.build-command != '' }}
         env:
           BUILD_COMMAND: ${{ inputs.build-command }}
-        run: bash -euo pipefail -c "${BUILD_COMMAND}"
+          BUILD_GITHUB_TOKEN: ${{ secrets.BUILD_GITHUB_TOKEN }}
+        run: |-
+          set -euo pipefail
+          # Opt-in: only export a token when the caller actually supplied one,
+          # so builds that need none never see an empty GITHUB_TOKEN. This job
+          # only runs on the production branch, so the build command is trusted
+          # default-branch code (unlike the preview job below).
+          if [ -n "${BUILD_GITHUB_TOKEN}" ]; then
+            export GITHUB_TOKEN="${BUILD_GITHUB_TOKEN}"
+          fi
+          bash -euo pipefail -c "${BUILD_COMMAND}"
 
       - name: Run pre-deploy command
         if: ${{ inputs.pre-deploy-command != '' }}
