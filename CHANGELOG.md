@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.4.0](https://github.com/DevSecNinja/.github/compare/v2.3.0...v2.4.0) (2026-08-07)
+
+
+### Features
+
+* **mise:** update tool zizmor ( 1.27.0 ➔ 1.28.0 ) [automerge] ([#302](https://github.com/DevSecNinja/.github/issues/302)) ([aec0b6a](https://github.com/DevSecNinja/.github/commit/aec0b6a1820c4760c618f4acdccea8a5efd0dc1a))
+
+
+### Bug Fixes
+
+* **pages:** scope Cloudflare concurrency per project ([#305](https://github.com/DevSecNinja/.github/issues/305)) ([5c5394a](https://github.com/DevSecNinja/.github/commit/5c5394a77432b930c0a534767d7d5818d9521a7e))
+
 ## [2.3.0](https://github.com/DevSecNinja/.github/compare/v2.2.0...v2.3.0) (2026-08-07)
 
 
