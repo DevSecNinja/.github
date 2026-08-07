@@ -213,6 +213,11 @@ jobs:
       cloudflare-project-name: my-site
 ```
 
+A repository may call this workflow more than once — once per site. Cloudflare
+deploy and preview concurrency is scoped per project name, so parallel calls do
+not cancel or serialise each other. Give each call its own
+`preview-comment-marker` so the preview comments don't overwrite one another.
+
 `artifact-name` and `build-command` are mutually exclusive — the artifact is
 deployed exactly as uploaded. With `artifact-name` set the deploy jobs skip
 Node/Go setup, install and build entirely.
