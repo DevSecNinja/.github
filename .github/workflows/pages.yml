@@ -365,7 +365,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     concurrency:
-      group: pages-${{ github.repository }}
+      # Concurrency groups are already scoped to the repository, so naming the
+      # repo adds nothing. A repository has exactly one GitHub Pages site, so
+      # every call that deploys to Pages does belong in a single group.
+      group: pages
       cancel-in-progress: false
     environment:
       name: github-pages
@@ -488,7 +491,7 @@ jobs:
     concurrency:
       # Scoped per Cloudflare project: a repository may call this workflow once
       # per site, and those deploys are independent of each other.
-      group: cloudflare-pages-${{ matrix.target }}-${{ github.repository }}-${{ needs.detect-cloudflare.outputs.project-name }}
+      group: cloudflare-pages-${{ matrix.target }}-${{ needs.detect-cloudflare.outputs.project-name }}
       cancel-in-progress: false
     environment:
       name: ${{ matrix.environment }}
@@ -602,7 +605,7 @@ jobs:
       # Scoped per Cloudflare project, as above. Without the project name two
       # calls from one repository share a group and, because this one cancels
       # in progress, the second preview kills the first.
-      group: preview-${{ github.repository }}-${{ github.event.pull_request.number }}-${{ needs.detect-cloudflare.outputs.project-name }}
+      group: preview-${{ github.event.pull_request.number }}-${{ needs.detect-cloudflare.outputs.project-name }}
       cancel-in-progress: true
     permissions:
       contents: read
