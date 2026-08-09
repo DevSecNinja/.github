@@ -26,11 +26,13 @@ on:
         default: 14
       gated-branch-prefixes:
         description: >-
-          Comma-separated Renovate branch prefixes to gate (registries without
-          a trusted release timestamp).
+          Comma-separated Renovate branch prefixes to gate. The default matches
+          the `docker-gated-` marker that .renovate/packageRules.json5 stamps
+          onto every dependency Renovate cannot soak natively, so the gate and
+          the Renovate config are driven by one shared decision.
         required: false
         type: string
-        default: "renovate/ghcr.io-,renovate/lscr.io-,renovate/quay.io-"
+        default: "renovate/docker-gated-"
       renovate-bot-login:
         description: "Login of the account that opens Renovate PRs."
         required: false
@@ -73,6 +75,8 @@ jobs:
             const { owner, repo } = context.repo;
             const dayMs = 24 * 60 * 60 * 1000;
 
+            // The `docker-gated-` marker is applied by the same Renovate rule
+            // that sets timestamp-optional, so this can never drift from it.
             const isGated = (branch) =>
               prefixes.some((prefix) => branch.startsWith(prefix));
 
