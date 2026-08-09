@@ -103,7 +103,24 @@
       // with `$` so it cannot also match unrelated tags sharing that prefix.
       description: "Use custom versioning for linuxserver images",
       versioning: "regex:^(version)(?<compatibility>.*?)-v?(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)[\\.-]*r?(?<build>\\d+)*-*r?(?<release>\\w+)?|^latest$",
-      matchPackageNames: ["/^lscr\\.io\\/linuxserver\\//"],
+      // linuxserver publishes the same images to Docker Hub, lscr.io and ghcr.io
+      // with identical digests. Docker Hub is preferred because it is the only
+      // registry Renovate reads a release timestamp from, so the soak is
+      // enforced natively there rather than by the pr-cooldown proxy — but the
+      // rule must cover every mirror, otherwise moving an image between them
+      // silently changes its versioning.
+      matchPackageNames: [
+        "/^lscr\\.io\\/linuxserver\\//",
+        "/^docker\\.io\\/linuxserver\\//",
+        "/^ghcr\\.io\\/linuxserver\\//",
+      ],
+      // Only `version-*` tags need this regex. Some linuxserver images (e.g.
+      // qbittorrent) publish plain semver tags like `5.1.4`, which the regex
+      // cannot parse — forcing it on them makes the value uncomparable, so they
+      // get digest-only updates and silently freeze. Selecting on tag shape
+      // instead of image name lets those fall through to default docker
+      // versioning, which compares them correctly, with no per-image allowlist.
+      matchCurrentValue: "/^version-/",
     },
     {
       description: "Group .chezmoiversion and .mise.toml chezmoi pin updates into one PR so both files are always updated atomically and CI stays green.",
