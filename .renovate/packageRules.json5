@@ -53,15 +53,32 @@
       minimumReleaseAge: "14 days",
     },
     {
-      description: "ghcr.io / lscr.io / quay.io do not expose a trusted release timestamp, so the default timestamp-required behaviour marks every release 'pending' forever and no PR is ever created. Treat missing timestamps as stable so Renovate opens the PR (and enables automerge); the 14-day soak is instead enforced by the pr-cooldown required status check, which measures the PR branch head commit age. rebaseWhen:conflicted stops behind-base-branch rebases from rewriting that commit on every base change and perpetually resetting the cooldown clock (branch protection is non-strict, so a behind-base branch still auto-merges once soaked). Placed after the generic docker rule so it wins. See docs/design-decisions/0005-pr-age-cooldown-for-untrusted-timestamps.md.",
+      // Renovate only derives a release timestamp for Docker Hub, and only via
+      // the Hub-specific hub.docker.com API — `registryHost === DOCKER_HUB` in
+      // the docker datasource. Every other registry goes through the OCI
+      // Registry V2 /tags/list endpoint, which returns bare tag names, so no
+      // timestamp exists regardless of what the registry stores internally.
+      // Match that condition directly instead of maintaining an allowlist:
+      // previously each new registry had to be remembered here AND in the
+      // cooldown workflow, and dhi.io was missing from both for ~3.5 months
+      // (DevSecNinja/truenas-apps#634).
+      // The positive pattern requires a dot in the first path segment, i.e. an
+      // explicit registry host, so bare Docker Hub names like "nginx" or
+      // "library/nginx" keep their native soak.
+      // The same matcher also stamps the branch name, so the cooldown gate and
+      // this rule can never disagree: any dep Renovate cannot soak natively
+      // gets `renovate/docker-gated-`, and the workflow gates exactly that
+      // prefix. A registry nobody has wired up yet is therefore gated by
+      // default rather than auto-merging unsoaked.
+      description: "Every registry except Docker Hub lacks a trusted release timestamp, so the default timestamp-required behaviour marks every release 'pending' forever and no PR is ever created. Treat missing timestamps as stable so Renovate opens the PR (and enables automerge); the 14-day soak is instead enforced by the pr-cooldown required status check, which measures the PR branch head commit age. rebaseWhen:conflicted stops behind-base-branch rebases from rewriting that commit on every base change and perpetually resetting the cooldown clock (branch protection is non-strict, so a behind-base branch still auto-merges once soaked). Placed after the generic docker rule so it wins. See docs/design-decisions/0005-pr-age-cooldown-for-untrusted-timestamps.md.",
       matchDatasources: ["docker"],
       matchPackageNames: [
-        "/^ghcr\\.io\\//",
-        "/^lscr\\.io\\//",
-        "/^quay\\.io\\//",
+        "/^[^/]*\\./",
+        "!/^docker\\.io\\//",
       ],
       minimumReleaseAgeBehaviour: "timestamp-optional",
       rebaseWhen: "conflicted",
+      additionalBranchPrefix: "docker-gated-",
     },
     {
       description: "Auto-merge dotfiles devcontainer image digest, patch, and minor updates via branch without tests, ignoring the global schedule and release-age soak so they can always merge. Placed after the generic docker minimumReleaseAge rule so its minimumReleaseAge:0 wins. Major bumps are intentionally excluded and left for manual review.",
