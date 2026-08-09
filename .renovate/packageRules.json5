@@ -77,8 +77,15 @@
       schedule: ["at any time"],
     },
     {
+      // The `v` prefix is matched outside `<major>`: capturing it (`v?\d+`) makes
+      // Renovate's Number.parseInt("v1") return NaN and corrupt version comparison.
+      // `<release>` is optional so three-part tags with no trailing build/release
+      // segment (e.g. bazarr's `version-v1.5.3`) match at all — when it was
+      // mandatory those tags never matched and were never updated, and tags like
+      // `version-10.4.57` backtracked into patch=5/release=7. `latest` is anchored
+      // with `$` so it cannot also match unrelated tags sharing that prefix.
       description: "Use custom versioning for linuxserver images",
-      versioning: "regex:^(version)(?<compatibility>.*?)-(?<major>v?\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)[\\.-]*r?(?<build>\\d+)*-*r?(?<release>\\w+)|^latest*",
+      versioning: "regex:^(version)(?<compatibility>.*?)-v?(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)[\\.-]*r?(?<build>\\d+)*-*r?(?<release>\\w+)?|^latest$",
       matchPackageNames: ["/^lscr\\.io\\/linuxserver\\//"],
     },
     {
