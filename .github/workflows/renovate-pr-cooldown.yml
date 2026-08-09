@@ -30,7 +30,7 @@ on:
           a trusted release timestamp).
         required: false
         type: string
-        default: "renovate/ghcr.io-,renovate/lscr.io-,renovate/quay.io-"
+        default: "renovate/ghcr.io-,renovate/lscr.io-,renovate/quay.io-,renovate/dhi.io-"
       renovate-bot-login:
         description: "Login of the account that opens Renovate PRs."
         required: false

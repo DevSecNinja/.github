@@ -17,8 +17,9 @@ datasource/registry must provide. Renovate 42+ defaults
 **not** trust the OCI `org.opencontainers.image.created` annotation (the
 publisher controls it, so it could be forged to bypass the soak).
 
-Several registries we use — **ghcr.io, lscr.io, quay.io** — expose no trusted
-timestamp. With `timestamp-required`, every release from those registries is
+Several registries we use — **ghcr.io, lscr.io, quay.io, dhi.io** — expose no
+trusted timestamp. With `timestamp-required`, every release from those
+registries is
 marked "pending" forever: `internalChecksFilter: strict` then refuses to create
 a branch, so the update sits under the dependency dashboard's "Pending Status
 Checks" section and **no PR is ever opened** (observed in
@@ -43,7 +44,7 @@ The two native options are both unacceptable on their own:
 Keep the soak, but for these registries **measure it from PR age instead of
 release age**.
 
-1. For `docker` deps on `ghcr.io` / `lscr.io` / `quay.io`, set
+1. For `docker` deps on `ghcr.io` / `lscr.io` / `quay.io` / `dhi.io`, set
    `minimumReleaseAgeBehaviour: "timestamp-optional"` (in
    [`.renovate/packageRules.json5`](../../.renovate/packageRules.json5)). Renovate
    opens the PR immediately and enables `platformAutomerge`.
