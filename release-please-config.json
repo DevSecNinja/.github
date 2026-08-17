@@ -9,6 +9,19 @@
   "draft": false,
   "draft-pull-request": false,
   "prerelease": false,
+  "changelog-sections": [
+    { "type": "feat", "section": "🚀 Features" },
+    { "type": "fix", "section": "🐛 Bug Fixes" },
+    { "type": "perf", "section": "⚡ Performance" },
+    { "type": "revert", "section": "⏪ Reverts" },
+    { "type": "build", "section": "📦 Dependencies" },
+    { "type": "ci", "section": "🔧 CI", "hidden": true },
+    { "type": "docs", "section": "📖 Documentation", "hidden": true },
+    { "type": "chore", "hidden": true },
+    { "type": "refactor", "hidden": true },
+    { "type": "test", "hidden": true },
+    { "type": "style", "hidden": true }
+  ],
   "packages": {
     ".": {
       "release-type": "simple",

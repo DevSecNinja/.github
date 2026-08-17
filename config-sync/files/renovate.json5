@@ -5,6 +5,7 @@
     "helpers:pinGitHubActionDigests",
     ":dependencyDashboard",
     ":semanticCommits",
+    ":semanticCommitTypeAll(build)",
     "github>DevSecNinja/.github//.renovate/autoMerge.json5",
     "github>DevSecNinja/.github//.renovate/base.json5",
     "github>DevSecNinja/.github//.renovate/customManagers.json5",
