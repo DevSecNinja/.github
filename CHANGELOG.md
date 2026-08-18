@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.5.0](https://github.com/DevSecNinja/.github/compare/v2.4.0...v2.5.0) (2026-08-18)
+
+
+### 🚀 Features
+
+* **deps:** update dependency apm-cli ( 0.26.0 ➔ 0.27.0 ) [automerge] ([#321](https://github.com/DevSecNinja/.github/issues/321)) ([d00cc26](https://github.com/DevSecNinja/.github/commit/d00cc263977c0dc0fb9d474d1afc62d61965740e))
+* **deps:** update dependency wrangler ( 4.118.0 ➔ 4.119.0 ) [automerge] ([#309](https://github.com/DevSecNinja/.github/issues/309)) ([044b9da](https://github.com/DevSecNinja/.github/commit/044b9da62e169240cc71ae146d38be6efcd7f4e2))
+* **deps:** update dependency wrangler ( 4.119.0 ➔ 4.123.0 ) [automerge] ([#318](https://github.com/DevSecNinja/.github/issues/318)) ([d88b8d9](https://github.com/DevSecNinja/.github/commit/d88b8d90f346d2505e654f7a2ea7bb2cd45624bf))
+* **github-release:** update release jdx/mise ( v2026.7.14 ➔ v2026.8.0 ) [automerge] ([#319](https://github.com/DevSecNinja/.github/issues/319)) ([70fea47](https://github.com/DevSecNinja/.github/commit/70fea47535c668c0e37a550a7b883f38d729b0df))
+* **mise:** update tool uv ( 0.11.32 ➔ 0.12.1 ) [automerge] ([#320](https://github.com/DevSecNinja/.github/issues/320)) ([7db84d1](https://github.com/DevSecNinja/.github/commit/7db84d1ef679952dbed3fdac03fef5288503ec49))
+* **renovate:** derive timestamp gating from one matcher ([#312](https://github.com/DevSecNinja/.github/issues/312)) ([be67213](https://github.com/DevSecNinja/.github/commit/be67213109f7b973bc22752c79a5312de6da9597))
+
+
+### 🐛 Bug Fixes
+
+* **github-release:** update release jdx/mise ( v2026.7.12 ➔ v2026.7.13 ) [automerge] ([#307](https://github.com/DevSecNinja/.github/issues/307)) ([2dcda50](https://github.com/DevSecNinja/.github/commit/2dcda507cd3d617f3d27ab3ba015e4ece2b0aab9))
+* **github-release:** update release jdx/mise ( v2026.7.13 ➔ v2026.7.14 ) [automerge] ([#314](https://github.com/DevSecNinja/.github/issues/314)) ([2fb4955](https://github.com/DevSecNinja/.github/commit/2fb4955995c3e6bd84d00a2fb29127a7a6706944))
+* **mise:** update tool pipx:checkov ( 3.3.8 ➔ 3.3.9 ) [automerge] ([#317](https://github.com/DevSecNinja/.github/issues/317)) ([42ccc79](https://github.com/DevSecNinja/.github/commit/42ccc798f93f740d6214c8725a6cc150f4da1c43))
+* **renovate:** recognize linuxserver version-v* tags ([#310](https://github.com/DevSecNinja/.github/issues/310)) ([d7115e6](https://github.com/DevSecNinja/.github/commit/d7115e64cc3e1ec7f6e67a7b14900c2e8d41be9b))
+* **renovate:** scope linuxserver versioning by mirror and tag shape ([#313](https://github.com/DevSecNinja/.github/issues/313)) ([4dc939a](https://github.com/DevSecNinja/.github/commit/4dc939a37df9a50e667d8981480078d53eb593b6))
+
 ## [2.4.0](https://github.com/DevSecNinja/.github/compare/v2.3.0...v2.4.0) (2026-08-07)
 
 
