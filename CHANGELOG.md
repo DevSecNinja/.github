@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.0.0](https://github.com/DevSecNinja/.github/compare/v2.5.0...v3.0.0) (2026-09-04)
+
+
+### ⚠ BREAKING CHANGES
+
+* **release-please:** require GitHub App authentication ([#335](https://github.com/DevSecNinja/.github/issues/335))
+
+### 🚀 Features
+
+* **release-please:** require GitHub App authentication ([#335](https://github.com/DevSecNinja/.github/issues/335)) ([c278731](https://github.com/DevSecNinja/.github/commit/c278731ad3147892769f9f3c08d0064ea01988ad))
+
+
+### 🐛 Bug Fixes
+
+* **shell:** apply configured indentation ([#337](https://github.com/DevSecNinja/.github/issues/337)) ([d1012e2](https://github.com/DevSecNinja/.github/commit/d1012e2e80ffc536f131f9d093b98a418011c30a))
+
 ## [2.5.0](https://github.com/DevSecNinja/.github/compare/v2.4.0...v2.5.0) (2026-08-18)
 
 
