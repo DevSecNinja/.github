@@ -128,6 +128,38 @@ jobs:
       tag: ${{ github.ref_name }}
 ```
 
+### Release Please (`release-please.yml`)
+
+Opens or updates release PRs and creates version tags from Conventional
+Commits. GitHub App authentication is mandatory so release PR and tag
+events trigger downstream workflows; the reusable fails closed for
+empty or whitespace-only credentials and never uses `GITHUB_TOKEN`.
+
+| Input / secret    | Description                                            |
+| ----------------- | ------------------------------------------------------ |
+| `app-id`          | **Required.** Release Please GitHub App ID.            |
+| `app-private-key` | **Required secret.** Private key paired with `app-id`. |
+| `target-branch`   | Branch to track. Default: `main`.                      |
+| `config-file`     | Release Please configuration path.                     |
+| `manifest-file`   | Release Please manifest path.                          |
+
+The App installation needs only Contents and Pull requests write
+permissions (Metadata read is automatic). Every caller must also enable
+**Allow GitHub Actions to create and approve pull requests**.
+
+Callers choose one publication pattern:
+
+1. Set `skip-github-release: false` for a direct Release Please GitHub
+   Release, with no competing tag publisher. This is the default for
+   simple consumers.
+2. Set `skip-github-release: true` with a tag-triggered `release.yml`
+   that owns assets, attestations, notes, and publication. Release
+   Please still creates the tag in this pattern; use it only when those
+   custom publication steps are needed.
+
+See the [onboarding guide](release-please-onboarding.md) and
+[ADR 0007](design-decisions/0007-mandatory-release-please-app-authentication.md).
+
 ### Pages (`pages.yml`)
 
 Runs configurable site validation commands, deploys the production artifact to
@@ -584,6 +616,7 @@ provides the display name, description, and category shown in the picker.
 | `lint.yml`                       | Linting pipeline                       |
 | `pages.yml`                      | GitHub Pages deploy and PR previews    |
 | `release.yml`                    | GitHub Release on tag push             |
+| `release-please.yml`             | App-authenticated release PRs and tags |
 | `config-sync.yml`                | Weekly config drift sync               |
 | `label-sync.yml`                 | Sync labels from `.github/labels.yaml` |
 | `labeler.yml`                    | Auto-label PRs and issues              |

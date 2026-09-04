@@ -11,7 +11,9 @@ name: Release Please
 # Release directly (`skip-github-release: false`).
 #
 # Branch protection is fully respected: every release commit lands via
-# PR through normal CI. No bypass actor required.
+# PR through normal CI. GitHub App credentials are mandatory, and the
+# repository must enable "Allow GitHub Actions to create and approve pull
+# requests". No bypass actor required.
 #
 # Onboarding guide:
 #   docs/release-please-onboarding.md
@@ -21,10 +23,8 @@ on:
     branches:
       - main
   workflow_dispatch:
-
 permissions:
   contents: read
-
 concurrency:
   group: release-please
   cancel-in-progress: false

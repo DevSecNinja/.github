@@ -10,21 +10,19 @@ name: Reusable — Release Please
 #      Conventional Commits since the last tag.
 #
 #   2. When that release PR is merged, creates the `vX.Y.Z` git tag
-#      pointing at the merge commit. **It does NOT create a GitHub
-#      Release** (skip-github-release: true is set in each consumer's
-#      release-please-config.json) — publishing is owned by the
-#      consumer's existing tag-triggered `release.yml`.
+#      pointing at the merge commit. Depending on the caller's config,
+#      release-please either creates the GitHub Release directly
+#      (`skip-github-release: false`) or leaves release publication to a
+#      tag-triggered workflow (`skip-github-release: true`).
 #
 # Branch protection is fully respected: the chore commit always lands
 # via PR through normal CI. No bypass actor is needed.
 #
-# Authentication: pass `app-id` (input) + `app-private-key` (secret) so
-# release PRs are opened by a GitHub App identity — App-opened PRs
-# trigger `pull_request: opened` events, so required CI status checks
-# fire automatically. Without those, release-please falls back to
-# `GITHUB_TOKEN`, which by GitHub design does NOT trigger workflow runs
-# on the PRs it opens; under branch protection that means the PR cannot
-# satisfy required status checks. See:
+# Authentication: `app-id` (input) + `app-private-key` (secret) are
+# mandatory. Release PRs and tags created by the App trigger downstream
+# workflows; events created by GITHUB_TOKEN do not. The calling
+# repository must install the App and enable "Allow GitHub Actions to
+# create and approve pull requests". See:
 #   https://docs.github.com/en/actions/security-guides/automatic-token-authentication#using-the-github_token-in-a-workflow
 #
 # See also:
@@ -51,20 +49,16 @@ on:
         default: .release-please-manifest.json
       app-id:
         description: |
-          GitHub App ID used to mint a short-lived token for opening the
-          release PR. When set, the App must be installed on the calling
-          repo with Contents: write + Pull requests: write permissions.
-          When unset, release-please falls back to GITHUB_TOKEN — release
-          PRs will open but won't trigger CI on `pull_request` events.
-        required: false
+          GitHub App ID used to mint a short-lived token. The App must be
+          installed on the calling repo with Contents: write and Pull
+          requests: write permissions.
+        required: true
         type: string
-        default: ""
     secrets:
       app-private-key:
         description: |
-          PEM contents of the GitHub App's private key, paired with
-          `app-id`. Required when `app-id` is set.
-        required: false
+          PEM contents of the GitHub App's private key, paired with app-id.
+        required: true
     outputs:
       releases_created:
         description: "`true` when this run created at least one new tag."
@@ -85,18 +79,27 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       # release-please needs to push the chore-release branch and tag.
-      # Used as fallback when `app-id` is not provided.
       contents: write
-      # …and to open / update the release PR.
+      # ...and to open / update the release PR.
       pull-requests: write
     outputs:
       releases_created: ${{ steps.release-please.outputs.releases_created }}
       tag_name: ${{ steps.release-please.outputs.tag_name }}
       pr: ${{ steps.release-please.outputs.pr }}
     steps:
+      - name: Validate GitHub App credentials
+        shell: bash
+        env:
+          APP_ID: ${{ inputs.app-id }}
+          APP_PRIVATE_KEY: ${{ secrets.app-private-key }}
+        run: |-
+          if [[ -z "${APP_ID//[[:space:]]/}" || -z "${APP_PRIVATE_KEY//[[:space:]]/}" ]]; then
+              echo "::error title=GitHub App authentication required::Configure the Release Please App installation and credentials: https://github.com/DevSecNinja/.github/blob/main/docs/release-please-onboarding.md"
+              exit 1
+          fi
+
       - name: Generate App token
         id: app-token
-        if: inputs.app-id != ''
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           app-id: ${{ inputs.app-id }}
@@ -114,7 +117,4 @@ jobs:
           target-branch: ${{ inputs.target-branch }}
           config-file: ${{ inputs.config-file }}
           manifest-file: ${{ inputs.manifest-file }}
-          # Use the App token if available; otherwise fall back to
-          # GITHUB_TOKEN. Release PRs opened with GITHUB_TOKEN won't
-          # trigger CI — see top-of-file comment.
-          token: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
