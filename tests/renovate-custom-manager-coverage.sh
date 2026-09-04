@@ -27,25 +27,25 @@ custom_managers="${renovate_dir}/customManagers.json5"
 base_config="${renovate_dir}/base.json5"
 
 if ! command -v pyjson5 >/dev/null 2>&1; then
-	echo "error: 'pyjson5' not found on PATH. Run via 'mise run test'." >&2
-	exit 1
+    echo "error: 'pyjson5' not found on PATH. Run via 'mise run test'." >&2
+    exit 1
 fi
 
 to_json() {
-	pyjson5 --as-json "$1"
+    pyjson5 --as-json "$1"
 }
 
 # Every package rule across all preset files, merged into one array.
 rules_json="$(
-	for f in "${renovate_dir}"/*.json5; do
-		to_json "${f}"
-	done | jq -s '[.[] | (.packageRules // [])[]]'
+    for f in "${renovate_dir}"/*.json5; do
+        to_json "${f}"
+    done | jq -s '[.[] | (.packageRules // [])[]]'
 )"
 
 # Custom managers as [{description, datasource}].
 managers_json="$(
-	to_json "${custom_managers}" |
-		jq '[.customManagers[]
+    to_json "${custom_managers}" |
+        jq '[.customManagers[]
             | {description: (.description // "(no description)"), datasource: .datasourceTemplate}]'
 )"
 
@@ -53,10 +53,10 @@ managers_json="$(
 global_min_age="$(to_json "${base_config}" | jq '.minimumReleaseAge // null')"
 
 problems_json="$(
-	jq -n \
-		--argjson managers "${managers_json}" \
-		--argjson rules "${rules_json}" \
-		--argjson globalMinAge "${global_min_age}" '
+    jq -n \
+        --argjson managers "${managers_json}" \
+        --argjson rules "${rules_json}" \
+        --argjson globalMinAge "${global_min_age}" '
         def coversDs($d): (.matchDatasources // []) | index($d);
         def nonMajor: (.matchUpdateTypes == null)
             or (any(.matchUpdateTypes[]; . == "minor" or . == "patch"));
@@ -109,8 +109,8 @@ problems_json="$(
 problem_count="$(echo "${problems_json}" | jq 'length')"
 
 if [ "${problem_count}" -ne 0 ]; then
-	echo "✖ ${problem_count} custom-manager governance problem(s) found:" >&2
-	echo "${problems_json}" | jq -r '
+    echo "✖ ${problem_count} custom-manager governance problem(s) found:" >&2
+    echo "${problems_json}" | jq -r '
         .[]
         | if .kind == "missing-datasource" then
             "  - manager \"\(.description)\" has no datasourceTemplate"
@@ -118,10 +118,10 @@ if [ "${problem_count}" -ne 0 ]; then
             "  - datasource \"\(.datasource)\" is missing rules: \(.missing | join(", "))\n      used by: \(.managers | join("; "))"
           end
     ' >&2
-	echo "" >&2
-	echo "Add the missing rules under .renovate/ (autoMerge, packageRules, labels," >&2
-	echo "semanticCommits) so the datasource matches the rest of the repo's conventions." >&2
-	exit 1
+    echo "" >&2
+    echo "Add the missing rules under .renovate/ (autoMerge, packageRules, labels," >&2
+    echo "semanticCommits) so the datasource matches the rest of the repo's conventions." >&2
+    exit 1
 fi
 
 manager_count="$(echo "${managers_json}" | jq 'length')"
