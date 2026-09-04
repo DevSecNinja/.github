@@ -5,8 +5,9 @@ Step-by-step guide for adopting the central
 reusable workflow in a `DevSecNinja/*` repo.
 
 The end state: every push to `main` opens or updates a `chore(main):
-release vX.Y.Z` PR that you merge to ship. **Branch protection is
-respected end-to-end — no bypass actor needed.**
+release vX.Y.Z` PR that you merge to ship. **GitHub App authentication
+is mandatory, and branch protection is respected end-to-end — no bypass
+actor needed.**
 
 ---
 
@@ -55,9 +56,9 @@ For reference, the DevSecNinja App is `DevSecNinja Release Please`
 ## Per-repo adoption
 
 You'll do these once per repo. Order matters — do the **App install +
-secrets** before merging the workflow PR, otherwise the first run will
-fail with `Bad credentials` instead of just falling back to
-`GITHUB_TOKEN`.
+credentials + Actions PR-creation setting** before merging the workflow
+PR. The reusable workflow deliberately fails closed when either
+credential is empty; it never falls back to `GITHUB_TOKEN`.
 
 ### 1. Install the App on the repo
 
@@ -98,7 +99,33 @@ run fails with:
 (The workflow successfully creates the branch + commit; only the
 final PR-open step is blocked.)
 
-### 4. Add the three release-please files
+### 4. Choose a publication pattern
+
+The authentication contract is the same for both supported patterns:
+the App installation, `RELEASE_PLEASE_APP_ID`,
+`RELEASE_PLEASE_APP_PRIVATE_KEY`, and the Actions PR-creation setting
+are mandatory.
+
+#### Pattern A: Direct Release Please GitHub Release
+
+Set `"skip-github-release": false`. Release Please creates the version
+tag and GitHub Release after the release PR merges. Do not configure a
+competing tag-triggered publisher for the same tag.
+
+This is the default for simple consumers that do not publish release
+assets, attestations, or custom notes. This repository uses Pattern A.
+
+#### Pattern B: Split tag publisher
+
+Set `"skip-github-release": true` and provide a `release.yml` triggered
+by `push` on `v*` tags. Release Please still creates the version tag;
+the option skips only the formal GitHub Release. The tag-triggered
+workflow owns release notes, assets, attestations, and publication.
+
+Use Pattern B when a repository needs custom release assets or
+attestations, or must generate custom release notes at publication time.
+
+### 5. Add the three release-please files
 
 Commit the following on a feature branch:
 
@@ -150,7 +177,7 @@ tracks a manifest, no language-specific bumping):
   "release-type": "simple",
   "include-component-in-tag": false,
   "include-v-in-tag": true,
-  "skip-github-release": true,
+  "skip-github-release": false,
   "bump-minor-pre-major": true,
   "bump-patch-for-minor-pre-major": false,
   "draft": false,
@@ -165,11 +192,11 @@ tracks a manifest, no language-specific bumping):
 }
 ```
 
-**`skip-github-release: true` is mandatory** when the repo already has
-a tag-triggered `release.yml` (which most do, via `release-publish` or
-the central simple `release.yml`). Otherwise release-please will create
-a duplicate release that conflicts with the existing one — and on
-Immutable-Releases repos that's an unrecoverable error.
+The example uses the Pattern A default. Switch to
+`skip-github-release: true` only when the repo has a tag-triggered
+publisher via `release-publish` or the central simple `release.yml`. It
+does **not** prevent tag creation; it prevents Release Please from
+creating the formal GitHub Release.
 
 #### `.release-please-manifest.json`
 
@@ -183,7 +210,7 @@ Pin to the _current_ released version (the one matching the latest
 release-please bumps this file inside its release PRs. **Do not have
 Renovate manage it** — the bump is the release.
 
-### 5. (Optional) Retire local `cog bump`
+### 6. (Optional) Retire local `cog bump`
 
 If the repo had `cog bump` driving releases (cog hooks in `cog.toml`,
 `task release:bump` in Taskfile, etc.):
@@ -195,14 +222,14 @@ If the repo had `cog bump` driving releases (cog hooks in `cog.toml`,
   if they're useful for local previews.
 - Update any onboarding / contributor docs to point at this guide.
 
-Reference implementations:
+Pattern B reference implementations:
 
 - [`DevSecNinja/dotfiles`](https://github.com/DevSecNinja/dotfiles) —
   with assets + Sigstore attestations.
 - [`DevSecNinja/truenas-apps`](https://github.com/DevSecNinja/truenas-apps) —
   notes-only release.
 
-### 6. Merge the PR and watch the first release
+### 7. Merge the PR and watch the first release
 
 On merge to `main`:
 
@@ -211,8 +238,9 @@ On merge to `main`:
 3. **All required CI checks run on it** (because the PR was opened by
    the App, not `GITHUB_TOKEN`).
 4. Once green, you merge it like any normal PR.
-5. release-please creates the `vX.Y.Z` tag on the merge commit.
-6. The tag-triggered `release.yml` publishes the GitHub Release.
+5. Release Please creates the `vX.Y.Z` tag on the merge commit.
+6. Pattern A has Release Please create the GitHub Release directly;
+   Pattern B has the tag-triggered `release.yml` publish it.
 
 > Trigger downstream release workflows on `push: tags`, **not** on
 > `release: created` — see
@@ -238,9 +266,12 @@ Step 3 above wasn't done. Toggle the setting and re-run the workflow
 
 ### Release PR opens but no CI runs on it
 
-The PR was opened by `github-actions[bot]` instead of the App — step 2
-was skipped or `app-id` is empty. Verify in _Repo Settings → Variables
-→ Actions_ that `RELEASE_PLEASE_APP_ID` exists and is non-empty.
+Current versions fail before running Release Please when either App
+credential is empty. If a PR was opened by `github-actions[bot]`, the
+caller is pinned to an older central workflow that allowed the
+`GITHUB_TOKEN` fallback. Update its central workflow pin, then verify in
+_Repo Settings → Variables → Actions_ that `RELEASE_PLEASE_APP_ID`
+exists and is non-empty.
 
 Quick unblock for an already-open release PR: a _human user_ closes
 and reopens it (which fires `pull_request` events from a user identity,

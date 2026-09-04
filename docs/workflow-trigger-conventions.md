@@ -158,31 +158,36 @@ Conventions:
 
 ## Release flow with release-please
 
-release-please uses a draft-then-publish pattern with an opt-in
-`release-please.yml` per repo. The configuration that works reliably
-across the org:
+Every release-please caller must authenticate with the Release Please
+GitHub App. The App must be installed with Contents and Pull requests
+write permissions, both credentials must be configured, and the
+repository must enable **Allow GitHub Actions to create and approve pull
+requests**. The reusable workflow fails closed rather than falling back
+to `GITHUB_TOKEN`, whose events do not trigger downstream workflows.
 
-- `release-please-config.json`: `skip-github-release: false`,
-  `draft: true`, `force-tag-creation: true`, `draft-pull-request: true`.
-- After the release PR merges, release-please pushes the `vX.Y.Z` tag
-  and creates a _draft_ GitHub Release with the changelog body.
-- A separate caller workflow (e.g. `release.yml`) listens on
-  `push: tags: ["v*"]`, fetches the draft body via
-  `gh release view --json body --jq .body`, builds / uploads / attests
-  artifacts, then flips `--draft=false` to publish.
+Two publication patterns are supported:
+
+1. **Direct Release Please GitHub Release.** Configure
+   `skip-github-release: false` and do not add a competing tag publisher.
+   Release Please creates both the `vX.Y.Z` tag and the GitHub Release.
+   This is the default for simple consumers.
+2. **Split tag publisher.** Configure `skip-github-release: true` and
+   run `release.yml` on `push: tags: ["v*"]`. Release Please still
+   creates the tag; the option skips only the formal GitHub Release.
+   Use this only when the publisher must own assets, attestations,
+   custom notes, or publication.
 
 **Trigger downstream release workflows on `push: tags`, NOT on
-`release: created`.** The `release: created` event from
-release-please's GitHub App token does not propagate reliably to
-workflows in the same repo — tag-push events do. See
+`release: created`.** Tag-push events are the stable handoff from
+Release Please to a split publisher. See
 [DevSecNinja/dotfiles#263](https://github.com/DevSecNinja/dotfiles/pull/263)
 and
 [DevSecNinja/dotfiles#266](https://github.com/DevSecNinja/dotfiles/pull/266)
 for the diagnosis trail.
 
-The draft-publish pattern is also compatible with **Immutable
-Releases** — the API only constrains a Release once it's been
-published, so the draft can be edited freely up until the final flip.
+Pattern B is compatible with **Immutable Releases** because only the
+publisher creates the formal release after its assets and attestations
+are ready.
 
 `workflow_dispatch` as a manual escape hatch is fine for one-offs
 (re-publish a botched release, etc.) but tightens immutability if
