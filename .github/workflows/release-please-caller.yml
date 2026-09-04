@@ -31,9 +31,8 @@ concurrency:
 
 jobs:
   release-please:
-    # Self-reference: same repo, pinned to the SHA that introduced the
-    # App-token wiring. Re-pin to the next vX.Y.Z tag once cut.
-    uses: DevSecNinja/.github/.github/workflows/release-please.yml@fa92001d3877b58e3c8f8b0fa2f6f9230fbb0792 # main
+    # Self-reference pinned to the released fail-closed workflow.
+    uses: DevSecNinja/.github/.github/workflows/release-please.yml@c61e8107b080f72e25bfc41d3eef947dbfa66446 # v3.0.0
     permissions:
       contents: write
       pull-requests: write
