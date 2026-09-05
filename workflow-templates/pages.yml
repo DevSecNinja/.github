@@ -48,6 +48,8 @@ jobs:
       # github-pages: false
       # cloudflare-production: true
       # cloudflare-project-name: "my-site"
+      # Register only; create/switch the CNAME after verifying the Pages domain.
+      # cloudflare-custom-domain: "www.example.com" # Requires central v3.1.0+
       # Optional: deploy every main commit to an acceptance environment and
       # reserve production for releases. Also add the release trigger to `on:`
       # above, e.g. `release: { types: [published] }`.

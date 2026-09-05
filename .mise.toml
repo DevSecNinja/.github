@@ -20,6 +20,7 @@ zizmor = "1.29.0"
 [tasks.test]
 description = "Run repository tests"
 run = [
+  "bash ./tests/pages-custom-domain-contract.sh",
   "bash ./tests/renovate-custom-manager-coverage.sh",
   "bash ./tests/release-please-auth-contract.sh",
 ]
