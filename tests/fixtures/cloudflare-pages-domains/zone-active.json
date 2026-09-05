@@ -1,0 +1,22 @@
+{
+  "success": true,
+  "errors": [],
+  "messages": [],
+  "result": [
+    {
+      "id": "test-zone",
+      "name": "ravensberg.org",
+      "status": "active",
+      "account": {
+        "id": "test-account"
+      }
+    }
+  ],
+  "result_info": {
+    "page": 1,
+    "per_page": 50,
+    "total_pages": 1,
+    "count": 1,
+    "total_count": 1
+  }
+}

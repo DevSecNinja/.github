@@ -1,14 +1,12 @@
 ---
 name: Reusable — Pages
-
 on:
   workflow_call:
     inputs:
       node-version:
         description: >-
-          Node.js version for setup-node. Required when install-command,
-          test-setup-command, test-command, or build-command is set; leave
-          empty for no-build static sites.
+          Node.js version for setup-node. Required when install-command, test-setup-command, test-command, or build-command
+          is set; leave empty for no-build static sites.
         required: false
         type: string
         default: ""
@@ -19,10 +17,8 @@ on:
         default: ""
       go-version:
         description: >-
-          Go version to install before the build. Required for Hugo Modules and
-          any other build step that shells out to Go; leave empty to skip Go
-          setup. Without it the build silently uses whatever Go the runner
-          image happens to ship.
+          Go version to install before the build. Required for Hugo Modules and any other build step that shells out to Go;
+          leave empty to skip Go setup. Without it the build silently uses whatever Go the runner image happens to ship.
         required: false
         type: string
         default: ""
@@ -34,8 +30,7 @@ on:
         default: ""
       wrangler-version:
         description: >-
-          Wrangler version for Cloudflare Pages deploys. Required when
-          cloudflare-preview, cloudflare-production, or cloudflare-acceptance
+          Wrangler version for Cloudflare Pages deploys. Required when cloudflare-preview, cloudflare-production, or cloudflare-acceptance
           is enabled.
         required: false
         type: string
@@ -56,15 +51,12 @@ on:
         type: string
       artifact-name:
         description: >-
-          Name of an artifact, uploaded by an earlier job in the calling
-          workflow, that already contains the built site. When set, the deploy
-          jobs download it into `artifact-path` instead of running
-          `install-command` / `build-command`.
+          Name of an artifact, uploaded by an earlier job in the calling workflow, that already contains the built site. When
+          set, the deploy jobs download it into `artifact-path` instead of running `install-command` / `build-command`.
 
-          Use this when the build needs credentials or tooling this workflow
-          does not provide: the build then runs in the caller's own job, where
-          the caller controls the environment, and this workflow only deploys.
-          The calling job must `needs:` the job that uploads the artifact.
+          Use this when the build needs credentials or tooling this workflow does not provide: the build then runs in the
+          caller's own job, where the caller controls the environment, and this workflow only deploys. The calling job must
+          `needs:` the job that uploads the artifact.
         required: false
         type: string
         default: ""
@@ -120,19 +112,35 @@ on:
         default: false
       cloudflare-production-on-release:
         description: >-
-          Deploy Cloudflare production only on GitHub release events instead of
-          on every production-branch commit. The caller must also trigger the
-          workflow on the release event.
+          Deploy Cloudflare production only on GitHub release events instead of on every production-branch commit. The caller
+          must also trigger the workflow on the release event.
         required: false
         type: boolean
         default: false
       cloudflare-custom-domain:
         description: >-
-          Optional lowercase FQDN to register on the production Cloudflare Pages
-          project after a successful production deploy. DNS is not modified.
+          Optional lowercase FQDN to register on the production Cloudflare Pages project after a successful production deploy.
         required: false
         type: string
         default: ""
+      cloudflare-manage-dns:
+        description: >-
+          Create the custom-domain CNAME when absent. Existing conflicting records are never changed. Requires cloudflare-dns-zone.
+        required: false
+        type: boolean
+        default: false
+      cloudflare-dns-zone:
+        description: >-
+          Lowercase zone apex containing cloudflare-custom-domain, for example example.com. Required when cloudflare-manage-dns
+          is true.
+        required: false
+        type: string
+        default: ""
+      cloudflare-dns-proxied:
+        description: "Proxy a workflow-managed custom-domain CNAME through Cloudflare"
+        required: false
+        type: boolean
+        default: true
       cloudflare-acceptance:
         description: "Deploy an acceptance build to Cloudflare Pages on production-branch commits"
         required: false
@@ -172,10 +180,12 @@ on:
         description: >-
           Resolved pages.dev CNAME target for the production Pages project.
         value: ${{ jobs.register-cloudflare-domain.outputs.dns-target }}
-
+      cloudflare-custom-domain-dns-action:
+        description: >-
+          DNS result when custom-domain registration runs: unmanaged, created, or no-op.
+        value: ${{ jobs.register-cloudflare-domain.outputs.dns-action }}
 permissions:
   contents: read
-
 jobs:
   validate-inputs:
     name: Validate inputs
@@ -195,6 +205,8 @@ jobs:
           CLOUDFLARE_PRODUCTION: ${{ inputs.cloudflare-production }}
           CLOUDFLARE_ACCEPTANCE: ${{ inputs.cloudflare-acceptance }}
           CLOUDFLARE_CUSTOM_DOMAIN: ${{ inputs.cloudflare-custom-domain }}
+          CLOUDFLARE_MANAGE_DNS: ${{ inputs.cloudflare-manage-dns }}
+          CLOUDFLARE_DNS_ZONE: ${{ inputs.cloudflare-dns-zone }}
           CONFIGURED_PROJECT_NAME: ${{ inputs.cloudflare-project-name }}
         run: |-
           set -euo pipefail
@@ -241,8 +253,38 @@ jobs:
             fi
           fi
 
-          echo "Input validation passed."
+          if [ "${CLOUDFLARE_MANAGE_DNS}" = "true" ]; then
+            if [ "${CLOUDFLARE_PRODUCTION}" != "true" ]; then
+              echo "::error::cloudflare-manage-dns requires cloudflare-production: true."
+              exit 1
+            fi
 
+            if [ -z "${CLOUDFLARE_CUSTOM_DOMAIN}" ]; then
+              echo "::error::cloudflare-manage-dns requires cloudflare-custom-domain."
+              exit 1
+            fi
+
+            if [ -z "${CLOUDFLARE_DNS_ZONE}" ]; then
+              echo "::error::cloudflare-manage-dns requires cloudflare-dns-zone."
+              exit 1
+            fi
+
+            if [ "${#CLOUDFLARE_DNS_ZONE}" -gt 253 ] ||
+              ! [[ "${CLOUDFLARE_DNS_ZONE}" =~ ^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$ ]]; then
+              echo "::error::cloudflare-dns-zone must be a lowercase DNS zone with at least two labels; schemes, paths, ports, wildcards, underscores, and trailing dots are not allowed."
+              exit 1
+            fi
+
+            case "${CLOUDFLARE_CUSTOM_DOMAIN}" in
+              "${CLOUDFLARE_DNS_ZONE}" | *."${CLOUDFLARE_DNS_ZONE}") ;;
+              *)
+                echo "::error::cloudflare-custom-domain must equal cloudflare-dns-zone or be its subdomain."
+                exit 1
+                ;;
+            esac
+          fi
+
+          echo "Input validation passed."
   detect-cloudflare:
     name: Detect Cloudflare configuration
     needs:
@@ -356,7 +398,6 @@ jobs:
             echo "targets=${targets}"
           } >>"${GITHUB_OUTPUT}"
           echo "Cloudflare Pages deployments are configured (targets: ${targets})."
-
   test:
     name: Run tests
     needs:
@@ -369,47 +410,39 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-
       - name: Setup Node.js
         if: ${{ inputs.node-version != '' }}
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ inputs.node-version }}
           cache: ${{ inputs.node-cache }}
-
       - name: Setup Go
         if: ${{ inputs.go-version != '' || inputs.go-version-file != '' }}
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: ${{ inputs.go-version }}
           go-version-file: ${{ inputs.go-version-file }}
-
       - name: Install dependencies
         if: ${{ inputs.install-command != '' }}
         env:
           INSTALL_COMMAND: ${{ inputs.install-command }}
         run: bash -euo pipefail -c "${INSTALL_COMMAND}"
-
       - name: Run test setup
         if: ${{ inputs.test-setup-command != '' }}
         env:
           TEST_SETUP_COMMAND: ${{ inputs.test-setup-command }}
         run: bash -euo pipefail -c "${TEST_SETUP_COMMAND}"
-
       - name: Run tests
         if: ${{ inputs.test-command != '' }}
         env:
           TEST_COMMAND: ${{ inputs.test-command }}
         run: bash -euo pipefail -c "${TEST_COMMAND}"
-
   deploy:
     name: Deploy to GitHub Pages
     needs:
       - test
     if: >-
-      inputs.github-pages &&
-      github.event_name != 'pull_request' &&
-      github.ref == format('refs/heads/{0}', inputs.production-branch)
+      inputs.github-pages && github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', inputs.production-branch)
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     concurrency:
@@ -437,10 +470,8 @@ jobs:
           # Fetch tags so builds can read the release tag at HEAD
           # (footer/version metadata). Safe when no tags exist.
           fetch-tags: true
-
       - name: Setup Pages
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
-
       - name: Setup Node.js
         if: ${{ inputs.build-command != '' }}
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -451,11 +482,9 @@ jobs:
           # These jobs run only on merge to the production branch, so the lost
           # package-download caching is negligible; test/preview keep it.
           package-manager-cache: false
-
       - name: Setup Go
         if: >-
-          ${{ inputs.artifact-name == '' &&
-          (inputs.go-version != '' || inputs.go-version-file != '') }}
+          ${{ inputs.artifact-name == '' && (inputs.go-version != '' || inputs.go-version-file != '') }}
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: ${{ inputs.go-version }}
@@ -463,19 +492,16 @@ jobs:
           # Caching disabled on this privileged job to remove the
           # cache-poisoning surface (zizmor), matching setup-node above.
           cache: false
-
       - name: Install dependencies
         if: ${{ inputs.build-command != '' && inputs.install-command != '' }}
         env:
           INSTALL_COMMAND: ${{ inputs.install-command }}
         run: bash -euo pipefail -c "${INSTALL_COMMAND}"
-
       - name: Build site
         if: ${{ inputs.build-command != '' }}
         env:
           BUILD_COMMAND: ${{ inputs.build-command }}
         run: bash -euo pipefail -c "${BUILD_COMMAND}"
-
       # Artifacts are scoped to the workflow run, and a reusable workflow's jobs
       # are part of the caller's run — so this picks up an artifact uploaded by
       # an earlier caller job with no extra permissions and no token handoff.
@@ -485,13 +511,11 @@ jobs:
         with:
           name: ${{ inputs.artifact-name }}
           path: ${{ inputs.artifact-path }}
-
       - name: Run pre-deploy command
         if: ${{ inputs.pre-deploy-command != '' }}
         env:
           PRE_DEPLOY_COMMAND: ${{ inputs.pre-deploy-command }}
         run: bash -euo pipefail -c "${PRE_DEPLOY_COMMAND}"
-
       - name: Update sitemap lastmod dates
         if: ${{ inputs.update-sitemap-lastmod }}
         env:
@@ -510,24 +534,20 @@ jobs:
           sed -i -E \
             "s|<lastmod>[0-9]{4}-[0-9]{2}-[0-9]{2}</lastmod>|<lastmod>${today}</lastmod>|g" \
             "${SITEMAP_PATH}"
-
       - name: Upload artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: ${{ inputs.artifact-path }}
-
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
-
   deploy-cloudflare:
     name: Deploy Cloudflare ${{ matrix.target }}
     needs:
       - detect-cloudflare
       - test
     if: >-
-      needs.detect-cloudflare.outputs.enabled == 'true' &&
-      needs.detect-cloudflare.outputs.targets != '[]'
+      needs.detect-cloudflare.outputs.enabled == 'true' && needs.detect-cloudflare.outputs.targets != '[]'
     strategy:
       fail-fast: false
       # Production and acceptance share the same build and deploy steps; the
@@ -559,7 +579,6 @@ jobs:
           # Fetch tags so builds can read the release tag at HEAD
           # (footer/version metadata). Safe when no tags exist.
           fetch-tags: true
-
       - name: Setup Node.js
         if: ${{ inputs.build-command != '' }}
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -570,11 +589,9 @@ jobs:
           # These jobs run only on merge to the production branch, so the lost
           # package-download caching is negligible; test/preview keep it.
           package-manager-cache: false
-
       - name: Setup Go
         if: >-
-          ${{ inputs.artifact-name == '' &&
-          (inputs.go-version != '' || inputs.go-version-file != '') }}
+          ${{ inputs.artifact-name == '' && (inputs.go-version != '' || inputs.go-version-file != '') }}
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: ${{ inputs.go-version }}
@@ -582,19 +599,16 @@ jobs:
           # Caching disabled on this privileged job to remove the
           # cache-poisoning surface (zizmor), matching setup-node above.
           cache: false
-
       - name: Install dependencies
         if: ${{ inputs.build-command != '' && inputs.install-command != '' }}
         env:
           INSTALL_COMMAND: ${{ inputs.install-command }}
         run: bash -euo pipefail -c "${INSTALL_COMMAND}"
-
       - name: Build site
         if: ${{ inputs.build-command != '' }}
         env:
           BUILD_COMMAND: ${{ inputs.build-command }}
         run: bash -euo pipefail -c "${BUILD_COMMAND}"
-
       # Artifacts are scoped to the workflow run, and a reusable workflow's jobs
       # are part of the caller's run — so this picks up an artifact uploaded by
       # an earlier caller job with no extra permissions and no token handoff.
@@ -604,13 +618,11 @@ jobs:
         with:
           name: ${{ inputs.artifact-name }}
           path: ${{ inputs.artifact-path }}
-
       - name: Run pre-deploy command
         if: ${{ inputs.pre-deploy-command != '' }}
         env:
           PRE_DEPLOY_COMMAND: ${{ inputs.pre-deploy-command }}
         run: bash -euo pipefail -c "${PRE_DEPLOY_COMMAND}"
-
       - name: Ensure Cloudflare Pages project exists
         uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0 # v4.0.0
         continue-on-error: true
@@ -618,10 +630,9 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           command: >-
-            pages project create ${{ needs.detect-cloudflare.outputs.project-name }}
-            --production-branch ${{ inputs.cloudflare-production-branch }}
+            pages project create ${{ needs.detect-cloudflare.outputs.project-name }} --production-branch ${{ inputs.cloudflare-production-branch
+            }}
           wranglerVersion: ${{ inputs.wrangler-version }}
-
       - name: Deploy to Cloudflare Pages
         id: deploy
         uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0 # v4.0.0
@@ -629,20 +640,17 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           command: >-
-            pages deploy ${{ inputs.artifact-path }}
-            --project-name=${{ needs.detect-cloudflare.outputs.project-name }}
-            --branch=${{ matrix.branch }}
+            pages deploy ${{ inputs.artifact-path }} --project-name=${{ needs.detect-cloudflare.outputs.project-name }} --branch=${{
+            matrix.branch }}
           wranglerVersion: ${{ inputs.wrangler-version }}
-
   register-cloudflare-domain:
     name: Register Cloudflare production domain
     needs:
       - detect-cloudflare
       - deploy-cloudflare
     if: >-
-      needs.detect-cloudflare.outputs.deploy-production == 'true' &&
-      inputs.cloudflare-custom-domain != '' &&
-      needs.deploy-cloudflare.result == 'success'
+      needs.detect-cloudflare.outputs.deploy-production == 'true' && inputs.cloudflare-custom-domain != '' && needs.deploy-cloudflare.result
+      == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     concurrency:
@@ -654,6 +662,7 @@ jobs:
     outputs:
       status: ${{ steps.register.outputs.status }}
       dns-target: ${{ steps.register.outputs.dns-target }}
+      dns-action: ${{ steps.register.outputs.dns-action }}
     steps:
       - name: Register Cloudflare Pages custom domain
         id: register
@@ -661,6 +670,9 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CUSTOM_DOMAIN: ${{ inputs.cloudflare-custom-domain }}
+          MANAGE_DNS: ${{ inputs.cloudflare-manage-dns }}
+          DNS_ZONE: ${{ inputs.cloudflare-dns-zone }}
+          DNS_PROXIED: ${{ inputs.cloudflare-dns-proxied }}
           PROJECT_NAME: ${{ needs.detect-cloudflare.outputs.project-name }}
         run: |-
           set -euo pipefail
@@ -668,8 +680,12 @@ jobs:
           api_base="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${PROJECT_NAME}"
           domain_response="$(mktemp)"
           project_response="$(mktemp)"
+          zone_response="$(mktemp)"
+          records_response="$(mktemp)"
+          records_all="$(mktemp)"
+          records_next="$(mktemp)"
           request_body="$(mktemp)"
-          trap 'rm -f "${domain_response}" "${project_response}" "${request_body}"' EXIT
+          trap 'rm -f "${domain_response}" "${project_response}" "${zone_response}" "${records_response}" "${records_all}" "${records_next}" "${request_body}"' EXIT
 
           api_errors() {
             local response_file="$1"
@@ -710,7 +726,7 @@ jobs:
 
             local http_code
             if ! http_code="$(curl "${args[@]}" "${url}")"; then
-              echo "::error::Cloudflare Pages ${method} request failed before an HTTP response was received." >&2
+              echo "::error::Cloudflare API ${method} request failed before an HTTP response was received." >&2
               return 1
             fi
             printf '%s' "${http_code}"
@@ -783,33 +799,165 @@ jobs:
             exit 1
           fi
 
+          dns_action="unmanaged"
+          dns_proxied_summary="not managed"
+          if [ "${MANAGE_DNS}" = "true" ]; then
+            dns_proxied_summary="${DNS_PROXIED}"
+            zones_url="https://api.cloudflare.com/client/v4/zones?name=${DNS_ZONE}&status=active&account.id=${CLOUDFLARE_ACCOUNT_ID}&page=1&per_page=50"
+            zones_http_code="$(request GET "${zones_url}" "${zone_response}")"
+            if [ "${zones_http_code}" -lt 200 ] || [ "${zones_http_code}" -ge 300 ]; then
+              echo "::error::Failed to resolve active Cloudflare DNS zone '${DNS_ZONE}' (HTTP ${zones_http_code}): $(api_errors "${zone_response}")"
+              exit 1
+            fi
+            if ! jq -e \
+              --arg zone "${DNS_ZONE}" \
+              --arg account "${CLOUDFLARE_ACCOUNT_ID}" \
+              '.success == true
+               and (.result | type) == "array"
+               and ((.result_info.total_pages // 1) == 1)
+               and ([.result[]
+                     | select(.name == $zone
+                              and .status == "active"
+                              and .account.id == $account)]
+                    | length) == 1
+               and (.result | length) == 1' \
+              "${zone_response}" >/dev/null; then
+              echo "::error::Cloudflare must return exactly one active '${DNS_ZONE}' zone in the configured account: $(api_errors "${zone_response}")"
+              exit 1
+            fi
+            zone_id="$(jq -er '.result[0].id | select(type == "string" and length > 0)' "${zone_response}")"
+            zone_api="https://api.cloudflare.com/client/v4/zones/${zone_id}"
+
+            printf '[]' >"${records_all}"
+            page=1
+            total_pages=1
+            while [ "${page}" -le "${total_pages}" ]; do
+              records_url="${zone_api}/dns_records?name=${CUSTOM_DOMAIN}&page=${page}&per_page=100"
+              records_http_code="$(request GET "${records_url}" "${records_response}")"
+              if [ "${records_http_code}" -lt 200 ] || [ "${records_http_code}" -ge 300 ]; then
+                echo "::error::Failed to query DNS records for '${CUSTOM_DOMAIN}' (HTTP ${records_http_code}): $(api_errors "${records_response}")"
+                exit 1
+              fi
+              if ! jq -e \
+                '.success == true
+                 and (.result | type) == "array"
+                 and ((.result_info.total_pages // 1) | type) == "number"
+                 and (.result_info.total_pages // 1) >= 1' \
+                "${records_response}" >/dev/null; then
+                echo "::error::Cloudflare returned an invalid DNS records response: $(api_errors "${records_response}")"
+                exit 1
+              fi
+              total_pages="$(jq -r '.result_info.total_pages // 1' "${records_response}")"
+              jq -s '.[0] + .[1].result' "${records_all}" "${records_response}" >"${records_next}"
+              mv "${records_next}" "${records_all}"
+              page=$((page + 1))
+            done
+
+            record_count="$(
+              jq -r --arg name "${CUSTOM_DOMAIN}" \
+                '[.[] | select(.name == $name)] | length' \
+                "${records_all}"
+            )"
+            if [ "${record_count}" -eq 0 ]; then
+              jq -cn \
+                --arg name "${CUSTOM_DOMAIN}" \
+                --arg content "${dns_target}" \
+                --argjson proxied "${DNS_PROXIED}" \
+                '{type: "CNAME", name: $name, content: $content, ttl: 1, proxied: $proxied}' \
+                >"${request_body}"
+              create_http_code="$(request POST "${zone_api}/dns_records" "${records_response}" "${request_body}")"
+              if [ "${create_http_code}" -lt 200 ] || [ "${create_http_code}" -ge 300 ]; then
+                echo "::error::Failed to create DNS CNAME for '${CUSTOM_DOMAIN}' (HTTP ${create_http_code}): $(api_errors "${records_response}")"
+                exit 1
+              fi
+              if ! jq -e \
+                --arg name "${CUSTOM_DOMAIN}" \
+                --arg content "${dns_target}" \
+                --argjson proxied "${DNS_PROXIED}" \
+                '.success == true
+                 and .result.type == "CNAME"
+                 and .result.name == $name
+                 and .result.content == $content
+                 and .result.proxied == $proxied' \
+                "${records_response}" >/dev/null; then
+                echo "::error::Cloudflare returned an unsuccessful or mismatched DNS creation response: $(api_errors "${records_response}")"
+                exit 1
+              fi
+              dns_action="created"
+              echo "Created DNS CNAME '${CUSTOM_DOMAIN}' pointing to '${dns_target}' (proxied: ${DNS_PROXIED})."
+            elif [ "${record_count}" -eq 1 ] && jq -e \
+              --arg name "${CUSTOM_DOMAIN}" \
+              --arg content "${dns_target}" \
+              --argjson proxied "${DNS_PROXIED}" \
+              '.[] | select(.name == $name)
+               | .type == "CNAME"
+                 and .content == $content
+                 and .proxied == $proxied' \
+              "${records_all}" >/dev/null; then
+              dns_action="no-op"
+              echo "DNS CNAME '${CUSTOM_DOMAIN}' already points to '${dns_target}' with the requested proxy state."
+            else
+              echo "::error::A conflicting DNS record already exists for '${CUSTOM_DOMAIN}'. Refusing to change or replace it."
+              exit 1
+            fi
+
+            if [ "${status}" != "active" ]; then
+              poll_interval="${PAGES_DOMAIN_POLL_INTERVAL_SECONDS:-10}"
+              for attempt in $(seq 1 12); do
+                sleep "${poll_interval}"
+                domain_http_code="$(request GET "${domain_url}" "${domain_response}")"
+                if [ "${domain_http_code}" != "200" ] || ! jq -e \
+                  --arg domain "${CUSTOM_DOMAIN}" \
+                  '.success == true and .result.name == $domain' \
+                  "${domain_response}" >/dev/null; then
+                  echo "::error::Failed to poll Cloudflare Pages custom domain '${CUSTOM_DOMAIN}' (HTTP ${domain_http_code}): $(api_errors "${domain_response}")"
+                  exit 1
+                fi
+                status="$(jq -r '.result.status' "${domain_response}")"
+                case "${status}" in
+                  active)
+                    echo "Cloudflare Pages custom domain '${CUSTOM_DOMAIN}' is active."
+                    break
+                    ;;
+                  pending | initializing)
+                    if [ "${attempt}" -eq 12 ]; then
+                      echo "::notice title=Cloudflare Pages domain pending::Custom domain '${CUSTOM_DOMAIN}' remains '${status}' after the bounded activation wait."
+                    fi
+                    ;;
+                  *)
+                    echo "::error::Cloudflare Pages custom domain '${CUSTOM_DOMAIN}' entered unexpected status '${status}'."
+                    exit 1
+                    ;;
+                esac
+              done
+            fi
+          fi
+
           {
             echo "status=${status}"
             echo "dns-target=${dns_target}"
+            echo "dns-action=${dns_action}"
           } >>"${GITHUB_OUTPUT}"
-          echo "::notice title=Cloudflare Pages DNS cutover::Custom domain '${CUSTOM_DOMAIN}' is '${status}'. Create or switch its DNS CNAME to '${dns_target}' after verification; this workflow did not change DNS."
+          echo "::notice title=Cloudflare Pages custom domain::Domain '${CUSTOM_DOMAIN}', project '${PROJECT_NAME}', target '${dns_target}', DNS '${dns_action}', proxied '${dns_proxied_summary}', Pages status '${status}'."
           {
             echo "### Cloudflare Pages custom domain"
             echo
             echo "- Domain: \`${CUSTOM_DOMAIN}\`"
-            echo "- Status: \`${status}\`"
+            echo "- Resolved project: \`${PROJECT_NAME}\`"
             echo "- DNS CNAME target: \`${dns_target}\`"
-            echo "- DNS records were not changed by this workflow."
+            echo "- DNS action: \`${dns_action}\`"
+            echo "- DNS proxied: \`${dns_proxied_summary}\`"
+            echo "- Pages domain status: \`${status}\`"
           } >>"${GITHUB_STEP_SUMMARY}"
-
   deploy-preview:
     name: Deploy Cloudflare preview
     needs:
       - detect-cloudflare
       - test
     if: >-
-      inputs.cloudflare-preview &&
-      github.event_name == 'pull_request' &&
-      github.event.action != 'closed' &&
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      github.actor != 'renovate[bot]' &&
-      github.actor != 'dependabot[bot]' &&
-      needs.detect-cloudflare.outputs.enabled == 'true'
+      inputs.cloudflare-preview && github.event_name == 'pull_request' && github.event.action != 'closed' && github.event.pull_request.head.repo.full_name
+      == github.repository && github.actor != 'renovate[bot]' && github.actor != 'dependabot[bot]' && needs.detect-cloudflare.outputs.enabled
+      == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     concurrency:
@@ -835,18 +983,15 @@ jobs:
           # Fetch tags so builds can read the release tag at HEAD
           # (footer/version metadata). Safe when no tags exist.
           fetch-tags: true
-
       - name: Setup Node.js
         if: ${{ inputs.build-command != '' }}
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ inputs.node-version }}
           package-manager-cache: false
-
       - name: Setup Go
         if: >-
-          ${{ inputs.artifact-name == '' &&
-          (inputs.go-version != '' || inputs.go-version-file != '') }}
+          ${{ inputs.artifact-name == '' && (inputs.go-version != '' || inputs.go-version-file != '') }}
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: ${{ inputs.go-version }}
@@ -854,19 +999,16 @@ jobs:
           # Caching disabled on this privileged job to remove the
           # cache-poisoning surface (zizmor), matching setup-node above.
           cache: false
-
       - name: Install dependencies
         if: ${{ inputs.build-command != '' && inputs.install-command != '' }}
         env:
           INSTALL_COMMAND: ${{ inputs.install-command }}
         run: bash -euo pipefail -c "${INSTALL_COMMAND}"
-
       - name: Build site
         if: ${{ inputs.build-command != '' }}
         env:
           BUILD_COMMAND: ${{ inputs.build-command }}
         run: bash -euo pipefail -c "${BUILD_COMMAND}"
-
       # Artifacts are scoped to the workflow run, and a reusable workflow's jobs
       # are part of the caller's run — so this picks up an artifact uploaded by
       # an earlier caller job with no extra permissions and no token handoff.
@@ -876,13 +1018,11 @@ jobs:
         with:
           name: ${{ inputs.artifact-name }}
           path: ${{ inputs.artifact-path }}
-
       - name: Run pre-preview command
         if: ${{ inputs.pre-preview-command != '' }}
         env:
           PRE_PREVIEW_COMMAND: ${{ inputs.pre-preview-command }}
         run: bash -euo pipefail -c "${PRE_PREVIEW_COMMAND}"
-
       - name: Ensure Cloudflare Pages project exists
         uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0 # v4.0.0
         continue-on-error: true
@@ -890,10 +1030,9 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           command: >-
-            pages project create ${{ needs.detect-cloudflare.outputs.project-name }}
-            --production-branch ${{ inputs.cloudflare-production-branch }}
+            pages project create ${{ needs.detect-cloudflare.outputs.project-name }} --production-branch ${{ inputs.cloudflare-production-branch
+            }}
           wranglerVersion: ${{ inputs.wrangler-version }}
-
       - name: Deploy to Cloudflare Pages
         id: deploy
         uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0 # v4.0.0
@@ -901,11 +1040,9 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           command: >-
-            pages deploy ${{ inputs.artifact-path }}
-            --project-name=${{ needs.detect-cloudflare.outputs.project-name }}
-            --branch=${{ github.head_ref }}
+            pages deploy ${{ inputs.artifact-path }} --project-name=${{ needs.detect-cloudflare.outputs.project-name }} --branch=${{
+            github.head_ref }}
           wranglerVersion: ${{ inputs.wrangler-version }}
-
       - name: Post or update PR comment
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
@@ -941,19 +1078,14 @@ jobs:
                 body,
               });
             }
-
   close-preview:
     name: Close Cloudflare preview
     needs:
       - detect-cloudflare
     if: >-
-      inputs.cloudflare-preview &&
-      github.event_name == 'pull_request' &&
-      github.event.action == 'closed' &&
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      github.actor != 'renovate[bot]' &&
-      github.actor != 'dependabot[bot]' &&
-      needs.detect-cloudflare.outputs.enabled == 'true'
+      inputs.cloudflare-preview && github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.head.repo.full_name
+      == github.repository && github.actor != 'renovate[bot]' && github.actor != 'dependabot[bot]' && needs.detect-cloudflare.outputs.enabled
+      == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
