@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.1.0](https://github.com/DevSecNinja/.github/compare/v3.0.0...v3.1.0) (2026-09-05)
+
+
+### 🚀 Features
+
+* **pages:** add custom domain registration ([#342](https://github.com/DevSecNinja/.github/issues/342)) ([1b2ee6f](https://github.com/DevSecNinja/.github/commit/1b2ee6f9e7b6fe6cee51fb67ece92873d29a03df))
+
 ## [3.0.0](https://github.com/DevSecNinja/.github/compare/v2.5.0...v3.0.0) (2026-09-04)
 
 
