@@ -167,8 +167,8 @@ GitHub Pages and/or Cloudflare Pages from the configured production branch, and
 optionally deploys same-repository pull request previews to Cloudflare Pages.
 Cloudflare jobs detect missing Cloudflare secrets before any deploy work. Missing
 secrets fail production Cloudflare deploys and skip preview-only deploys.
-An optional production custom domain can be registered after deployment. Domain
-registration intentionally does not create or update DNS records.
+An optional production custom domain can be registered after deployment. Callers
+may also opt into safe DNS CNAME creation; DNS remains unmanaged by default.
 
 | Input                              | Description                                                                                      |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------ |
@@ -192,7 +192,10 @@ registration intentionally does not create or update DNS records.
 | `cloudflare-preview`               | Enable Cloudflare pull request previews. Default: `true`.                                        |
 | `cloudflare-production`            | Deploy production to Cloudflare Pages. Default: `false`.                                         |
 | `cloudflare-production-on-release` | Deploy Cloudflare production only on `release` events, not every main commit. Default: `false`.  |
-| `cloudflare-custom-domain`         | Register one lowercase FQDN after a production deploy. Default: empty; DNS is never modified.    |
+| `cloudflare-custom-domain`         | Register one lowercase FQDN after a production deploy. Default: empty.                           |
+| `cloudflare-manage-dns`            | Create the custom-domain CNAME when absent; never replace conflicts. Default: `false`.           |
+| `cloudflare-dns-zone`              | Lowercase zone apex containing the custom domain. Required when DNS management is enabled.       |
+| `cloudflare-dns-proxied`           | Proxy a workflow-created CNAME through Cloudflare. Default: `true`.                              |
 | `cloudflare-acceptance`            | Deploy an acceptance build to Cloudflare on main commits. Default: `false`.                      |
 | `cloudflare-acceptance-branch`     | Cloudflare branch name for acceptance deploys. Default: `acceptance`.                            |
 | `cloudflare-project-name`          | Cloudflare Pages project; lowercase letters, numbers, and hyphens only.                          |
@@ -261,30 +264,53 @@ Node/Go setup, install and build entirely.
 
 Set `cloudflare-custom-domain` only with `cloudflare-production: true`, an
 explicit `cloudflare-project-name`, the required Wrangler version, and
-`CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_API_TOKEN` secrets. The token needs
-Cloudflare Pages Write permission. The workflow validates the domain as a
-lowercase FQDN, deploys production, then reads or creates that domain through
+`CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_API_TOKEN` secrets. Registration needs
+Account Cloudflare Pages Write permission. The workflow validates the domain as
+a lowercase FQDN, deploys production, then reads or creates that domain through
 the official Pages API. Preview, acceptance, pull request cleanup, and GitHub
 Pages deploys never register it.
 
-The registration job reports two reusable-workflow outputs:
+The registration job reports three reusable-workflow outputs:
 `cloudflare-custom-domain-status` and
-`cloudflare-custom-domain-dns-target`. The DNS target comes from the Pages
-project API's `subdomain` field, not from the requested project name. Cloudflare
-can assign a collision-safe value such as
+`cloudflare-custom-domain-dns-target`, plus
+`cloudflare-custom-domain-dns-action` (`unmanaged`, `created`, or `no-op`). The
+DNS target comes from the Pages project API's `subdomain` field, not from the
+requested project name. Cloudflare can assign a collision-safe value such as
 `net-worth-calculator-xn8.pages.dev`, even when
 `cloudflare-project-name` is `net-worth-calculator`.
 
-Use a staged cutover:
+Wrangler remains responsible for Pages project creation and deployment. It does
+not provide robust generic DNS-record lifecycle management, so the optional
+cutover uses Cloudflare's official REST API with the same token. To enable it,
+set `cloudflare-manage-dns: true`, provide the containing zone apex through
+`cloudflare-dns-zone`, and optionally set `cloudflare-dns-proxied` (default
+`true`). The token then needs Account Cloudflare Pages Write, Zone Read, and DNS
+Edit permissions.
+
+The workflow resolves exactly one active zone in the configured account, reads
+all exact-name records, and creates a TTL-auto CNAME only when no record exists.
+An exact CNAME to the resolved target with the requested proxy state is a no-op.
+Any other type, target, proxy state, duplicate, or ambiguous zone fails without
+modification. It never replaces or deletes a record.
+
+For a workflow-managed cutover:
 
 1. Deploy and verify the generated `pages.dev` site.
-2. Set `cloudflare-custom-domain` and verify that registration reaches
-   `initializing`, `pending`, or `active`.
-3. Create or switch the custom hostname's DNS CNAME to the reported
-   `cloudflare-custom-domain-dns-target`. The workflow never assumes zone
-   ownership and never changes DNS.
+2. Set `cloudflare-custom-domain`, `cloudflare-manage-dns: true`, and
+   `cloudflare-dns-zone`. The custom domain must equal the zone or be its
+   subdomain.
+3. Review the summary for the resolved project, CNAME target, DNS action, proxy
+   state, and Pages domain status. A bounded activation wait may end in
+   `initializing` or `pending` while Cloudflare finishes propagation; failed or
+   unexpected states fail the job.
 4. Keep the previous host or DNS value available as a rollback path until the
-   custom domain and certificate are stable.
+   custom domain and certificate are stable. Disabling DNS management does not
+   delete records. To roll back a newly created record, restore the prior service
+   first if applicable, then explicitly remove the CNAME in Cloudflare.
+
+Leave `cloudflare-manage-dns` at its default `false` for manual or externally
+managed DNS. Registration retains the v3.1 behavior and reports the target
+without calling the DNS API.
 
 Because artifacts are scoped to the workflow run and a reusable workflow's jobs
 run inside the caller's run, no extra permissions and no credential handoff are
@@ -305,7 +331,7 @@ on:
 
 jobs:
   pages:
-    uses: DevSecNinja/.github/.github/workflows/pages.yml@35c54636d55aa4d3aa727a98500ad87571e50be2 # v1.0.0
+    uses: DevSecNinja/.github/.github/workflows/pages.yml@<sha> # v3.2.0
     permissions:
       contents: read
       deployments: write
@@ -334,6 +360,9 @@ jobs:
       # cloudflare-production: true
       # cloudflare-project-name: "my-site"
       # cloudflare-custom-domain: "www.example.com"
+      # cloudflare-manage-dns: true
+      # cloudflare-dns-zone: "example.com"
+      # cloudflare-dns-proxied: true
     secrets:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

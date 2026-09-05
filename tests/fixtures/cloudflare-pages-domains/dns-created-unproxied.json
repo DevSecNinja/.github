@@ -1,0 +1,13 @@
+{
+  "success": true,
+  "errors": [],
+  "messages": [],
+  "result": {
+    "id": "record-id",
+    "type": "CNAME",
+    "name": "net-worth.ravensberg.org",
+    "content": "net-worth-calculator-xn8.pages.dev",
+    "ttl": 1,
+    "proxied": false
+  }
+}

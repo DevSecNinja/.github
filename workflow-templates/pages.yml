@@ -1,6 +1,5 @@
 ---
 name: Pages
-
 on:
   push:
     branches:
@@ -17,13 +16,11 @@ on:
     paths-ignore:
       - "**.md"
   workflow_dispatch:
-
 permissions:
   contents: read
-
 jobs:
   pages:
-    uses: DevSecNinja/.github/.github/workflows/pages.yml@783a7a3a03ae71efcdf5b13eaea80efe26dfa641 # v2.2.0
+    uses: DevSecNinja/.github/.github/workflows/pages.yml@7a3e8e1475c658c60c23bedc7daf2e559bfe60b4 # v3.1.0
     permissions:
       contents: read
       deployments: write
@@ -48,8 +45,12 @@ jobs:
       # github-pages: false
       # cloudflare-production: true
       # cloudflare-project-name: "my-site"
-      # Register only; create/switch the CNAME after verifying the Pages domain.
       # cloudflare-custom-domain: "www.example.com" # Requires central v3.1.0+
+      # Optional safe DNS creation (requires central v3.2.0+ and token
+      # permissions Account Pages Write, Zone Read, and DNS Edit):
+      # cloudflare-manage-dns: true
+      # cloudflare-dns-zone: "example.com"
+      # cloudflare-dns-proxied: true
       # Optional: deploy every main commit to an acceptance environment and
       # reserve production for releases. Also add the release trigger to `on:`
       # above, e.g. `release: { types: [published] }`.

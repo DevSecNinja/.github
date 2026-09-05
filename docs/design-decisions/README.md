@@ -21,3 +21,4 @@ that supersedes the old one.
 | [0006](0006-prebuilt-artifact-deploys.md)                   | Deploy prebuilt artifacts instead of passing credentials into builds | Accepted |
 | [0007](0007-mandatory-release-please-app-authentication.md) | Require GitHub App authentication for Release Please                 | Accepted |
 | [0008](0008-pages-custom-domain-registration.md)            | Register Pages domains without managing DNS                          | Accepted |
+| [0009](0009-pages-managed-dns-cutover.md)                   | Opt into safe Pages DNS cutover                                      | Accepted |
