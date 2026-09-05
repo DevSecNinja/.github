@@ -1,0 +1,11 @@
+{
+  "success": false,
+  "errors": [
+    {
+      "code": 8000011,
+      "message": "Domain not found"
+    }
+  ],
+  "messages": [],
+  "result": null
+}

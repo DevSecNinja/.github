@@ -126,6 +126,13 @@ on:
         required: false
         type: boolean
         default: false
+      cloudflare-custom-domain:
+        description: >-
+          Optional lowercase FQDN to register on the production Cloudflare Pages
+          project after a successful production deploy. DNS is not modified.
+        required: false
+        type: string
+        default: ""
       cloudflare-acceptance:
         description: "Deploy an acceptance build to Cloudflare Pages on production-branch commits"
         required: false
@@ -156,6 +163,15 @@ on:
         required: false
       CLOUDFLARE_ACCOUNT_ID:
         required: false
+    outputs:
+      cloudflare-custom-domain-status:
+        description: >-
+          Cloudflare Pages custom-domain status after registration, when enabled.
+        value: ${{ jobs.register-cloudflare-domain.outputs.status }}
+      cloudflare-custom-domain-dns-target:
+        description: >-
+          Resolved pages.dev CNAME target for the production Pages project.
+        value: ${{ jobs.register-cloudflare-domain.outputs.dns-target }}
 
 permissions:
   contents: read
@@ -178,6 +194,8 @@ jobs:
           CLOUDFLARE_PREVIEW: ${{ inputs.cloudflare-preview }}
           CLOUDFLARE_PRODUCTION: ${{ inputs.cloudflare-production }}
           CLOUDFLARE_ACCEPTANCE: ${{ inputs.cloudflare-acceptance }}
+          CLOUDFLARE_CUSTOM_DOMAIN: ${{ inputs.cloudflare-custom-domain }}
+          CONFIGURED_PROJECT_NAME: ${{ inputs.cloudflare-project-name }}
         run: |-
           set -euo pipefail
 
@@ -205,6 +223,24 @@ jobs:
             exit 1
           fi
 
+          if [ -n "${CLOUDFLARE_CUSTOM_DOMAIN}" ]; then
+            if [ "${CLOUDFLARE_PRODUCTION}" != "true" ]; then
+              echo "::error::cloudflare-custom-domain requires cloudflare-production: true."
+              exit 1
+            fi
+
+            if [ -z "${CONFIGURED_PROJECT_NAME}" ]; then
+              echo "::error::cloudflare-project-name is required when cloudflare-custom-domain is set."
+              exit 1
+            fi
+
+            if [ "${#CLOUDFLARE_CUSTOM_DOMAIN}" -gt 253 ] ||
+              ! [[ "${CLOUDFLARE_CUSTOM_DOMAIN}" =~ ^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$ ]]; then
+              echo "::error::cloudflare-custom-domain must be a lowercase FQDN with at least two labels; schemes, paths, ports, wildcards, underscores, and trailing dots are not allowed."
+              exit 1
+            fi
+          fi
+
           echo "Input validation passed."
 
   detect-cloudflare:
@@ -215,6 +251,7 @@ jobs:
     outputs:
       enabled: ${{ steps.detect.outputs.enabled }}
       project-name: ${{ steps.detect.outputs.project-name }}
+      deploy-production: ${{ steps.detect.outputs.deploy-production }}
       # JSON array of production-style deploy targets ({target, environment,
       # branch}) that should run for this event. Empty when nothing deploys.
       targets: ${{ steps.detect.outputs.targets }}
@@ -226,6 +263,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_PRODUCTION: ${{ inputs.cloudflare-production }}
           CLOUDFLARE_PRODUCTION_ON_RELEASE: ${{ inputs.cloudflare-production-on-release }}
+          CLOUDFLARE_CUSTOM_DOMAIN: ${{ inputs.cloudflare-custom-domain }}
           CLOUDFLARE_ACCEPTANCE: ${{ inputs.cloudflare-acceptance }}
           CLOUDFLARE_PREVIEW: ${{ inputs.cloudflare-preview }}
           CLOUDFLARE_PRODUCTION_BRANCH: ${{ inputs.cloudflare-production-branch }}
@@ -242,6 +280,7 @@ jobs:
 
           if [ "${CLOUDFLARE_PREVIEW}" != "true" ] && [ "${CLOUDFLARE_PRODUCTION}" != "true" ] && [ "${CLOUDFLARE_ACCEPTANCE}" != "true" ]; then
             echo "enabled=false" >>"${GITHUB_OUTPUT}"
+            echo "deploy-production=false" >>"${GITHUB_OUTPUT}"
             echo "targets=[]" >>"${GITHUB_OUTPUT}"
             echo "Cloudflare Pages deployments are disabled by input."
             exit 0
@@ -249,8 +288,12 @@ jobs:
 
           if [ -z "${CLOUDFLARE_API_TOKEN}" ] || [ -z "${CLOUDFLARE_ACCOUNT_ID}" ]; then
             echo "enabled=false" >>"${GITHUB_OUTPUT}"
+            echo "deploy-production=false" >>"${GITHUB_OUTPUT}"
             echo "targets=[]" >>"${GITHUB_OUTPUT}"
-            if [ "${CLOUDFLARE_PRODUCTION}" = "true" ] || [ "${CLOUDFLARE_ACCEPTANCE}" = "true" ]; then
+            if [ -n "${CLOUDFLARE_CUSTOM_DOMAIN}" ]; then
+              echo "::error::cloudflare-custom-domain requires CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID."
+              exit 1
+            elif [ "${CLOUDFLARE_PRODUCTION}" = "true" ] || [ "${CLOUDFLARE_ACCEPTANCE}" = "true" ]; then
               echo "::error::cloudflare-production or cloudflare-acceptance is enabled, but CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID is missing."
               exit 1
             fi
@@ -305,6 +348,7 @@ jobs:
           {
             echo "project-name=${project_name}"
             echo "enabled=true"
+            echo "deploy-production=${deploy_production}"
             echo "targets=${targets}"
           } >>"${GITHUB_OUTPUT}"
           echo "Cloudflare Pages deployments are configured (targets: ${targets})."
@@ -585,6 +629,169 @@ jobs:
             --project-name=${{ needs.detect-cloudflare.outputs.project-name }}
             --branch=${{ matrix.branch }}
           wranglerVersion: ${{ inputs.wrangler-version }}
+
+  register-cloudflare-domain:
+    name: Register Cloudflare production domain
+    needs:
+      - detect-cloudflare
+      - deploy-cloudflare
+    if: >-
+      needs.detect-cloudflare.outputs.deploy-production == 'true' &&
+      inputs.cloudflare-custom-domain != '' &&
+      needs.deploy-cloudflare.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    concurrency:
+      group: >-
+        cloudflare-pages-domain-${{ needs.detect-cloudflare.outputs.project-name }}-${{ inputs.cloudflare-custom-domain }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
+    outputs:
+      status: ${{ steps.register.outputs.status }}
+      dns-target: ${{ steps.register.outputs.dns-target }}
+    steps:
+      - name: Register Cloudflare Pages custom domain
+        id: register
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CUSTOM_DOMAIN: ${{ inputs.cloudflare-custom-domain }}
+          PROJECT_NAME: ${{ needs.detect-cloudflare.outputs.project-name }}
+        run: |-
+          set -euo pipefail
+
+          api_base="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${PROJECT_NAME}"
+          domain_response="$(mktemp)"
+          project_response="$(mktemp)"
+          request_body="$(mktemp)"
+          trap 'rm -f "${domain_response}" "${project_response}" "${request_body}"' EXIT
+
+          api_errors() {
+            local response_file="$1"
+            jq -r \
+              'if ([.errors[]?.message] | length) > 0
+               then [.errors[]?.message] | join("; ")
+               else "no error details returned"
+               end' \
+              "${response_file}" 2>/dev/null || printf '%s' "invalid JSON response"
+          }
+
+          request() {
+            local method="$1"
+            local url="$2"
+            local output_file="$3"
+            local data_file="${4:-}"
+            local -a args=(
+              --silent
+              --show-error
+              --connect-timeout 10
+              --max-time 60
+              --output "${output_file}"
+              --write-out "%{http_code}"
+              --request "${method}"
+              --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+            )
+
+            if [ "${method}" = "GET" ]; then
+              args+=(--retry 2 --retry-all-errors)
+            fi
+
+            if [ -n "${data_file}" ]; then
+              args+=(
+                --header "Content-Type: application/json"
+                --data-binary "@${data_file}"
+              )
+            fi
+
+            local http_code
+            if ! http_code="$(curl "${args[@]}" "${url}")"; then
+              echo "::error::Cloudflare Pages ${method} request failed before an HTTP response was received." >&2
+              return 1
+            fi
+            printf '%s' "${http_code}"
+          }
+
+          domain_url="${api_base}/domains/${CUSTOM_DOMAIN}"
+          domain_http_code="$(request GET "${domain_url}" "${domain_response}")"
+
+          if [ "${domain_http_code}" = "200" ]; then
+            if ! jq -e \
+              --arg domain "${CUSTOM_DOMAIN}" \
+              '.success == true and .result.name == $domain' \
+              "${domain_response}" >/dev/null; then
+              echo "::error::Cloudflare returned an unsuccessful or mismatched custom-domain response: $(api_errors "${domain_response}")"
+              exit 1
+            fi
+            status="$(jq -r '.result.status' "${domain_response}")"
+            case "${status}" in
+              active | pending | initializing)
+                echo "Cloudflare Pages custom domain '${CUSTOM_DOMAIN}' already exists with status '${status}'."
+                ;;
+              *)
+                echo "::error::Cloudflare Pages custom domain '${CUSTOM_DOMAIN}' is in unexpected status '${status}'."
+                exit 1
+                ;;
+            esac
+          elif [ "${domain_http_code}" = "404" ]; then
+            jq -cn --arg name "${CUSTOM_DOMAIN}" '{name: $name}' >"${request_body}"
+            domain_http_code="$(request POST "${api_base}/domains" "${domain_response}" "${request_body}")"
+            if [ "${domain_http_code}" -lt 200 ] || [ "${domain_http_code}" -ge 300 ]; then
+              echo "::error::Failed to register Cloudflare Pages custom domain '${CUSTOM_DOMAIN}' (HTTP ${domain_http_code}): $(api_errors "${domain_response}")"
+              exit 1
+            fi
+            if ! jq -e \
+              --arg domain "${CUSTOM_DOMAIN}" \
+              '.success == true and .result.name == $domain' \
+              "${domain_response}" >/dev/null; then
+              echo "::error::Cloudflare returned an unsuccessful or mismatched custom-domain registration response: $(api_errors "${domain_response}")"
+              exit 1
+            fi
+            status="$(jq -r '.result.status' "${domain_response}")"
+            case "${status}" in
+              active | pending | initializing)
+                echo "Registered Cloudflare Pages custom domain '${CUSTOM_DOMAIN}' with status '${status}'."
+                ;;
+              *)
+                echo "::error::Cloudflare registered custom domain '${CUSTOM_DOMAIN}' with unexpected status '${status}'."
+                exit 1
+                ;;
+            esac
+          else
+            echo "::error::Failed to query Cloudflare Pages custom domain '${CUSTOM_DOMAIN}' (HTTP ${domain_http_code}): $(api_errors "${domain_response}")"
+            exit 1
+          fi
+
+          project_http_code="$(request GET "${api_base}" "${project_response}")"
+          if [ "${project_http_code}" -lt 200 ] || [ "${project_http_code}" -ge 300 ]; then
+            echo "::error::Failed to query Cloudflare Pages project '${PROJECT_NAME}' (HTTP ${project_http_code}): $(api_errors "${project_response}")"
+            exit 1
+          fi
+          if ! dns_target="$(
+            jq -er \
+              --arg project "${PROJECT_NAME}" \
+              'select(.success == true and .result.name == $project)
+               | .result.subdomain
+               | select(type == "string" and endswith(".pages.dev"))' \
+              "${project_response}"
+          )"; then
+            echo "::error::Cloudflare returned an unsuccessful project response or no valid pages.dev subdomain: $(api_errors "${project_response}")"
+            exit 1
+          fi
+
+          {
+            echo "status=${status}"
+            echo "dns-target=${dns_target}"
+          } >>"${GITHUB_OUTPUT}"
+          echo "::notice title=Cloudflare Pages DNS cutover::Custom domain '${CUSTOM_DOMAIN}' is '${status}'. Create or switch its DNS CNAME to '${dns_target}' after verification; this workflow did not change DNS."
+          {
+            echo "### Cloudflare Pages custom domain"
+            echo
+            echo "- Domain: \`${CUSTOM_DOMAIN}\`"
+            echo "- Status: \`${status}\`"
+            echo "- DNS CNAME target: \`${dns_target}\`"
+            echo "- DNS records were not changed by this workflow."
+          } >>"${GITHUB_STEP_SUMMARY}"
 
   deploy-preview:
     name: Deploy Cloudflare preview

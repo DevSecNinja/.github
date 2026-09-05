@@ -167,6 +167,8 @@ GitHub Pages and/or Cloudflare Pages from the configured production branch, and
 optionally deploys same-repository pull request previews to Cloudflare Pages.
 Cloudflare jobs detect missing Cloudflare secrets before any deploy work. Missing
 secrets fail production Cloudflare deploys and skip preview-only deploys.
+An optional production custom domain can be registered after deployment. Domain
+registration intentionally does not create or update DNS records.
 
 | Input                              | Description                                                                                      |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------ |
@@ -190,6 +192,7 @@ secrets fail production Cloudflare deploys and skip preview-only deploys.
 | `cloudflare-preview`               | Enable Cloudflare pull request previews. Default: `true`.                                        |
 | `cloudflare-production`            | Deploy production to Cloudflare Pages. Default: `false`.                                         |
 | `cloudflare-production-on-release` | Deploy Cloudflare production only on `release` events, not every main commit. Default: `false`.  |
+| `cloudflare-custom-domain`         | Register one lowercase FQDN after a production deploy. Default: empty; DNS is never modified.    |
 | `cloudflare-acceptance`            | Deploy an acceptance build to Cloudflare on main commits. Default: `false`.                      |
 | `cloudflare-acceptance-branch`     | Cloudflare branch name for acceptance deploys. Default: `acceptance`.                            |
 | `cloudflare-project-name`          | Cloudflare Pages project; lowercase letters, numbers, and hyphens only.                          |
@@ -254,6 +257,35 @@ not cancel or serialise each other. Give each call its own
 deployed exactly as uploaded. With `artifact-name` set the deploy jobs skip
 Node/Go setup, install and build entirely.
 
+#### Cloudflare custom-domain migration
+
+Set `cloudflare-custom-domain` only with `cloudflare-production: true`, an
+explicit `cloudflare-project-name`, the required Wrangler version, and
+`CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_API_TOKEN` secrets. The token needs
+Cloudflare Pages Write permission. The workflow validates the domain as a
+lowercase FQDN, deploys production, then reads or creates that domain through
+the official Pages API. Preview, acceptance, pull request cleanup, and GitHub
+Pages deploys never register it.
+
+The registration job reports two reusable-workflow outputs:
+`cloudflare-custom-domain-status` and
+`cloudflare-custom-domain-dns-target`. The DNS target comes from the Pages
+project API's `subdomain` field, not from the requested project name. Cloudflare
+can assign a collision-safe value such as
+`net-worth-calculator-xn8.pages.dev`, even when
+`cloudflare-project-name` is `net-worth-calculator`.
+
+Use a staged cutover:
+
+1. Deploy and verify the generated `pages.dev` site.
+2. Set `cloudflare-custom-domain` and verify that registration reaches
+   `initializing`, `pending`, or `active`.
+3. Create or switch the custom hostname's DNS CNAME to the reported
+   `cloudflare-custom-domain-dns-target`. The workflow never assumes zone
+   ownership and never changes DNS.
+4. Keep the previous host or DNS value available as a rollback path until the
+   custom domain and certificate are stable.
+
 Because artifacts are scoped to the workflow run and a reusable workflow's jobs
 run inside the caller's run, no extra permissions and no credential handoff are
 involved. Note that the same artifact is deployed to previews and to
@@ -301,6 +333,7 @@ jobs:
       # github-pages: false
       # cloudflare-production: true
       # cloudflare-project-name: "my-site"
+      # cloudflare-custom-domain: "www.example.com"
     secrets:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
