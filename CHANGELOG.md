@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.2.0](https://github.com/DevSecNinja/.github/compare/v3.1.0...v3.2.0) (2026-09-05)
+
+
+### 🚀 Features
+
+* **pages:** add safe Cloudflare DNS cutover ([72727fa](https://github.com/DevSecNinja/.github/commit/72727fa0a01386c335574c0462ad8c3638b476cc))
+
 ## [3.1.0](https://github.com/DevSecNinja/.github/compare/v3.0.0...v3.1.0) (2026-09-05)
 
 
