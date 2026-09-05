@@ -279,17 +279,21 @@ jobs:
           project_name="${CONFIGURED_PROJECT_NAME:-$REPOSITORY_NAME}"
 
           if [ "${CLOUDFLARE_PREVIEW}" != "true" ] && [ "${CLOUDFLARE_PRODUCTION}" != "true" ] && [ "${CLOUDFLARE_ACCEPTANCE}" != "true" ]; then
-            echo "enabled=false" >>"${GITHUB_OUTPUT}"
-            echo "deploy-production=false" >>"${GITHUB_OUTPUT}"
-            echo "targets=[]" >>"${GITHUB_OUTPUT}"
+            {
+              echo "enabled=false"
+              echo "deploy-production=false"
+              echo "targets=[]"
+            } >>"${GITHUB_OUTPUT}"
             echo "Cloudflare Pages deployments are disabled by input."
             exit 0
           fi
 
           if [ -z "${CLOUDFLARE_API_TOKEN}" ] || [ -z "${CLOUDFLARE_ACCOUNT_ID}" ]; then
-            echo "enabled=false" >>"${GITHUB_OUTPUT}"
-            echo "deploy-production=false" >>"${GITHUB_OUTPUT}"
-            echo "targets=[]" >>"${GITHUB_OUTPUT}"
+            {
+              echo "enabled=false"
+              echo "deploy-production=false"
+              echo "targets=[]"
+            } >>"${GITHUB_OUTPUT}"
             if [ -n "${CLOUDFLARE_CUSTOM_DOMAIN}" ]; then
               echo "::error::cloudflare-custom-domain requires CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID."
               exit 1
