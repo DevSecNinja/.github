@@ -28,24 +28,24 @@ MODE="${GUARD_MODE:-block}"
 LOG_DIR="${TOOL_GUARD_LOG_DIR:-.github/logs/copilot/tool-guardian}"
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-mkdir -p "$LOG_DIR"
-LOG_FILE="$LOG_DIR/guard.log"
+mkdir -p "${LOG_DIR}"
+LOG_FILE="${LOG_DIR}/guard.log"
 
 # Extract tool name and input text
 TOOL_NAME=""
 TOOL_INPUT=""
 
 if command -v jq &>/dev/null; then
-    TOOL_NAME=$(printf '%s' "$INPUT" | jq -r '.toolName // empty' 2>/dev/null || echo "")
-    TOOL_INPUT=$(printf '%s' "$INPUT" | jq -r '.toolInput // empty' 2>/dev/null || echo "")
+    TOOL_NAME=$(printf '%s' "${INPUT}" | jq -r '.toolName // empty' 2>/dev/null || echo "")
+    TOOL_INPUT=$(printf '%s' "${INPUT}" | jq -r '.toolInput // empty' 2>/dev/null || echo "")
 fi
 
 # Fallback: extract with grep/sed if jq unavailable or fields empty
-if [[ -z "$TOOL_NAME" ]]; then
-    TOOL_NAME=$(printf '%s' "$INPUT" | grep -oE '"toolName"\s*:\s*"[^"]*"' | head -1 | sed 's/.*"toolName"\s*:\s*"//;s/"//')
+if [[ -z "${TOOL_NAME}" ]]; then
+    TOOL_NAME=$(printf '%s' "${INPUT}" | grep -oE '"toolName"\s*:\s*"[^"]*"' | head -1 | sed 's/.*"toolName"\s*:\s*"//;s/"//')
 fi
-if [[ -z "$TOOL_INPUT" ]]; then
-    TOOL_INPUT=$(printf '%s' "$INPUT" | grep -oE '"toolInput"\s*:\s*"[^"]*"' | head -1 | sed 's/.*"toolInput"\s*:\s*"//;s/"//')
+if [[ -z "${TOOL_INPUT}" ]]; then
+    TOOL_INPUT=$(printf '%s' "${INPUT}" | grep -oE '"toolInput"\s*:\s*"[^"]*"' | head -1 | sed 's/.*"toolInput"\s*:\s*"//;s/"//')
 fi
 
 # Combine for pattern matching
@@ -54,15 +54,15 @@ COMBINED="${TOOL_NAME} ${TOOL_INPUT}"
 # Parse allowlist
 ALLOWLIST=()
 if [[ -n "${TOOL_GUARD_ALLOWLIST:-}" ]]; then
-    IFS=',' read -ra ALLOWLIST <<<"$TOOL_GUARD_ALLOWLIST"
+    IFS=',' read -ra ALLOWLIST <<<"${TOOL_GUARD_ALLOWLIST}"
 fi
 
 is_allowlisted() {
     local text="$1"
     for pattern in "${ALLOWLIST[@]}"; do
-        pattern=$(printf '%s' "$pattern" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-        [[ -z "$pattern" ]] && continue
-        if [[ "$text" == *"$pattern"* ]]; then
+        pattern=$(printf '%s' "${pattern}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+        [[ -z "${pattern}" ]] && continue
+        if [[ "${text}" == *"${pattern}"* ]]; then
             return 0
         fi
     done
@@ -70,9 +70,11 @@ is_allowlisted() {
 }
 
 # Check allowlist early — if the combined text matches, skip all scanning
-if [[ ${#ALLOWLIST[@]} -gt 0 ]] && is_allowlisted "$COMBINED"; then
+# is_allowlisted is used as a boolean guard, so suppressing set -e here is intentional.
+# shellcheck disable=SC2310
+if [[ ${#ALLOWLIST[@]} -gt 0 ]] && is_allowlisted "${COMBINED}"; then
     printf '{"timestamp":"%s","event":"guard_skipped","reason":"allowlisted","tool":"%s"}\n' \
-        "$TIMESTAMP" "$TOOL_NAME" >>"$LOG_FILE"
+        "${TIMESTAMP}" "${TOOL_NAME}" >>"${LOG_FILE}"
     exit 0
 fi
 
@@ -131,17 +133,18 @@ for entry in "${PATTERNS[@]}"; do
     regex="${rest%%:::*}"
     suggestion="${rest#*:::}"
 
-    if printf '%s\n' "$COMBINED" | grep -qiE "$regex" 2>/dev/null; then
-        local_match=$(printf '%s\n' "$COMBINED" | grep -oiE "$regex" 2>/dev/null | head -1)
+    if printf '%s\n' "${COMBINED}" | grep -qiE "${regex}" 2>/dev/null; then
+        local_match=$(printf '%s\n' "${COMBINED}" | grep -oiE "${regex}" 2>/dev/null | head -1)
         THREATS+=("${category}	${severity}	${local_match}	${suggestion}")
         THREAT_COUNT=$((THREAT_COUNT + 1))
     fi
 done
 
 # Output and logging
-if [[ $THREAT_COUNT -gt 0 ]]; then
+escaped_tool_name=$(json_escape "${TOOL_NAME}")
+if [[ ${THREAT_COUNT} -gt 0 ]]; then
     echo ""
-    echo "🛡️  Tool Guardian: $THREAT_COUNT threat(s) detected in '$TOOL_NAME' invocation"
+    echo "🛡️  Tool Guardian: ${THREAT_COUNT} threat(s) detected in '${TOOL_NAME}' invocation"
     echo ""
     printf "  %-24s %-10s %-40s %s\n" "CATEGORY" "SEVERITY" "MATCH" "SUGGESTION"
     printf "  %-24s %-10s %-40s %s\n" "--------" "--------" "-----" "----------"
@@ -150,20 +153,24 @@ if [[ $THREAT_COUNT -gt 0 ]]; then
     FINDINGS_JSON="["
     FIRST=true
     for threat in "${THREATS[@]}"; do
-        IFS=$'\t' read -r category severity match suggestion <<<"$threat"
+        IFS=$'\t' read -r category severity match suggestion <<<"${threat}"
 
         # Truncate match for display
-        display_match="$match"
+        display_match="${match}"
         if [[ ${#match} -gt 38 ]]; then
             display_match="${match:0:35}..."
         fi
-        printf "  %-24s %-10s %-40s %s\n" "$category" "$severity" "$display_match" "$suggestion"
+        printf "  %-24s %-10s %-40s %s\n" "${category}" "${severity}" "${display_match}" "${suggestion}"
 
-        if [[ "$FIRST" != "true" ]]; then
+        if [[ "${FIRST}" != "true" ]]; then
             FINDINGS_JSON+=","
         fi
         FIRST=false
-        FINDINGS_JSON+="{\"category\":\"$(json_escape "$category")\",\"severity\":\"$(json_escape "$severity")\",\"match\":\"$(json_escape "$match")\",\"suggestion\":\"$(json_escape "$suggestion")\"}"
+        esc_category=$(json_escape "${category}")
+        esc_severity=$(json_escape "${severity}")
+        esc_match=$(json_escape "${match}")
+        esc_suggestion=$(json_escape "${suggestion}")
+        FINDINGS_JSON+="{\"category\":\"${esc_category}\",\"severity\":\"${esc_severity}\",\"match\":\"${esc_match}\",\"suggestion\":\"${esc_suggestion}\"}"
     done
     FINDINGS_JSON+="]"
 
@@ -171,9 +178,9 @@ if [[ $THREAT_COUNT -gt 0 ]]; then
 
     # Write structured log entry
     printf '{"timestamp":"%s","event":"threats_detected","mode":"%s","tool":"%s","threat_count":%d,"threats":%s}\n' \
-        "$TIMESTAMP" "$MODE" "$(json_escape "$TOOL_NAME")" "$THREAT_COUNT" "$FINDINGS_JSON" >>"$LOG_FILE"
+        "${TIMESTAMP}" "${MODE}" "${escaped_tool_name}" "${THREAT_COUNT}" "${FINDINGS_JSON}" >>"${LOG_FILE}"
 
-    if [[ "$MODE" == "block" ]]; then
+    if [[ "${MODE}" == "block" ]]; then
         echo "🚫 Operation blocked: resolve the threats above or adjust TOOL_GUARD_ALLOWLIST."
         echo "   Set GUARD_MODE=warn to log without blocking."
         exit 1
@@ -183,7 +190,7 @@ if [[ $THREAT_COUNT -gt 0 ]]; then
 else
     # Log clean result
     printf '{"timestamp":"%s","event":"guard_passed","mode":"%s","tool":"%s"}\n' \
-        "$TIMESTAMP" "$MODE" "$(json_escape "$TOOL_NAME")" >>"$LOG_FILE"
+        "${TIMESTAMP}" "${MODE}" "${escaped_tool_name}" >>"${LOG_FILE}"
 fi
 
 exit 0
