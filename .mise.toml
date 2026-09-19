@@ -4,7 +4,7 @@ min_version = "2026.9.1"
 [tools]
 actionlint = "1.7.12"
 cocogitto = "7.0.0"
-dprint = "0.56.1"
+dprint = "0.57.2"
 gitleaks = "8.30.1"
 git-cliff = "2.14.1"
 "pipx:checkov" = "3.3.16"
