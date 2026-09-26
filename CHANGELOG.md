@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.2.1](https://github.com/DevSecNinja/.github/compare/v3.2.0...v3.2.1) (2026-09-26)
+
+
+### 🐛 Bug Fixes
+
+* **agents:** pin security analyzer to Sonnet 5 ([#373](https://github.com/DevSecNinja/.github/issues/373)) ([17de1b1](https://github.com/DevSecNinja/.github/commit/17de1b1672869746f0b038e63ce889738884d3cf))
+
 ## [3.2.0](https://github.com/DevSecNinja/.github/compare/v3.1.0...v3.2.0) (2026-09-05)
 
 
