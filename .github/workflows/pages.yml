@@ -624,7 +624,7 @@ jobs:
           PRE_DEPLOY_COMMAND: ${{ inputs.pre-deploy-command }}
         run: bash -euo pipefail -c "${PRE_DEPLOY_COMMAND}"
       - name: Ensure Cloudflare Pages project exists
-        uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0 # v4.0.0
+        uses: cloudflare/wrangler-action@953926a2e2182532811c01a25e53647d93bf07c0 # v4.1.3
         continue-on-error: true
         with:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -635,7 +635,7 @@ jobs:
           wranglerVersion: ${{ inputs.wrangler-version }}
       - name: Deploy to Cloudflare Pages
         id: deploy
-        uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0 # v4.0.0
+        uses: cloudflare/wrangler-action@953926a2e2182532811c01a25e53647d93bf07c0 # v4.1.3
         with:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -1024,7 +1024,7 @@ jobs:
           PRE_PREVIEW_COMMAND: ${{ inputs.pre-preview-command }}
         run: bash -euo pipefail -c "${PRE_PREVIEW_COMMAND}"
       - name: Ensure Cloudflare Pages project exists
-        uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0 # v4.0.0
+        uses: cloudflare/wrangler-action@953926a2e2182532811c01a25e53647d93bf07c0 # v4.1.3
         continue-on-error: true
         with:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -1035,7 +1035,7 @@ jobs:
           wranglerVersion: ${{ inputs.wrangler-version }}
       - name: Deploy to Cloudflare Pages
         id: deploy
-        uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0 # v4.0.0
+        uses: cloudflare/wrangler-action@953926a2e2182532811c01a25e53647d93bf07c0 # v4.1.3
         with:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
