@@ -15,5 +15,5 @@ jobs:
       contents: write
     with:
       # renovate: datasource=github-releases depName=jdx/mise
-      mise-version: "2026.9.12"
+      mise-version: "2026.9.13"
       autofix-config-dir: config-sync/files
