@@ -20,7 +20,7 @@ permissions:
   contents: read
 jobs:
   pages:
-    uses: DevSecNinja/.github/.github/workflows/pages.yml@7a3e8e1475c658c60c23bedc7daf2e559bfe60b4 # v3.1.0
+    uses: DevSecNinja/.github/.github/workflows/pages.yml@24acc67adf1be33089e73b2fdbdb4be8c12d145b # v3.2.0
     permissions:
       contents: read
       deployments: write
