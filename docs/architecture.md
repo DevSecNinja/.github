@@ -17,6 +17,7 @@ repositories use it.
 │   └── copilot-instructions.md   # Org-wide Copilot coding standards
 ├── .renovate/              # Renovate shared preset fragments
 ├── actions/                # Composite actions (run inside the caller's job)
+├── copilot-models.json     # Reviewed model choices (data; explicit consumer opt-in)
 ├── config-sync/
 │   ├── files/              # Files auto-synced to every repo (read-only)
 │   │   └── .github/labels-base.yaml  # Base label set synced to all repos
@@ -29,6 +30,16 @@ repositories use it.
 ```
 
 ---
+
+## Shared Copilot model policy
+
+[`copilot-models.json`](../copilot-models.json) centralizes reviewed, explicit
+model choices for opt-in CLI consumers. Consumers fetch this JSON data from
+`main`, validate it, log its revision and effective model, and fail closed rather
+than use `auto` or a fallback. A personal `.github` repository does not inject
+the policy into other repositories automatically. See the
+[onboarding and change guide](copilot-model-policy.md) for the contract,
+overrides, advance notification, account-specific availability, and rollback.
 
 ## Reusable workflows
 
