@@ -36,6 +36,13 @@ invalid values into valid ones. Reject missing fields, wrong types, unknown
 fields, malformed JSON, and multiple JSON documents. A valid ID's syntax does
 **not** establish that the model exists or is available to an account.
 
+Object keys must be unique at every nesting level, including keys made equal
+by JSON escape decoding. Reject duplicates before a parser collapses them into
+a dictionary. Use strict JSON numeric syntax: leading-zero numbers, `NaN`,
+`Infinity`, and `-Infinity` are invalid. `schemaVersion` and `revision` must be
+actual integer tokens, not booleans, strings, decimal forms such as `1.0`, or
+exponent forms such as `1e0`, even when numerically equal to an allowed integer.
+
 Keep actual model choices only in the root policy, not duplicated as production
 defaults in consumer code, repository variables, workflow YAML, or examples.
 The `revision` is independent of this repository's release version.
@@ -112,9 +119,11 @@ Actions and reusable-workflow `uses:` references remain full-SHA-pinned.
    increase against `main`; the offline schema test does not check Git history.
 3. Run `mise exec -- bash ./tests/copilot-model-policy-contract.sh` and
    `mise run test`, plus the normal lint checks. The contract test uses the
-   existing Bash/jq convention and makes no network or inference calls. It
-   checks schema shape, safe positive-integer revision, explicit IDs, and
-   negative cases, not account-specific model availability.
+   existing Bash entry point with Python 3's standard library for strict JSON
+   parsing; it needs no new Python packages and makes no network or inference
+   calls. It checks the raw document before duplicate keys or numeric token
+   types can be lost, along with schema shape, revision bounds, and model IDs.
+   It does not check account-specific model availability.
 4. Merge through the normal reviewed PR path only after the required
    consumer-identity checks and advance notice. Keep the chosen IDs explicit
    even if the CLI changes its own defaults.
@@ -122,6 +131,15 @@ Actions and reusable-workflow `uses:` references remain full-SHA-pinned.
    values with a **new, higher revision**, and confirm those models remain
    available. Do not reset the revision or blindly revert the whole JSON file.
    If no approved model is available, leave affected automation blocked.
+
+The offline contract test consumes
+[`tests/fixtures/copilot-model-policy-cases.json`](../tests/fixtures/copilot-model-policy-cases.json),
+an array of `{ "name": string, "valid": boolean, "document": string }` cases.
+Consumers can vendor an identical copy as test-only data and pass each
+`document` string unchanged to their real policy parser. Do not parse and
+reserialize the input first: that would hide the duplicate-key and numeric-token
+regressions. Keep the fixture local to each test suite, with no runtime download
+or dependency on an unmerged policy URL.
 
 For initial publication, merge the producer policy first and verify the raw URL
 serves the approved document. Only then roll out consumer integrations. Never
