@@ -119,8 +119,10 @@ Actions and reusable-workflow `uses:` references remain full-SHA-pinned.
    increase against `main`; the offline schema test does not check Git history.
 3. Run `mise exec -- bash ./tests/copilot-model-policy-contract.sh` and
    `mise run test`, plus the normal lint checks. The contract test uses the
-   existing Bash entry point with Python 3's standard library for strict JSON
-   parsing; it needs no new Python packages and makes no network or inference
+   existing Bash entry point with the Python standard library (version 3.6 or
+   newer) for strict JSON parsing. The launcher prefers `python3`, then tries
+   `python`, accepting either only after a successful version check. It needs
+   no new Python packages and makes no network or inference
    calls. It checks the raw document before duplicate keys or numeric token
    types can be lost, along with schema shape, revision bounds, and model IDs.
    It does not check account-specific model availability.

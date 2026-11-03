@@ -2,12 +2,16 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-if command -v python >/dev/null 2>&1; then
-    python_command=python
-elif command -v python3 >/dev/null 2>&1; then
-    python_command=python3
-else
-    echo "error: Python 3 is required for strict offline policy validation." >&2
+python_command=""
+for candidate in python3 python; do
+    if command -v "${candidate}" >/dev/null 2>&1 &&
+        "${candidate}" -c 'import sys; sys.exit(sys.version_info < (3, 6))' >/dev/null 2>&1; then
+        python_command="${candidate}"
+        break
+    fi
+done
+if [ -z "${python_command}" ]; then
+    echo "error: Python 3.6 or newer is required for strict offline policy validation." >&2
     exit 1
 fi
 
