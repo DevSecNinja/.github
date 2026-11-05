@@ -76,7 +76,7 @@ permissions:
 jobs:
   release-please:
     name: Open or update release PR
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       # release-please needs to push the chore-release branch and tag.
       contents: write
