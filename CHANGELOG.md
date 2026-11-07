@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.3.0](https://github.com/DevSecNinja/.github/compare/v3.2.0...v3.3.0) (2026-11-07)
+
+
+### 🚀 Features
+
+* **copilot:** add shared explicit model policy ([#452](https://github.com/DevSecNinja/.github/issues/452)) ([3151e96](https://github.com/DevSecNinja/.github/commit/3151e963606d5b95bfe953befa7de6b9971f1de3))
+
+
+### 🐛 Bug Fixes
+
+* **agents:** pin security analyzer to Sonnet 5 ([#373](https://github.com/DevSecNinja/.github/issues/373)) ([17de1b1](https://github.com/DevSecNinja/.github/commit/17de1b1672869746f0b038e63ce889738884d3cf))
+
 ## [3.2.0](https://github.com/DevSecNinja/.github/compare/v3.1.0...v3.2.0) (2026-09-05)
 
 
