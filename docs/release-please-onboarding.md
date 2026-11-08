@@ -78,7 +78,8 @@ Configure_.
 
 Provision the variable `AUTOMATION_APP_ID` and the secret
 `AUTOMATION_APP_PRIVATE_KEY` from 1Password with the dotfiles
-`GitHubRepoConfig` module (`-Check AppCredential`), as described in
+`GitHubRepoConfig` module (`-Check AppCredential`, then apply without
+`-WhatIf`), as described in
 [Per-repository credentials](automation-app.md#per-repository-credentials).
 On public repos it stores them in the `production` environment, pinned
 to the default branch; on private repos at repository level. Either
@@ -126,9 +127,13 @@ Commit the following on a feature branch:
 
 #### `.github/workflows/release-please.yml`
 
-Use the [`workflow-templates/release-please.yml`](../workflow-templates/release-please.yml)
-in this repo (also available via the GitHub UI's "New workflow"
-picker), or paste:
+Paste the snippet below. The
+[`workflow-templates/release-please.yml`](../workflow-templates/release-please.yml)
+starter (also in the GitHub UI's "New workflow" picker) is equivalent once it
+pins v3.4.0 or later; older copies of it pass the legacy
+`RELEASE_PLEASE_APP_*` names, which only exist in repos onboarded before
+v3.4.0, so a repo provisioned with just the standard names cannot release
+with them.
 
 ```yaml
 ---

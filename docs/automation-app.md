@@ -65,9 +65,20 @@ Provision them from 1Password (`op://Private/GitHub Automation App/app-id` and
 [DevSecNinja/dotfiles](https://github.com/DevSecNinja/dotfiles/blob/main/docs/github-repo-config.md#app-credentials):
 
 ```powershell
-$cred = Get-GitHubAppCredential
-Get-GitHubRepoConfig -All -Check AppCredential | Set-GitHubRepoConfig -AppCredential $cred -WhatIf
+$cred = Get-GitHubAppCredential   # 1Password asks for approval
+
+# Preview the drift, then apply it (same command without -WhatIf):
+Get-GitHubRepoConfig -All -Check AppCredential | Set-GitHubRepoConfig -Category AppCredential -AppCredential $cred -WhatIf
+Get-GitHubRepoConfig -All -Check AppCredential | Set-GitHubRepoConfig -Category AppCredential -AppCredential $cred
+
+# Or a single repository:
+Get-GitHubRepoConfig -Repository notes -Check AppCredential | Set-GitHubRepoConfig -Category AppCredential -AppCredential $cred
 ```
+
+`-Category AppCredential` limits the change to the credential; drop it to
+remediate the rest of the repository baseline as well. The 1Password CLI's
+desktop-app integration must be enabled (_Settings → Developer → Integrate
+with 1Password CLI_).
 
 On **public** repositories the module stores both in the Actions environment
 `production`, pinned to the default branch, so a workflow running on any other
