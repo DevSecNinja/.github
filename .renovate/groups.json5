@@ -42,7 +42,7 @@
       // 14-day pr-cooldown soak needs its own branch (ADR 0005).
       // Majors are not matched, so they keep separate, manually merged PRs;
       // vulnerability fixes are excluded via vulnerabilityAlerts in base.json5.
-      description: "Batch every non-major update into a single weekly PR. One PR (instead of one per dependency) means one CI run per Renovate push, and with rebaseWhen:conflicted no cascade of rebases after each automerge. See docs/design-decisions/0010-batch-renovate-updates-to-save-actions-minutes.md.",
+      description: "Batch every non-major update into a single weekly PR. One PR (instead of one per dependency) means one CI run per Renovate push, and only one open automerge PR to rebase when the base branch moves (within the Saturday window). See docs/design-decisions/0010-batch-renovate-updates-to-save-actions-minutes.md and 0013-rebase-automerge-branches-when-behind.md.",
       matchUpdateTypes: ["minor", "patch", "pin", "pinDigest", "digest"],
       groupName: "all non-major dependencies",
       groupSlug: "all-non-major",

@@ -204,7 +204,7 @@ Callers choose one publication pattern:
 
 See the [onboarding guide](release-please-onboarding.md),
 [ADR 0007](design-decisions/0007-mandatory-release-please-app-authentication.md)
-and [ADR 0012](design-decisions/0011-single-automation-github-app.md).
+and [ADR 0011](design-decisions/0011-single-automation-github-app.md).
 
 ### Pages (`pages.yml`)
 
@@ -867,17 +867,18 @@ CI), Renovate batches its work
   required checks pass.
 - **Lock file maintenance:** monthly, on the first day of the month (its
   branch automerge may complete outside the window).
-- **Rebasing:** `rebaseWhen: "conflicted"` — Renovate no longer rebases every
-  open PR each time `main` moves. Branch protection is non-strict, so a
-  behind-base PR still auto-merges. **Repositories whose ruleset requires
-  branches to be up to date** must override this in their own
-  `renovate.json5`, or their automerge PRs stall:
-
-  ```json5
-  {
-    rebaseWhen: "behind-base-branch",
-  }
-  ```
+- **Rebasing:** `rebaseWhen: "auto"` (Renovate's default,
+  [ADR 0013](design-decisions/0013-rebase-automerge-branches-when-behind.md)).
+  An automerge PR that falls behind `main` — or any PR in a repository that
+  requires up-to-date branches — is rebased on Renovate's next run inside the
+  window. Only where branches must be up to date (the standard for public
+  repositories) is every automerged update guaranteed to be tested against
+  the latest `main`; elsewhere GitHub's native automerge can merge a
+  behind-base PR before Renovate rebases it. No per-repository override is
+  needed. `docker-gated-` PRs keep `rebaseWhen: "conflicted"`, because a
+  rebase restarts their cooldown clock; repositories that require
+  `pr-cooldown` therefore keep "require branches to be up to date" off for
+  now.
 
 ### Auto-merge strategy
 

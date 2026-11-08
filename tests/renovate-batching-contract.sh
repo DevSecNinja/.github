@@ -86,7 +86,32 @@ jq -e --argjson g "${group_index}" \
     fail "the docker-gated rule must follow the group and keep groupName: null and rebaseWhen: conflicted"
 
 base="$(to_json "${renovate_dir}/base.json5")"
-jq -e '.rebaseWhen == "conflicted"' <<<"${base}" >/dev/null || fail "base.json5 must set rebaseWhen: conflicted"
+jq -e '.rebaseWhen == "auto"' <<<"${base}" >/dev/null ||
+    fail "base.json5 must keep Renovate's default rebaseWhen: auto (ADR 0013); only the docker-gated rule uses conflicted"
+non_gated_conflicted="$(
+    jq -r '.[] | select(.rebaseWhen == "conflicted" and .additionalBranchPrefix != "docker-gated-") | "\(._file): \((.description // "(no description)")[0:120])"' \
+        <<<"${rules_json}"
+)"
+[ -z "${non_gated_conflicted}" ] ||
+    fail "only the docker-gated rule may set rebaseWhen: conflicted (it breaks automerge elsewhere, ADR 0013):
+${non_gated_conflicted}"
+
+# Branch automerge needs rebasing once main moves; with conflicted Renovate
+# raises a PR instead. A docker branch-automerge rule placed after the gated
+# rule may overlap with it (e.g. a ghcr.io image) and would inherit its
+# conflicted unless it sets rebaseWhen itself.
+gated_index="$(jq '[.[] | select(.additionalBranchPrefix == "docker-gated-")][0]._index' <<<"${rules_json}")"
+inherits_conflicted="$(
+    jq -r --argjson gated "${gated_index}" \
+        '.[] | select(._index > $gated and .automergeType == "branch"
+            and ((.matchDatasources // ["docker"]) | index("docker"))
+            and ((.rebaseWhen // "conflicted") == "conflicted"))
+          | "\(._file): \((.description // "(no description)")[0:120])"' \
+        <<<"${rules_json}"
+)"
+[ -z "${inherits_conflicted}" ] ||
+    fail "docker branch-automerge rules after the docker-gated rule must set rebaseWhen (not conflicted) themselves:
+${inherits_conflicted}"
 jq -e '.schedule | length == 1' <<<"${base}" >/dev/null || fail "base.json5 must use a single weekly schedule window"
 jq -e '.updateNotScheduled == false' <<<"${base}" >/dev/null ||
     fail "base.json5 must set updateNotScheduled: false so open PRs are not pushed outside the window"
