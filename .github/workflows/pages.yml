@@ -266,8 +266,13 @@ jobs:
 
             # The deploy jobs delete artifact-path before restoring the built
             # artifact, so it must be a dedicated subdirectory of the workspace.
-            case "${ARTIFACT_PATH}" in
-              "" | "." | "./" | /* | .. | ../* | */.. | */../*)
+            # Trailing slashes are harmless; any other empty, `.` or `..` path
+            # component (including an absolute path or the workspace root) is
+            # rejected, since `rm -rf` refuses operands ending in `.`.
+            artifact_path="${ARTIFACT_PATH}"
+            while [[ "${artifact_path}" == */ ]]; do artifact_path="${artifact_path%/}"; done
+            case "/${artifact_path}/" in
+              //* | *//* | */./* | */../*)
                 echo "::error::build-github-token requires artifact-path to be a dedicated relative subdirectory (for example 'dist'), not '${ARTIFACT_PATH}'."
                 exit 1
                 ;;
