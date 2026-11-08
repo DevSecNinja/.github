@@ -82,7 +82,10 @@ job runs in the environment named by the `app-environment` input (default
 `production`) with `deployment: false`, which exposes the environment's
 values without creating a deployment record. Repository-level credentials work
 with the same default — environment values only take precedence when they
-exist — and so do private repositories.
+exist — and so do private repositories. GitHub creates the environment, empty
+and unprotected, the first time a job references it in a repository that
+lacks it; that is harmless, and the dotfiles module pins it to the default
+branch before it ever writes a secret into it.
 
 **Caller snippet** (all three reusables, v3.4.0+):
 

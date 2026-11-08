@@ -97,8 +97,10 @@ The full contract, caller snippet and migration steps live in
   again, and the repositories with the Actions PR-creation setting off get
   working sync PRs that run CI once their callers pass the secret.
 - Referencing the `production` environment creates it (unprotected and empty)
-  in a public repository that does not have it yet; the dotfiles module pins it
-  to the default branch before it writes any secret into it.
+  in a repository that does not have it yet — private repositories included,
+  where it stays inert on GitHub Free. The dotfiles module pins it to the
+  default branch before it writes any secret into it on public repositories,
+  and uses repository-level credentials on private ones.
 - A run dispatched from a non-default branch of a public repository fails at
   job start when the environment is pinned. That is the protection working.
 - The legacy `RELEASE_PLEASE_APP_*` variable and secret can be deleted from a
