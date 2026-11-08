@@ -1,6 +1,6 @@
 {
     "name": "Renovate PR cooldown",
-    "description": "Enforces a 14-day PR-age soak for Renovate PRs from registries without a trusted release timestamp (ghcr.io/lscr.io/quay.io) via a required pr-cooldown status check, so they can auto-merge after soaking. Add pr-cooldown to the branch ruleset's required checks.",
+    "description": "Enforces a 14-day soak for Renovate PRs from registries without a trusted release timestamp (every registry except Docker Hub) via a required pr-cooldown status check, measured from the proposed change so rebases keep the clock. Add pr-cooldown to the branch ruleset's required checks.",
     "categories": ["Continuous integration", "Dependency management"],
     "filePatterns": ["renovate\\.json5?$"]
 }

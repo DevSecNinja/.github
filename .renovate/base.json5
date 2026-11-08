@@ -44,8 +44,8 @@
   // `conflicted` is "not recommended if you have enabled Renovate automerge"
   // (Renovate docs). The CI cost of rebasing is bounded by the weekly
   // all-non-major group, the Saturday-only schedule and
-  // updateNotScheduled: false above, not by this setting. docker-gated
-  // dependencies keep `conflicted` (packageRules.json5) for their cooldown.
+  // updateNotScheduled: false above, not by this setting. This includes the
+  // docker-gated dependencies: their pr-cooldown soak survives rebases (ADR 0014).
   rebaseWhen: "auto",
   ignorePaths: [
     '**/*.sops.*',

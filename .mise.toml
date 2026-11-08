@@ -28,5 +28,6 @@ run = [
   "bash ./tests/automation-app-contract.sh",
   "bash ./tests/lint-job-modes-contract.sh",
   "bash ./tests/open-pr-push.sh",
+  "node ./tests/renovate-pr-cooldown.test.mjs",
   "python3 ./tests/workflow-job-conditions.py",
 ]

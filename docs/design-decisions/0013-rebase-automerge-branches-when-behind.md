@@ -5,7 +5,11 @@
 Accepted. Supersedes the global `rebaseWhen: "conflicted"` of
 [ADR 0010](0010-batch-renovate-updates-to-save-actions-minutes.md); amends
 [ADR 0005](0005-pr-age-cooldown-for-untrusted-timestamps.md) (strict branch
-protection).
+protection). Amended by
+[ADR 0014](0014-cooldown-measures-the-proposed-change.md): the
+`pr-cooldown` exception in decision 3 is lifted and the docker-gated rule
+no longer keeps `conflicted` (decision 2), because the cooldown now survives
+rebases.
 
 ## Context
 

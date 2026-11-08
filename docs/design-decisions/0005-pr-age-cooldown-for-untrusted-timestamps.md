@@ -5,7 +5,11 @@
 Accepted. Amended by
 [ADR 0013](0013-rebase-automerge-branches-when-behind.md): the
 non-strict branch protection this relies on is now a stated requirement
-for repositories that require `pr-cooldown`.
+for repositories that require `pr-cooldown`. Amended by
+[ADR 0014](0014-cooldown-measures-the-proposed-change.md): the cooldown
+measures how long the proposed change has been on the branch, not the head
+commit, so rebases keep the clock, gated PRs use `rebaseWhen: "auto"`, and
+that requirement no longer applies.
 
 ## Context
 
