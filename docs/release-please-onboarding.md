@@ -88,15 +88,9 @@ works with the caller below.
 > Renovate cannot manage these. They are provisioned once per repo and
 > rotated only if the App's private key is compromised.
 
-### 3. Leave Actions PR-creation off
+> **No Actions setting needed.** The repository setting _Allow GitHub Actions to create and approve pull requests_ (_Settings → Actions → General_) is **not required**: it restricts `GITHUB_TOKEN` only, and Release Please opens its PR with the App token. Leave it **off** (the default) so no workflow can approve pull requests with `GITHUB_TOKEN`.
 
-_Repo Settings → Actions → General → Workflow permissions →_
-**"Allow GitHub Actions to create and approve pull requests"** is **not
-required**: that setting governs `GITHUB_TOKEN` only, and Release Please
-opens its PR with the App token. Leave it **off** (or turn it off), so
-no workflow can approve pull requests with `GITHUB_TOKEN`.
-
-### 4. Choose a publication pattern
+### 3. Choose a publication pattern
 
 The authentication contract is the same for both supported patterns:
 the App installation and the `AUTOMATION_APP_ID` /
@@ -121,7 +115,7 @@ workflow owns release notes, assets, attestations, and publication.
 Use Pattern B when a repository needs custom release assets or
 attestations, or must generate custom release notes at publication time.
 
-### 5. Add the three release-please files
+### 4. Add the three release-please files
 
 Commit the following on a feature branch:
 
@@ -215,7 +209,7 @@ Pin to the _current_ released version (the one matching the latest
 release-please bumps this file inside its release PRs. **Do not have
 Renovate manage it** — the bump is the release.
 
-### 6. (Optional) Retire local `cog bump`
+### 5. (Optional) Retire local `cog bump`
 
 If the repo had `cog bump` driving releases (cog hooks in `cog.toml`,
 `task release:bump` in Taskfile, etc.):
@@ -234,7 +228,7 @@ Pattern B reference implementations:
 - [`DevSecNinja/truenas-apps`](https://github.com/DevSecNinja/truenas-apps) —
   notes-only release.
 
-### 7. Merge the PR and watch the first release
+### 6. Merge the PR and watch the first release
 
 On merge to `main`:
 
@@ -260,14 +254,15 @@ On merge to `main`:
 
 The run used `GITHUB_TOKEN` instead of the App — only possible with a
 central workflow pinned below v3.0.0, which allowed that fallback.
-Bump the pin and provision the App credentials (steps 1–2); do not
-enable the Actions setting.
+Bump the pin and provision the App credentials (steps 1–2). Do not
+enable the Actions setting: with App authentication it is not needed,
+and it would only let `GITHUB_TOKEN` open PRs that skip CI.
 
 ### `GitHub App authentication required`
 
 The preflight found no App ID or no private key. "AUTOMATION_APP_ID is
 set, but the calling job does not pass the AUTOMATION_APP_PRIVATE_KEY
-secret" means the caller lacks the `secrets:` mapping from step 5.
+secret" means the caller lacks the `secrets:` mapping from step 4.
 Otherwise provision the credentials (step 2).
 
 ### `Bad credentials` from `actions/create-github-app-token`
