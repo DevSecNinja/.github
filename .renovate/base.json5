@@ -33,14 +33,17 @@
   // pushed (and its CI re-run) whenever a newer version clears the soak.
   // Manual rebase requests (PR checkbox, dashboard) are still honoured.
   updateNotScheduled: false,
-  // Renovate's default, stated explicitly (ADR 0012). `auto` rebases a branch
+  // Renovate's default, stated explicitly (ADR 0013). `auto` rebases a branch
   // that is behind the base branch only when that is needed for a safe merge:
-  // automerge PRs, and repos that require branches to be up to date. That keeps
-  // automerged updates tested against the latest base branch and stops branch
-  // automerge (lock-file maintenance, dotfiles devcontainer) from falling back
-  // to a PR when the base moves. `conflicted` is "not recommended if you have
-  // enabled Renovate automerge" (Renovate docs). The CI cost of rebasing is
-  // bounded by the weekly all-non-major group, the Saturday-only schedule and
+  // automerge PRs, and repos that require branches to be up to date. In those
+  // strict repos (the standard for public repos) automerged updates are always
+  // tested against the latest base branch; elsewhere GitHub's native automerge
+  // (platformAutomerge) may still merge a behind-base PR before Renovate gets
+  // to rebase it. It also stops branch automerge (lock-file maintenance,
+  // dotfiles devcontainer) from falling back to a PR when the base moves.
+  // `conflicted` is "not recommended if you have enabled Renovate automerge"
+  // (Renovate docs). The CI cost of rebasing is bounded by the weekly
+  // all-non-major group, the Saturday-only schedule and
   // updateNotScheduled: false above, not by this setting. docker-gated
   // dependencies keep `conflicted` (packageRules.json5) for their cooldown.
   rebaseWhen: "auto",

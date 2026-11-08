@@ -3,7 +3,7 @@
 ## Status
 
 Accepted. Amended by
-[ADR 0012](0012-rebase-automerge-branches-when-behind.md): the
+[ADR 0013](0013-rebase-automerge-branches-when-behind.md): the
 non-strict branch protection this relies on is now a stated requirement
 for repositories that require `pr-cooldown`.
 

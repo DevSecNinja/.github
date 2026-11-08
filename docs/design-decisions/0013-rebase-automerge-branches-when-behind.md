@@ -1,4 +1,4 @@
-# ADR 0012: Rebase automerge branches when they fall behind
+# ADR 0013: Rebase automerge branches when they fall behind
 
 ## Status
 
@@ -83,6 +83,11 @@ to open branches outside the window).
   that is usually one PR, so the extra cost is small and bounded by the window.
 - Lock-file maintenance and the dotfiles devcontainer image are rebased and
   branch-merged again instead of turning into PRs.
-- Automerged updates are tested against the latest `main` before they merge.
+- In repositories that require up-to-date branches, automerged updates are
+  tested against the latest `main` before they merge. In repositories that do
+  not, GitHub's native automerge (`platformAutomerge`, ADR 0004) can still
+  merge a behind-base PR before Renovate rebases it, so there the guarantee is
+  only as strong as the branch protection — which is why strict is the
+  standard for public repositories.
 - Gated (`docker-gated-`) PRs are unchanged and still only merge in
   repositories without strict protection.

@@ -24,5 +24,5 @@ that supersedes the old one.
 | [0009](0009-pages-managed-dns-cutover.md)                      | Opt into safe Pages DNS cutover                                        | Accepted |
 | [0010](0010-batch-renovate-updates-to-save-actions-minutes.md) | Batch Renovate updates and consolidate CI jobs to save Actions minutes | Accepted |
 | [0011](0011-single-automation-github-app.md)                   | One GitHub App for every central automation that opens pull requests   | Accepted |
-| [0012](0012-rebase-automerge-branches-when-behind.md)          | Rebase automerge branches when they fall behind                        | Accepted |
 | [0012](0012-pages-build-github-token.md)                       | Build with the read-only workflow token in the Pages test job          | Accepted |
+| [0013](0013-rebase-automerge-branches-when-behind.md)          | Rebase automerge branches when they fall behind                        | Accepted |
