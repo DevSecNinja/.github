@@ -65,8 +65,20 @@ GitHub-hosted runners.
 - **Default `GITHUB_TOKEN` does not retrigger workflows on push.** Safe
   inside loops where the same workflow would otherwise re-run on the
   bot's commit (e.g. sign-on-push).
-- **Force-push with `--force-with-lease`** so a concurrent push to the
-  working branch is not silently overwritten.
+- **Force-push leased against the live branch tip.** The action reads the
+  working branch's current tip with `git ls-remote` and pushes with
+  `--force-with-lease=<branch>:<tip>` (an empty tip means "must not exist
+  yet"). A concurrent push to the working branch is still never silently
+  overwritten, and — unlike a bare `--force-with-lease`, which needs a
+  remote-tracking ref that a fresh checkout does not have — an existing
+  branch (an open PR, or one left behind after merge) no longer fails with
+  `! [rejected] … (stale info)`. Fixed in v3.3.0; callers pinned to an
+  older version can run `git fetch origin "+refs/heads/<branch>:refs/remotes/origin/<branch>"`
+  before this action as a workaround.
+- **No-op pushes are skipped.** When the branch already holds the same
+  changes on the same base commit, the action leaves it alone, so an
+  unchanged scheduled run does not re-run the PR's CI. The existing PR is
+  still looked up and reported (`changed=true`, `created=false`).
 - **PR reuse on conflict.** If a PR already exists for the same
   `branch -> base` pair, its contents are updated by the force-push
   and the existing PR is reused — no duplicate PRs across runs.

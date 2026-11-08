@@ -59,32 +59,61 @@ failing the workflow; set `lint-fail-on-error` to `true` to make lint failures
 fail the workflow. Toggle individual linters on/off with boolean inputs; all
 linter toggles default to `true`.
 
-| Input                   | Description                                      |
-| ----------------------- | ------------------------------------------------ |
-| `mise-version`          | **Required.** mise version to install.           |
-| `golangci-lint-version` | **Required.** golangci-lint version to install.  |
-| `go-version-file`       | Go version file for setup-go. Default: `go.mod`. |
-| `lint-config-dir`       | Optional linter config directory. Default: `""`. |
-| `lint-fail-on-error`    | Fail when a linter fails. Default: `false`.      |
-| `lint-dprint`           | Markdown formatting (dprint). Default: `true`.   |
-| `lint-yamlfmt`          | YAML formatting (yamlfmt). Default: `true`.      |
-| `lint-yamllint`         | YAML linting (yamllint). Default: `true`.        |
-| `lint-actionlint`       | GitHub Actions linting. Default: `true`.         |
-| `lint-gitleaks`         | Secret scanning (gitleaks). Default: `true`.     |
-| `lint-go`               | Go linting (golangci-lint). Default: `true`.     |
-| `lint-shellcheck`       | Shell linting (shellcheck). Default: `true`.     |
-| `lint-shfmt`            | Shell formatting (shfmt). Default: `true`.       |
-| `lint-checkov`          | IaC security scan (checkov). Default: `true`.    |
-| `lint-trivy`            | Filesystem scan (trivy). Default: `true`.        |
-| `lint-zizmor`           | Actions security scan (zizmor). Default: `true`. |
-| `lint-config-drift`     | Config-drift check. Default: `false`.            |
+**Job layout (`lint-job-mode`).** Every job is billed at least one full minute,
+so one job per linter costs about eight minutes per run even when each linter
+takes seconds. `auto` (the default) therefore runs every enabled linter as a
+step of a single `all linters` job on **private** repositories, and keeps one
+job per linter (`lint / dprint`, `lint / zizmor`, …) on **public** ones, where
+minutes are free. Force either layout with `single` or `parallel`. In single-job
+mode a failing linter does not stop the others; the last step lists every
+failure. Events without a repository payload (such as `schedule`) use the
+parallel layout under `auto`. Before switching a repository whose ruleset
+requires per-linter checks to `single`, require `all linters` instead — skipped
+per-linter jobs report success. See
+[ADR 0010](design-decisions/0010-batch-renovate-updates-to-save-actions-minutes.md).
+
+| Input                   | Description                                                            |
+| ----------------------- | ---------------------------------------------------------------------- |
+| `mise-version`          | **Required.** mise version to install.                                 |
+| `golangci-lint-version` | **Required.** golangci-lint version to install.                        |
+| `go-version-file`       | Go version file for setup-go. Default: `go.mod`.                       |
+| `lint-config-dir`       | Optional linter config directory. Default: `""`.                       |
+| `lint-fail-on-error`    | Fail when a linter fails. Default: `false`.                            |
+| `lint-job-mode`         | `auto`, `single`, or `parallel` (see above). Default: `auto`. v3.3.0+. |
+| `upload-sarif`          | Upload checkov/trivy/zizmor SARIF to code scanning. Default: `true`.   |
+| `lint-dprint`           | Markdown formatting (dprint). Default: `true`.                         |
+| `lint-yamlfmt`          | YAML formatting (yamlfmt). Default: `true`.                            |
+| `lint-yamllint`         | YAML linting (yamllint). Default: `true`.                              |
+| `lint-actionlint`       | GitHub Actions linting. Default: `true`.                               |
+| `lint-gitleaks`         | Secret scanning (gitleaks). Default: `true`.                           |
+| `lint-go`               | Go linting (golangci-lint). Default: `true`.                           |
+| `lint-shellcheck`       | Shell linting (shellcheck). Default: `true`.                           |
+| `lint-shfmt`            | Shell formatting (shfmt). Default: `true`.                             |
+| `lint-checkov`          | IaC security scan (checkov). Default: `true`.                          |
+| `lint-trivy`            | Filesystem scan (trivy). Default: `true`.                              |
+| `lint-zizmor`           | Actions security scan (zizmor). Default: `true`.                       |
+| `lint-config-drift`     | Config-drift check. Default: `false`.                                  |
 
 **Example caller:**
 
 ```yaml
+on:
+  pull_request:
+  # Keep push only when SARIF is uploaded (code scanning needs a
+  # default-branch baseline); otherwise the PR run already covers the commit.
+  push:
+    branches: ["main"]
+
+# A newer push to a PR cancels its running run. A running push/main run is
+# never cancelled, but a queued one is superseded by a newer push (only the
+# latest commit's result matters, and it saves minutes).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   lint:
-    uses: DevSecNinja/.github/.github/workflows/lint.yml@<sha> # v1.0.0
+    uses: DevSecNinja/.github/.github/workflows/lint.yml@<sha> # v3.3.0
     permissions:
       contents: read
       security-events: write
@@ -95,6 +124,7 @@ jobs:
       golangci-lint-version: "v2.11.4"
       # lint-config-dir: config-sync/files
       # lint-fail-on-error: true
+      # lint-job-mode: auto # single | parallel
 ```
 
 ### Auto-fix formatting (`autofix.yml`)
@@ -218,6 +248,22 @@ environment variable set to `${{ github.event.pull_request.head.sha || github.sh
 On `pull_request` events `github.sha` is the ephemeral merge commit, so builds
 should read `APP_COMMIT_SHA` to stamp the real PR head commit in previews.
 
+**Runs that cost nothing.** Every job is billed at least one minute, so the
+workflow skips whole runs that cannot change anything (v3.3.0+; see
+[ADR 0010](design-decisions/0010-batch-renovate-updates-to-save-actions-minutes.md)):
+
+- `pull_request: edited` events are skipped unless the base branch changed —
+  title and body edits (Renovate rewrites its PR bodies on most runs) never
+  change the site. New callers should not subscribe to `edited` at all.
+- `closed` events are skipped when there is no preview to clean up:
+  Renovate/Dependabot PRs, fork PRs, or `cloudflare-preview: false`.
+- Renovate/Dependabot PRs (matched on PR author as well as actor) run the
+  tests but never `detect-cloudflare` or a preview deploy, even when a human
+  updates the branch.
+
+Production deploys on push, release, and `workflow_dispatch` are never
+skipped, whoever triggered them.
+
 #### Deploying a prebuilt artifact
 
 This workflow provides a fixed build environment: Node, Go, an install command
@@ -337,12 +383,20 @@ on:
   push:
     branches: ["main"]
   pull_request:
-    types: [opened, edited, synchronize, reopened, closed]
+    # No `edited`: title/body edits never change the site.
+    types: [opened, synchronize, reopened, closed]
   workflow_dispatch:
+
+# A newer push to a PR cancels its running run. A running push/main run is
+# never cancelled, but a queued one is superseded by a newer push (only the
+# latest commit is worth deploying, and it saves minutes).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   pages:
-    uses: DevSecNinja/.github/.github/workflows/pages.yml@<sha> # v3.2.0
+    uses: DevSecNinja/.github/.github/workflows/pages.yml@<sha> # v3.3.0
     permissions:
       contents: read
       deployments: write
@@ -399,14 +453,19 @@ all-or-nothing escape hatch.
 | `sync-templates` | Also bootstrap files from `config-sync/templates/`. Default: `false`. |
 | `central-ref`    | Git ref of `DevSecNinja/.github` to sync from. Default: `main`.       |
 
+The calling job must grant `contents: write`, `pull-requests: write`, **and**
+`issues: write` (the `config-sync` label is created through the issues API).
+A caller that grants less fails with `startup_failure` before any step runs.
+
 **Example caller:**
 
 ```yaml
 jobs:
   sync:
-    uses: DevSecNinja/.github/.github/workflows/config-sync.yml@<sha> # v1.0.0
+    uses: DevSecNinja/.github/.github/workflows/config-sync.yml@<sha> # v3.3.0
     permissions:
       contents: write
+      issues: write
       pull-requests: write
     # with:
     #   sync-templates: true   # also bootstrap template files for new repos
@@ -519,7 +578,10 @@ jobs:
 ### Labeler (`labeler.yml`)
 
 Auto-labels pull requests and issues based on path patterns
-(`pr-labeler.yaml`) and keyword rules (`issue-labeler.yaml`).
+(`pr-labeler.yaml`) and keyword rules (`issue-labeler.yaml`). Issues authored
+by `renovate[bot]` are skipped (v3.3.0+): Renovate rewrites its Dependency
+Dashboard on nearly every run, and each `issues: edited` event would otherwise
+bill a run.
 
 **Example caller:**
 
@@ -543,6 +605,8 @@ branch.
 ```yaml
 jobs:
   run:
+    # Dependency bumps never add TODO comments; skip Renovate's automerge pushes.
+    if: github.actor != 'renovate[bot]'
     uses: DevSecNinja/.github/.github/workflows/todo-to-issue.yml@<sha> # v1.0.0
     permissions:
       contents: read
@@ -597,6 +661,11 @@ Key properties:
 - Reuses the existing PR (force-pushes its branch) when one already
   exists for the same `branch -> base` pair, so repeat runs do not
   spam duplicate PRs.
+- Leases the force-push against the branch tip it reads with
+  `git ls-remote`, so an existing working branch (an open PR, or a branch
+  left behind after merge) is updated instead of rejected as "stale info"
+  (fixed in v3.3.0). When the branch already holds the same changes on the
+  same base, the push is skipped so the PR's CI does not re-run.
 - Branch protection on the base branch stays fully enforced.
 
 | Input            | Required | Default                     | Description                                                              |
@@ -742,13 +811,47 @@ by individual repositories via their `renovate.json5`.
 
 | Preset                  | Purpose                                                       |
 | ----------------------- | ------------------------------------------------------------- |
-| `base.json5`            | Core scheduling and PR settings                               |
-| `autoMerge.json5`       | Auto-merge rules for patch/minor updates                      |
-| `groups.json5`          | Dependency grouping                                           |
+| `base.json5`            | Core scheduling, rebase and PR settings                       |
+| `autoMerge.json5`       | Auto-merge rules for non-major updates                        |
+| `groups.json5`          | Dependency grouping, including the weekly all-non-major batch |
 | `labels.json5`          | Label assignment for Renovate PRs                             |
-| `packageRules.json5`    | Per-ecosystem rules                                           |
+| `packageRules.json5`    | Per-ecosystem rules (and opt-outs from the weekly batch)      |
 | `customManagers.json5`  | Custom regex managers (e.g. `mise-version` in workflow files) |
 | `semanticCommits.json5` | Conventional Commits for Renovate PRs                         |
+
+### Batching and schedule
+
+To keep Actions minutes down (every Renovate push re-runs the repository's
+CI), Renovate batches its work
+([ADR 0010](design-decisions/0010-batch-renovate-updates-to-save-actions-minutes.md)):
+
+- **One weekly PR for all non-major updates** — `renovate/all-non-major`
+  ("all non-major dependencies"). It overrides the specific groups (mise, vite,
+  postgres, chezmoi) for non-major updates, which therefore still land
+  together; those groups keep their own PR for major updates only.
+- **Not batched:** major updates (separate, manual), vulnerability fixes
+  (separate, immediate), `docker-gated-` images (separate, so the
+  [ADR 0005](design-decisions/0005-pr-age-cooldown-for-untrusted-timestamps.md)
+  cooldown keeps working), and the dotfiles devcontainer image (branch
+  automerge at any time).
+- **Schedule:** one window, Saturday 00:00–07:59 (Europe/Amsterdam), and
+  `updateNotScheduled: false`, so open PRs are not pushed (and their CI is
+  not re-run) outside it either; manual rebase requests still work.
+  Automerge is not tied to the window — GitHub merges as soon as the
+  required checks pass.
+- **Lock file maintenance:** monthly, on the first day of the month (its
+  branch automerge may complete outside the window).
+- **Rebasing:** `rebaseWhen: "conflicted"` — Renovate no longer rebases every
+  open PR each time `main` moves. Branch protection is non-strict, so a
+  behind-base PR still auto-merges. **Repositories whose ruleset requires
+  branches to be up to date** must override this in their own
+  `renovate.json5`, or their automerge PRs stall:
+
+  ```json5
+  {
+    rebaseWhen: "behind-base-branch",
+  }
+  ```
 
 ### Auto-merge strategy
 
@@ -771,7 +874,7 @@ can still assign Code Owners if an automerge PR cannot merge cleanly.
 | Go modules                        | All                                         | Current version ≥ 1.0           |
 | DevSecNinja devcontainer (digest) | `ghcr.io/devsecninja/*`                     | Always (no wait time)           |
 | Dotfiles devcontainer image       | `ghcr.io/devsecninja/dotfiles-devcontainer` | Always (branch merge, no tests) |
-| Lock file maintenance             | All                                         | Always (branch merge, no PR)    |
+| Lock file maintenance             | All                                         | Monthly (branch merge, no PR)   |
 
 **What does NOT auto-merge:**
 
@@ -792,8 +895,9 @@ can still assign Code Owners if an automerge PR cannot merge cleanly.
   ignores the global schedule and can merge whenever a digest update lands.
 - **OSV vulnerability alerts** bypass `minimumReleaseAge` (set to `0`) so
   security fixes merge immediately.
-- **Schedule** — Renovate only runs on weekends and Fridays, except the dotfiles
-  devcontainer image, which can merge at any time.
+- **Schedule** — Renovate only opens and updates PRs on Saturday mornings,
+  except vulnerability fixes and the dotfiles devcontainer image, which can
+  land at any time.
 - **Digest updates disabled** — prevents merging potentially hijacked tags (except
   DevSecNinja-owned devcontainer images on `ghcr.io/devsecninja/`, which are trusted
   internal images and auto-merge immediately with no wait time).

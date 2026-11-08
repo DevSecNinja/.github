@@ -3,12 +3,24 @@ name: Lint
 
 on:
   pull_request:
+  # Keep push only when results are uploaded to code scanning (upload-sarif:
+  # true, the default): code scanning needs a default-branch analysis as the
+  # baseline for PR alerts. Without SARIF uploads (e.g. private repos without
+  # GitHub Advanced Security) drop it: the PR run already covered the commit.
   push:
     branches:
       - $default-branch
 
 permissions:
   contents: read
+
+# One run per PR (or branch). A newer push to a PR cancels its running run.
+# A running push/main run is never cancelled, but a queued one is superseded
+# by a newer push: only the latest commit's result matters, and dropping the
+# stale run saves Actions minutes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   lint:
@@ -29,6 +41,13 @@ jobs:
       # (default: true, requires GitHub Advanced Security). Set false for
       # private repos without GHAS to gate on exit codes with console output.
       # upload-sarif: false
+      # Optional (v3.3.0+): how linters are scheduled. `auto` (default) runs
+      # every linter as a step of one `all linters` job on private repos (one
+      # billed job instead of ~11) and one job per linter on public repos.
+      # Force either with `single` or `parallel`. Before switching a repo with
+      # required per-linter checks to `single`, require `all linters` instead:
+      # skipped per-linter jobs report success.
+      # lint-job-mode: auto
       # Optional: use a different Go version file.
       # go-version-file: go.mod
       # Toggle linters on/off (all default to true):

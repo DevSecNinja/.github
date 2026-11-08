@@ -15,6 +15,9 @@ jobs:
     uses: DevSecNinja/.github/.github/workflows/config-sync.yml@0d0f448de257f354c89dc3a128871235d6ba8c11 # v2.5.0
     permissions:
       contents: write
+      # Required: the reusable workflow creates the config-sync label through
+      # the issues API. Without it the run fails with startup_failure.
+      issues: write
       pull-requests: write
       # Uncomment to also bootstrap template files for new repos:
       # with:

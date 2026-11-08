@@ -3,8 +3,11 @@ name: Renovate PR cooldown
 
 on:
   pull_request:
+  # Daily re-check flips the status once a gated PR has soaked. Against a
+  # 14-day soak, merging up to a day later costs nothing, and it is a quarter
+  # of the runs of a 6-hourly schedule.
   schedule:
-    - cron: "17 */6 * * *"
+    - cron: "17 6 * * *"
   workflow_dispatch:
 
 permissions:
@@ -20,5 +23,5 @@ jobs:
       # Optional overrides (defaults shown):
       # with:
       #   cooldown-days: 14
-      #   gated-branch-prefixes: "renovate/ghcr.io-,renovate/lscr.io-,renovate/quay.io-"
+      #   gated-branch-prefixes: "renovate/docker-gated-"
       #   status-context: "pr-cooldown"

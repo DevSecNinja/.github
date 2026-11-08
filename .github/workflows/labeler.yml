@@ -41,7 +41,10 @@ jobs:
   issue-labeler:
     name: Issue Labeler
     runs-on: ubuntu-24.04
-    if: ${{ github.event_name == 'issues' }}
+    # Renovate rewrites its Dependency Dashboard issue on nearly every run, and
+    # each `issues: edited` event would otherwise bill a labeler run for an
+    # issue that never needs keyword labels.
+    if: ${{ github.event_name == 'issues' && github.event.issue.user.login != 'renovate[bot]' }}
     permissions:
       contents: read
       issues: write

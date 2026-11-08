@@ -15,6 +15,12 @@ name: Reusable — Config Sync
 # Per-repo opt-out: list paths (one per line, relative to repo root)
 # in `.github/.config-sync-ignore` to skip them during sync. Blank
 # lines and `#` comments are allowed.
+#
+# Caller permissions: the calling job MUST grant `contents: write`,
+# `pull-requests: write` AND `issues: write` (the `config-sync` label is
+# created through the issues API). A caller that grants less fails before
+# any step runs (`startup_failure`), because a reusable workflow's jobs can
+# never request more than the calling job grants.
 
 on:
   workflow_call:
@@ -171,6 +177,22 @@ jobs:
               --force; then
             echo "::warning::Could not create/update config-sync label (transient error or org policy). The PR will be created without it."
           fi
+      - name: Fetch config-sync branch
+        # The pinned open-pr version pushes with a bare --force-with-lease,
+        # which needs a remote-tracking ref for the branch. Without this fetch,
+        # every run where chore/config-sync already exists on the remote (an
+        # open PR, or a branch left behind after merge) is rejected with
+        # "stale info". open-pr v3.3.0+ leases against `git ls-remote` itself;
+        # this step is harmless there.
+        if: steps.pull.outputs.updated == '1'
+        env:
+          BRANCH: chore/config-sync
+        run: |-
+          depth=()
+          if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then
+            depth=(--depth=1)
+          fi
+          git fetch --no-tags "${depth[@]}" origin "+refs/heads/${BRANCH}:refs/remotes/origin/${BRANCH}" || true
       - name: Create PR if configs changed
         if: steps.pull.outputs.updated == '1'
         uses: DevSecNinja/.github/actions/open-pr@0d0f448de257f354c89dc3a128871235d6ba8c11 # v2.5.0

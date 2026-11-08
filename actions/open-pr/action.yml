@@ -177,9 +177,35 @@ runs:
         fi
         git commit "${commit_args[@]}"
 
-        # Push with --force-with-lease so we never clobber a branch that
-        # someone else moved between the local checkout and the push.
-        git push --force-with-lease origin "${BRANCH}"
+        # Lease the push against the branch tip as it is on the remote right
+        # now. A bare --force-with-lease compares against the local
+        # remote-tracking ref, which a fresh (usually shallow) checkout does
+        # not have for this branch, so every push to an already existing
+        # branch was rejected as "stale info". An empty lease value means
+        # "the branch must not exist yet". Either way, a branch someone moves
+        # between this lookup and the push is still never overwritten.
+        remote_ref="refs/heads/${BRANCH}"
+        remote_sha="$(git ls-remote origin "${remote_ref}" | awk -v ref="${remote_ref}" '$2 == ref { print $1 }')" || {
+          echo "::error::Could not read ${remote_ref} from origin; refusing to push without a lease." >&2
+          exit 1
+        }
+
+        # Leave an identical branch alone: same parent and same tree means the
+        # open PR already carries exactly these changes, and a no-op
+        # force-push would only re-run its CI. Only deepen history when the
+        # checkout is already shallow, so a full clone stays complete.
+        fetch_args=(--quiet --no-tags)
+        if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then
+          fetch_args+=(--depth=2)
+        fi
+        if [ -n "${remote_sha}" ] &&
+          git fetch "${fetch_args[@]}" origin "${remote_sha}" 2>/dev/null &&
+          [ "$(git rev-parse "${remote_sha}^{tree}")" = "$(git rev-parse 'HEAD^{tree}')" ] &&
+          [ "$(git rev-parse --verify --quiet "${remote_sha}^")" = "$(git rev-parse 'HEAD^')" ]; then
+          echo "${BRANCH} already has these changes on the same base; skipping push."
+        else
+          git push --force-with-lease="${remote_ref}:${remote_sha}" origin "HEAD:${remote_ref}"
+        fi
 
         echo "changed=true" >> "${GITHUB_OUTPUT}"
 

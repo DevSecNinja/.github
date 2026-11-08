@@ -23,5 +23,9 @@ run = [
   "bash ./tests/copilot-model-policy-contract.sh",
   "bash ./tests/pages-custom-domain-contract.sh",
   "bash ./tests/renovate-custom-manager-coverage.sh",
+  "bash ./tests/renovate-batching-contract.sh",
   "bash ./tests/release-please-auth-contract.sh",
+  "bash ./tests/lint-job-modes-contract.sh",
+  "bash ./tests/open-pr-push.sh",
+  "python3 ./tests/workflow-job-conditions.py",
 ]
