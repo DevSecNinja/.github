@@ -26,3 +26,4 @@ that supersedes the old one.
 | [0011](0011-single-automation-github-app.md)                   | One GitHub App for every central automation that opens pull requests   | Accepted |
 | [0012](0012-pages-build-github-token.md)                       | Build with the read-only workflow token in the Pages test job          | Accepted |
 | [0013](0013-rebase-automerge-branches-when-behind.md)          | Rebase automerge branches when they fall behind                        | Accepted |
+| [0014](0014-cooldown-measures-the-proposed-change.md)          | Measure the pr-cooldown soak from the proposed change                  | Accepted |

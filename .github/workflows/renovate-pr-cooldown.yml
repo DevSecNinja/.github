@@ -6,15 +6,24 @@ name: Reusable — Renovate PR cooldown
 # those registries the Renovate presets use `minimumReleaseAgeBehaviour:
 # timestamp-optional`, so Renovate opens the PR immediately instead of blocking
 # it forever. This workflow re-introduces the soak as a required
-# `pr-cooldown` status check that only turns green once the PR branch head
-# commit is at least `cooldown-days` old — measured from the commit so a rebase
-# to a newer version correctly restarts the clock. GitHub auto-merge
+# `pr-cooldown` status check that only turns green once the change the PR
+# proposes has been on its branch for `cooldown-days`. GitHub auto-merge
 # (Renovate `platformAutomerge`) then merges the PR once the check passes.
+#
+# The age is measured from the change, not from the head commit (ADR 0014):
+# a fingerprint of the PR's added and removed lines is traced back through the
+# branch's commits and force pushes. Rebases and "Update branch" merges keep
+# the clock; a newer version or a re-pushed digest restarts it. That lets
+# gated PRs be rebased under "require branches to be up to date" protection.
+# Each status records the traced change ("change <fingerprint> since <time>")
+# so the next run only has to look one push back. When the history cannot be
+# read completely it falls back to the head commit date, which is never
+# earlier.
 #
 # Non-gated PRs (human PRs, or Renovate PRs from registries that DO provide a
 # trusted timestamp) always receive a passing status so the required check
 # never blocks them. See docs/design-decisions/0005-pr-age-cooldown-for-
-# untrusted-timestamps.md.
+# untrusted-timestamps.md and 0014-cooldown-measures-the-proposed-change.md.
 
 on:
   workflow_call:
@@ -74,6 +83,7 @@ jobs:
               .filter(Boolean);
             const { owner, repo } = context.repo;
             const dayMs = 24 * 60 * 60 * 1000;
+            const crypto = require('crypto');
 
             // The `docker-gated-` marker is applied by the same Renovate rule
             // that sets timestamp-optional, so this can never drift from it.
@@ -89,6 +99,190 @@ jobs:
                 context: context_name,
                 description: description.slice(0, 140),
               });
+            };
+
+            // The change a PR proposes, independent of where its branch
+            // starts: the added and removed lines of the three-dot diff
+            // against the base branch (taken from the merge base). A rebase,
+            // or a merge from the base branch ("Update branch"), keeps it; a
+            // new version or a re-pushed digest changes it. Null when the
+            // diff cannot be fingerprinted reliably.
+            const fingerprints = new Map();
+            const fingerprint = (baseRef, sha) => {
+              const basehead = `${baseRef}...${sha}`;
+              if (!fingerprints.has(basehead)) {
+                fingerprints.set(basehead, (async () => {
+                  try {
+                    const { data } = await github.rest.repos.compareCommitsWithBasehead({
+                      owner,
+                      repo,
+                      basehead,
+                    });
+                    const files = [...(data.files || [])];
+                    // The compare API lists at most 300 files.
+                    if (files.length >= 300) return null;
+                    files.sort((a, b) => (a.filename < b.filename ? -1 : a.filename > b.filename ? 1 : 0));
+                    const hash = crypto.createHash('sha256');
+                    for (const file of files) {
+                      // Binary, oversized or empty files carry no patch, so a
+                      // change to them would be invisible.
+                      if (file.patch === undefined && !(file.status === 'renamed' && file.changes === 0)) {
+                        return null;
+                      }
+                      hash.update(`${file.status}\0${file.previous_filename || ''}\0${file.filename}\n`);
+                      for (const line of (file.patch || '').split('\n')) {
+                        if (line.startsWith('+') || line.startsWith('-')) hash.update(`${line}\n`);
+                      }
+                    }
+                    return hash.digest('hex');
+                  } catch (error) {
+                    core.warning(`Cannot compare ${basehead}: ${error.message}`);
+                    return null;
+                  }
+                })());
+              }
+              return fingerprints.get(basehead);
+            };
+
+            const historyQuery = `
+              query($owner: String!, $repo: String!, $number: Int!) {
+                repository(owner: $owner, name: $repo) {
+                  pullRequest(number: $number) {
+                    commits(last: 100) {
+                      totalCount
+                      nodes { commit { oid committedDate } }
+                    }
+                    timelineItems(last: 100, itemTypes: [HEAD_REF_FORCE_PUSHED_EVENT]) {
+                      totalCount
+                      nodes {
+                        ... on HeadRefForcePushedEvent {
+                          createdAt
+                          beforeCommit { oid committedDate }
+                          afterCommit { oid }
+                        }
+                      }
+                    }
+                  }
+                }
+              }`;
+
+            // Every status this workflow sets records the change it traced:
+            // "change <16 hex> since <ISO time>". A later run reuses that
+            // record for the same commit, or for the commit a force push
+            // replaced, instead of walking the whole branch history again.
+            // Only statuses in this context written with the workflow token
+            // are trusted.
+            const recordPattern = /change ([0-9a-f]{16}) since (\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z)/;
+            const recorded = async (sha) => {
+              try {
+                const { data } = await github.rest.repos.listCommitStatusesForRef({
+                  owner,
+                  repo,
+                  ref: sha,
+                  per_page: 100,
+                });
+                // Newest first: only the latest status in this context counts.
+                const status = data.find((s) => s.context === context_name);
+                if (!status || !status.creator || status.creator.login !== 'github-actions[bot]') return null;
+                const match = recordPattern.exec(status.description || '');
+                return match ? { change: match[1], since: new Date(match[2]) } : null;
+              } catch (error) {
+                core.warning(`Cannot read the statuses of ${sha}: ${error.message}`);
+                return null;
+              }
+            };
+
+            // Fingerprint comparisons allowed per PR when no record helps.
+            const maxCompares = 50;
+
+            // When the change now on the PR branch first appeared, so that
+            // rebases and base-branch merges do not restart the soak but any
+            // change to what the PR proposes does (ADR 0014). Falls back to
+            // the head commit date (the ADR 0005 behaviour, never earlier)
+            // whenever the history cannot be read completely. Every shortcut
+            // errs towards a later (more conservative) start.
+            const changeSince = async (pr) => {
+              const fallback = async (reason) => {
+                const { data } = await github.rest.repos.getCommit({ owner, repo, ref: pr.head.sha });
+                return { since: new Date(data.commit.committer.date), change: null, reason };
+              };
+              const own = await recorded(pr.head.sha);
+              if (own) return { since: own.since, change: own.change, reason: 'recorded on this commit' };
+
+              const baseRef = pr.base.ref;
+              const current = await fingerprint(baseRef, pr.head.sha);
+              if (!current) return fallback('diff not comparable');
+              const key = current.slice(0, 16);
+
+              let history;
+              try {
+                history = (await github.graphql(historyQuery, { owner, repo, number: pr.number }))
+                  .repository.pullRequest;
+              } catch (error) {
+                core.warning(`Cannot read the history of PR #${pr.number}: ${error.message}`);
+                return fallback('history unavailable');
+              }
+              const commits = history.commits.nodes.map((node) => node.commit);
+              if (commits.length === 0 || history.commits.totalCount > commits.length) {
+                return fallback('commit list incomplete');
+              }
+              if (commits[commits.length - 1].oid !== pr.head.sha) {
+                return fallback('branch moved during evaluation');
+              }
+              const found = (since, reason) => ({ since: new Date(since), change: current, reason });
+              const olderThanCooldown = (time) => Date.now() - new Date(time).getTime() >= cooldownDays * dayMs;
+
+              // Pushes on top of the branch: the change arrived with the
+              // oldest commit of the trailing run that carries it.
+              for (let i = commits.length - 1; i > 0; i -= 1) {
+                if ((await fingerprint(baseRef, commits[i - 1].oid)) !== current) {
+                  return found(commits[i].committedDate, 'pushed on top of the branch');
+                }
+              }
+
+              // Force pushes (Renovate rebases and version updates), newest
+              // first: the change arrived with the newest one that did not
+              // already carry it.
+              const pushes = history.timelineItems.nodes.filter((node) => node && node.createdAt).reverse();
+              let compared = 0;
+              let newer = null;
+              for (const push of pushes) {
+                // The branch right after this push must already carry the
+                // change; otherwise a push between this force push and the
+                // newer one brought it.
+                if (newer) {
+                  const after = push.afterCommit && push.afterCommit.oid;
+                  if (!after || (after !== newer.beforeCommit.oid && (await fingerprint(baseRef, after)) !== current)) {
+                    return found(newer.createdAt, 'pushed between force pushes');
+                  }
+                }
+                const before = push.beforeCommit;
+                if (!before) return found(push.createdAt, 'force-pushed');
+                const record = await recorded(before.oid);
+                if (record) {
+                  return record.change === key
+                    ? found(record.since, 'unchanged since a recorded run')
+                    : found(push.createdAt, 'force-pushed');
+                }
+                // The change is known to be there since this push.
+                if (compared >= maxCompares) return found(push.createdAt, 'history too long to verify');
+                compared += 1;
+                if ((await fingerprint(baseRef, before.oid)) !== current) {
+                  return found(push.createdAt, 'force-pushed');
+                }
+                // The change predates this push; once that is older than the
+                // cooldown, the exact start no longer matters.
+                if (olderThanCooldown(push.createdAt)) return found(push.createdAt, 'predates the cooldown');
+                newer = push;
+              }
+              if (pushes.length === 0) {
+                return found(commits[0].committedDate, 'unchanged since the branch was created');
+              }
+              const oldest = pushes[pushes.length - 1];
+              if (history.timelineItems.totalCount > pushes.length) {
+                return found(oldest.createdAt, 'older force pushes not inspected');
+              }
+              return found(oldest.beforeCommit.committedDate, 'unchanged since the branch was created');
             };
 
             let pulls;
@@ -113,30 +307,26 @@ jobs:
                 continue;
               }
 
-              const commit = await github.rest.repos.getCommit({
-                owner,
-                repo,
-                ref: sha,
-              });
-              const committedAt = new Date(commit.data.commit.committer.date);
-              const ageDays = (Date.now() - committedAt.getTime()) / dayMs;
+              const { since, change, reason } = await changeSince(pr);
+              const ageDays = (Date.now() - since.getTime()) / dayMs;
+              // The change record is read back by later runs (recordPattern).
+              const detail = change
+                ? `change ${change.slice(0, 16)} since ${since.toISOString().replace(/\.\d{3}Z$/, 'Z')}`
+                : `head commit: ${reason}`;
+              core.info(`PR #${pr.number} (${branch}): ${detail} [${reason}]; ${ageDays.toFixed(1)} day(s) old`);
 
               if (ageDays >= cooldownDays) {
                 await setStatus(
                   sha,
                   'success',
-                  `Cooldown complete (${cooldownDays}-day soak met)`,
+                  `Cooldown complete (${cooldownDays}-day soak met; ${detail})`,
                 );
-                core.info(`PR #${pr.number} (${branch}): cooldown met`);
               } else {
                 const remaining = Math.max(1, Math.ceil(cooldownDays - ageDays));
                 await setStatus(
                   sha,
                   'pending',
-                  `Soaking: ${remaining} day(s) left of ${cooldownDays}-day cooldown`,
-                );
-                core.info(
-                  `PR #${pr.number} (${branch}): ${remaining} day(s) left`,
+                  `Soaking: ${remaining} day(s) left of ${cooldownDays}-day cooldown (${detail})`,
                 );
               }
             }

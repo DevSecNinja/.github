@@ -875,10 +875,26 @@ CI), Renovate batches its work
   repositories) is every automerged update guaranteed to be tested against
   the latest `main`; elsewhere GitHub's native automerge can merge a
   behind-base PR before Renovate rebases it. No per-repository override is
-  needed. `docker-gated-` PRs keep `rebaseWhen: "conflicted"`, because a
-  rebase restarts their cooldown clock; repositories that require
-  `pr-cooldown` therefore keep "require branches to be up to date" off for
-  now.
+  needed. This includes `docker-gated-` PRs: their `pr-cooldown` soak is
+  measured from the proposed change, not the head commit, so a rebase keeps
+  the clock
+  ([ADR 0014](design-decisions/0014-cooldown-measures-the-proposed-change.md))
+  and they merge under "require branches to be up to date" protection too.
+
+#### `pr-cooldown` (gated images)
+
+Repositories with images from registries that lack a trusted release
+timestamp (everything except Docker Hub) add the
+[`renovate-pr-cooldown`](../workflow-templates/renovate-pr-cooldown.yml)
+caller and require its `pr-cooldown` status
+([ADR 0005](design-decisions/0005-pr-age-cooldown-for-untrusted-timestamps.md)).
+The status turns green once the change a `renovate/docker-gated-` PR proposes
+— its added and removed lines, fingerprinted — has been on the branch for 14
+days. A newer version or a re-pushed digest restarts the clock; rebases and
+"Update branch" merges do not. The description shows the traced change and its
+start, e.g.
+`Soaking: 5 day(s) left of 14-day cooldown (change 67e0a18cd7d13143 since 2026-10-22T11:59:18Z)`,
+and the next run reuses that record instead of walking the history again.
 
 ### Auto-merge strategy
 
