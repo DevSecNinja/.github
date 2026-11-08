@@ -127,13 +127,12 @@ Commit the following on a feature branch:
 
 #### `.github/workflows/release-please.yml`
 
-Paste the snippet below. The
-[`workflow-templates/release-please.yml`](../workflow-templates/release-please.yml)
-starter (also in the GitHub UI's "New workflow" picker) is equivalent once it
-pins v3.4.0 or later; older copies of it pass the legacy
-`RELEASE_PLEASE_APP_*` names, which only exist in repos onboarded before
-v3.4.0, so a repo provisioned with just the standard names cannot release
-with them.
+Use the [`workflow-templates/release-please.yml`](../workflow-templates/release-please.yml)
+starter in this repo (also in the GitHub UI's "New workflow" picker), or
+paste the snippet below. Copies of the template from before v3.4.0 pass the
+legacy `RELEASE_PLEASE_APP_*` names, which only exist in repos onboarded
+earlier — a repo provisioned with just the standard names needs the v3.4.0+
+snippet.
 
 ```yaml
 ---

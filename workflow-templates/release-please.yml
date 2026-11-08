@@ -10,14 +10,17 @@ name: Release Please
 #   - release-please-config.json
 #   - .release-please-manifest.json
 #
-# REQUIRED: install the Release Please GitHub App, configure both
-# credentials below, and enable "Allow GitHub Actions to create and
-# approve pull requests". The reusable workflow fails closed when either
-# credential is empty so release PRs and tags always trigger downstream
-# workflows.
+# REQUIRED: install the DevSecNinja Automation GitHub App and provision the
+# AUTOMATION_APP_ID variable and AUTOMATION_APP_PRIVATE_KEY secret (dotfiles
+# GitHubRepoConfig, -Check AppCredential). The reusable workflow fails closed
+# when either credential is missing, so release PRs and tags always trigger
+# downstream workflows. "Allow GitHub Actions to create and approve pull
+# requests" is not needed; leave it off.
 #
 # Onboarding guide:
 #   https://github.com/DevSecNinja/.github/blob/main/docs/release-please-onboarding.md
+# App credential contract:
+#   https://github.com/DevSecNinja/.github/blob/main/docs/automation-app.md
 #
 # Reusable workflow:
 #   https://github.com/DevSecNinja/.github/blob/main/.github/workflows/release-please.yml
@@ -32,11 +35,10 @@ permissions:
 
 jobs:
   release-please:
-    uses: DevSecNinja/.github/.github/workflows/release-please.yml@9c281b38f863550ddff25df04e6fda0b9b23d00c # v3.3.0
+    uses: DevSecNinja/.github/.github/workflows/release-please.yml@a9e3a11178ccd6e76115d3d7b31616631305991f # v3.4.0
     permissions:
       contents: write
       pull-requests: write
-    with:
-      app-id: ${{ vars.RELEASE_PLEASE_APP_ID }}
+    # The App ID is read from the AUTOMATION_APP_ID variable; pass the key.
     secrets:
-      app-private-key: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
+      AUTOMATION_APP_PRIVATE_KEY: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}

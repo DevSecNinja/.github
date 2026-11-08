@@ -179,4 +179,10 @@ assert_contains "${materialize}" 'private-key: ${{ secrets.AUTOMATION_APP_PRIVAT
 
 assert_contains "${repo_root}/docs/automation-app.md" 'AUTOMATION_APP_PRIVATE_KEY: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}'
 
+# Templates hand new repositories the standard caller snippet.
+config_sync_template="${repo_root}/workflow-templates/config-sync.yml"
+assert_contains "${config_sync_template}" 'AUTOMATION_APP_PRIVATE_KEY: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}'
+grep -Eq '^[[:space:]]+issues:' "${config_sync_template}" &&
+    fail "workflow-templates/config-sync.yml must not grant issues (not needed since v3.4.0)"
+
 echo "✓ Automation App: ${#reusables[@]} reusable workflows share one credential contract; fallbacks and fail-closed paths behave."

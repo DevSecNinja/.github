@@ -75,10 +75,14 @@ assert_contains "${workflow}" "permission-pull-requests: write"
 grep -Fq "issues:" <<<"${job_permissions}" &&
     fail "release job must not request issues permission"
 
-for file in "${caller}" "${template}"; do
-    assert_contains "${file}" 'app-id: ${{ vars.RELEASE_PLEASE_APP_ID }}'
-    assert_contains "${file}" 'app-private-key: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}'
-done
+# This repository's caller still maps the legacy names explicitly (the
+# backwards-compatible override path); new repositories use the template,
+# which passes only the standard secret.
+assert_contains "${caller}" 'app-id: ${{ vars.RELEASE_PLEASE_APP_ID }}'
+assert_contains "${caller}" 'app-private-key: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}'
+assert_contains "${template}" 'AUTOMATION_APP_PRIVATE_KEY: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}'
+grep -Fq 'RELEASE_PLEASE_APP' "${template}" &&
+    fail "${template} must use the standard AUTOMATION_APP_* names"
 
 for file in "${onboarding}" "${triggers}"; do
     assert_contains "${file}" "Direct Release Please GitHub Release"
