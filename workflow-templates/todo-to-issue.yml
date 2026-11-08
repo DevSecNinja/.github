@@ -15,7 +15,7 @@ jobs:
     # Dependency bumps never add TODO comments; skip Renovate's automerge
     # pushes instead of billing a run for each one.
     if: github.actor != 'renovate[bot]'
-    uses: DevSecNinja/.github/.github/workflows/todo-to-issue.yml@9c281b38f863550ddff25df04e6fda0b9b23d00c # v3.3.0
+    uses: DevSecNinja/.github/.github/workflows/todo-to-issue.yml@a9e3a11178ccd6e76115d3d7b31616631305991f # v3.4.0
     permissions:
       contents: read
       issues: write

@@ -12,13 +12,17 @@ permissions:
 
 jobs:
   sync:
-    uses: DevSecNinja/.github/.github/workflows/config-sync.yml@9c281b38f863550ddff25df04e6fda0b9b23d00c # v3.3.0
+    uses: DevSecNinja/.github/.github/workflows/config-sync.yml@a9e3a11178ccd6e76115d3d7b31616631305991f # v3.4.0
     permissions:
       contents: write
-      # Required: the reusable workflow creates the config-sync label through
-      # the issues API. Without it the run fails with startup_failure.
-      issues: write
       pull-requests: write
+    # The PR is opened as the DevSecNinja Automation GitHub App, so it runs CI
+    # and needs no "Allow GitHub Actions to create and approve pull requests"
+    # setting. The App ID is read from the AUTOMATION_APP_ID variable; pass
+    # the key. Without it the workflow warns and falls back to GITHUB_TOKEN.
+    # See https://github.com/DevSecNinja/.github/blob/main/docs/automation-app.md
+    secrets:
+      AUTOMATION_APP_PRIVATE_KEY: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
       # Uncomment to also bootstrap template files for new repos:
       # with:
       #   sync-templates: true
