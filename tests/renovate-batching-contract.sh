@@ -88,6 +88,10 @@ jq -e --argjson g "${group_index}" \
 base="$(to_json "${renovate_dir}/base.json5")"
 jq -e '.rebaseWhen == "conflicted"' <<<"${base}" >/dev/null || fail "base.json5 must set rebaseWhen: conflicted"
 jq -e '.schedule | length == 1' <<<"${base}" >/dev/null || fail "base.json5 must use a single weekly schedule window"
+jq -e '.updateNotScheduled == false' <<<"${base}" >/dev/null ||
+    fail "base.json5 must set updateNotScheduled: false so open PRs are not pushed outside the window"
+jq -e '.lockFileMaintenance.updateNotScheduled == true' <<<"${base}" >/dev/null ||
+    fail "lockFileMaintenance must keep updateNotScheduled: true so its branch automerge is not stranded"
 jq -e '.lockFileMaintenance.schedule | length > 0' <<<"${base}" >/dev/null ||
     fail "lockFileMaintenance needs its own (monthly) schedule"
 jq -e '.vulnerabilityAlerts | has("groupName") and .groupName == null and .schedule == ["at any time"]' \

@@ -63,10 +63,16 @@ bumping a pin (workflows) or automatically (Renovate presets are read from
   the gated rule. Branch protection is non-strict, so a behind-base PR still
   auto-merges.
 - **A single weekly window**: `* 0-7 * * 6` (Saturday 00:00–07:59
-  Europe/Amsterdam) instead of Friday plus the whole weekend. Automerge is
-  unaffected: GitHub merges once checks pass, whenever that is.
+  Europe/Amsterdam) instead of Friday plus the whole weekend, with
+  `updateNotScheduled: false`: by default Renovate only _creates_ branches
+  inside the schedule but keeps _updating_ open ones at any time, which would
+  still push to the weekly PR mid-week. Manual rebase requests are still
+  honoured. Automerge is unaffected: GitHub merges once checks pass, whenever
+  that is.
 - **Monthly lock-file maintenance** (`* 0-7 1 * *`) instead of Renovate's
-  weekly default.
+  weekly default. It keeps `updateNotScheduled: true`, because its branch
+  automerge is performed by Renovate and would otherwise wait a month when
+  checks finish after the window.
 - **Vulnerability fixes stay immediate and separate**: `vulnerabilityAlerts`
   explicitly keeps `groupName: null` and `schedule: ["at any time"]` (Renovate's
   defaults, made explicit). Major updates are never grouped and stay manual.
@@ -150,6 +156,8 @@ and no TODO-to-issue runs for Renovate's automerge pushes.
   `rebaseWhen: "behind-base-branch"` in their own `renovate.json5`; otherwise
   their automerge PRs stall behind the base branch. At the time of writing
   that applies to `home-assistant-win-companion` and `net-worth-calculator`.
+  Because of `updateNotScheduled: false`, those rebases also happen only in
+  the Saturday window.
 - Private repositories see one `all linters` check instead of one check per
   linter, and a lint run takes longer wall-clock. Repositories that require
   per-linter checks and opt into `single` must require `all linters` instead —

@@ -1069,6 +1069,7 @@ jobs:
         if: ${{ !cancelled() }}
         env:
           STEP_RESULTS: ${{ toJSON(steps) }}
+          JOB_STATUS: ${{ job.status }}
         run: |-
           set -euo pipefail
 
@@ -1079,6 +1080,14 @@ jobs:
             echo "| ---- | ------- |"
             jq -r 'to_entries[] | "| `\(.key)` | \(.value.outcome) |"' <<<"${STEP_RESULTS}"
           } >>"${GITHUB_STEP_SUMMARY}"
+
+          # A setup step (validation, checkout, mise install) has no id, so it
+          # is missing from STEP_RESULTS; when one fails, every linter after it
+          # is skipped and only the job status tells.
+          if [ "${JOB_STATUS}" = "failure" ]; then
+            echo "::error::A setup step failed before the linters could run; see the job log above."
+            exit 1
+          fi
 
           failed="$(jq -r 'to_entries[] | select(.value.outcome == "failure") | .key' <<<"${STEP_RESULTS}")"
           if [ -n "${failed}" ]; then

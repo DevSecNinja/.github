@@ -28,6 +28,11 @@
   schedule: [
     '* 0-7 * * 6',
   ],
+  // Renovate only creates branches inside the schedule but, by default, keeps
+  // updating existing ones at any time — an open weekly PR would still be
+  // pushed (and its CI re-run) whenever a newer version clears the soak.
+  // Manual rebase requests (PR checkbox, dashboard) are still honoured.
+  updateNotScheduled: false,
   // Only rebase a Renovate branch when it has a merge conflict. The default
   // (`auto`, which becomes `behind-base-branch` because automerge is on)
   // rebases every open Renovate PR each time the base branch moves — i.e. after
@@ -61,6 +66,10 @@
     // Monthly (first day of the month) instead of Renovate's weekly default:
     // a lock refresh rarely matters week to week, and each one costs a CI run.
     schedule: ["* 0-7 1 * *"],
+    // Branch automerge is done by Renovate itself and is skipped outside the
+    // schedule when updateNotScheduled is false; allow it here so a branch
+    // whose checks finish after the window does not wait a month to merge.
+    updateNotScheduled: true,
   },
   registryAliases: {
     "dhi.io": "dhi.io",

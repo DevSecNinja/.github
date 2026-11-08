@@ -185,7 +185,10 @@ runs:
         # "the branch must not exist yet". Either way, a branch someone moves
         # between this lookup and the push is still never overwritten.
         remote_ref="refs/heads/${BRANCH}"
-        remote_sha="$(git ls-remote origin "${remote_ref}" | awk -v ref="${remote_ref}" '$2 == ref { print $1 }')"
+        remote_sha="$(git ls-remote origin "${remote_ref}" | awk -v ref="${remote_ref}" '$2 == ref { print $1 }')" || {
+          echo "::error::Could not read ${remote_ref} from origin; refusing to push without a lease." >&2
+          exit 1
+        }
 
         # Leave an identical branch alone: same parent and same tree means the
         # open PR already carries exactly these changes, and a no-op

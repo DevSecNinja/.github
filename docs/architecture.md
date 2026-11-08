@@ -834,9 +834,13 @@ CI), Renovate batches its work
   [ADR 0005](design-decisions/0005-pr-age-cooldown-for-untrusted-timestamps.md)
   cooldown keeps working), and the dotfiles devcontainer image (branch
   automerge at any time).
-- **Schedule:** one window, Saturday 00:00–07:59 (Europe/Amsterdam). Automerge
-  is not tied to it — GitHub merges as soon as the required checks pass.
-- **Lock file maintenance:** monthly, on the first day of the month.
+- **Schedule:** one window, Saturday 00:00–07:59 (Europe/Amsterdam), and
+  `updateNotScheduled: false`, so open PRs are not pushed (and their CI is
+  not re-run) outside it either; manual rebase requests still work.
+  Automerge is not tied to the window — GitHub merges as soon as the
+  required checks pass.
+- **Lock file maintenance:** monthly, on the first day of the month (its
+  branch automerge may complete outside the window).
 - **Rebasing:** `rebaseWhen: "conflicted"` — Renovate no longer rebases every
   open PR each time `main` moves. Branch protection is non-strict, so a
   behind-base PR still auto-merges. **Repositories whose ruleset requires

@@ -54,7 +54,12 @@ a lot of incidental events
 
 - Leave `edited` out of `pull_request.types` unless the workflow reads
   the PR title, body, or base branch — Renovate rewrites its PR bodies on
-  most runs.
+  most runs. Exception: retargeting a PR to another base branch changes
+  the merge result but only fires `edited` (no `synchronize`). Keep
+  `edited` where a retargeted PR must be re-validated (e.g. stacked PRs),
+  and skip title/body-only edits in the workflow instead
+  (`github.event.action != 'edited' || github.event.changes.base`), as
+  `pages.yml` does.
 - Guard `issues: edited` handlers against `renovate[bot]`, which edits
   its Dependency Dashboard issue on nearly every run.
 - Skip post-merge work that dependency bumps can't affect (e.g.
@@ -62,7 +67,9 @@ a lot of incidental events
   calling job.
 - Put such guards on the first job in the `needs:` chain (or on the
   calling job): a skipped job is free, and every job that needs it is
-  skipped too.
+  skipped too — unless that job's `if:` calls a status function such as
+  `always()` or `failure()`, which overrides the implicit `success()`
+  and lets it run after a skipped need. Repeat the guard on those jobs.
 
 ---
 
@@ -106,10 +113,16 @@ concurrency:
 
 A newer push to a PR cancels its running run. A running push/main run
 is never cancelled, so a production deploy always finishes — but a
-_queued_ push/main run is superseded by a newer push, because a group
-holds at most one pending run. That is intentional: only the latest
-commit's result (or deploy) matters, and dropping the stale run saves
-Actions minutes.
+_queued_ push/main run is superseded by a later push, because a group
+holds at most one pending run. That is intentional: normally only the
+newest commit's result (or deploy) matters, and dropping the stale run
+saves Actions minutes.
+
+GitHub does not guarantee that runs enter a concurrency group in push
+order, so in rare races an older push's run can be the one left
+pending, deploying an older commit until the next push. Deploys don't
+reconcile against the branch tip; if a deploy looks stale, re-run the
+latest workflow run on the branch (or push again).
 
 **Reusable workflows (`on: workflow_call`) generally should not declare
 their own concurrency** — the caller owns it. A reusable that sets its
