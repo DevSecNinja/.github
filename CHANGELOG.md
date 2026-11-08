@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.5.0](https://github.com/DevSecNinja/.github/compare/v3.4.0...v3.5.0) (2026-11-08)
+
+
+### 🚀 Features
+
+* **pages:** add build-github-token to build with the read-only token ([#472](https://github.com/DevSecNinja/.github/issues/472)) ([e96393c](https://github.com/DevSecNinja/.github/commit/e96393c992c54a8adae490773c75b977a7aa38be))
+
 ## [3.4.0](https://github.com/DevSecNinja/.github/compare/v3.3.0...v3.4.0) (2026-11-08)
 
 
