@@ -45,6 +45,12 @@
       extractVersion: "^v?(?<version>.+)$",
     },
     {
+      description: "Regex custom managers track bare versions (e.g. 2026.10.19) against v-prefixed github-releases tags. A digest cannot be resolved for the non-existent bare tag (\"Could not determine new digest\"), so disable digest pinning for them.",
+      matchManagers: ["custom.regex"],
+      matchDatasources: ["github-releases"],
+      pinDigests: false,
+    },
+    {
       matchDatasources: ["github-releases"],
       minimumReleaseAge: "14 days",
     },
