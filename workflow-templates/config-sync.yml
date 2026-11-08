@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   sync:
-    uses: DevSecNinja/.github/.github/workflows/config-sync.yml@0d0f448de257f354c89dc3a128871235d6ba8c11 # v2.5.0
+    uses: DevSecNinja/.github/.github/workflows/config-sync.yml@9c281b38f863550ddff25df04e6fda0b9b23d00c # v3.3.0
     permissions:
       contents: write
       # Required: the reusable workflow creates the config-sync label through

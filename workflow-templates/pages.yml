@@ -28,7 +28,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   pages:
-    uses: DevSecNinja/.github/.github/workflows/pages.yml@7a3e8e1475c658c60c23bedc7daf2e559bfe60b4 # v3.1.0
+    uses: DevSecNinja/.github/.github/workflows/pages.yml@9c281b38f863550ddff25df04e6fda0b9b23d00c # v3.3.0
     permissions:
       contents: read
       deployments: write
