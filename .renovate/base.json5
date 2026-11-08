@@ -33,15 +33,17 @@
   // pushed (and its CI re-run) whenever a newer version clears the soak.
   // Manual rebase requests (PR checkbox, dashboard) are still honoured.
   updateNotScheduled: false,
-  // Only rebase a Renovate branch when it has a merge conflict. The default
-  // (`auto`, which becomes `behind-base-branch` because automerge is on)
-  // rebases every open Renovate PR each time the base branch moves — i.e. after
-  // every automerge — and each rebase re-runs CI on every open PR. Branch
-  // protection is non-strict, so a behind-base PR still auto-merges. Repos
-  // whose ruleset requires branches to be up to date before merging must
-  // override this with `rebaseWhen: "behind-base-branch"` in their own
-  // renovate.json5, otherwise their automerge PRs stall.
-  rebaseWhen: "conflicted",
+  // Renovate's default, stated explicitly (ADR 0012). `auto` rebases a branch
+  // that is behind the base branch only when that is needed for a safe merge:
+  // automerge PRs, and repos that require branches to be up to date. That keeps
+  // automerged updates tested against the latest base branch and stops branch
+  // automerge (lock-file maintenance, dotfiles devcontainer) from falling back
+  // to a PR when the base moves. `conflicted` is "not recommended if you have
+  // enabled Renovate automerge" (Renovate docs). The CI cost of rebasing is
+  // bounded by the weekly all-non-major group, the Saturday-only schedule and
+  // updateNotScheduled: false above, not by this setting. docker-gated
+  // dependencies keep `conflicted` (packageRules.json5) for their cooldown.
+  rebaseWhen: "auto",
   ignorePaths: [
     '**/*.sops.*',
   ],

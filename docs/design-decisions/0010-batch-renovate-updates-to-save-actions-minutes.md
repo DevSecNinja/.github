@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted
+Accepted. The global `rebaseWhen: "conflicted"` is superseded by
+[ADR 0012](0012-rebase-automerge-branches-when-behind.md) (`rebaseWhen:
+"auto"`); the rest stands.
 
 ## Context
 
@@ -61,7 +63,9 @@ bumping a pin (workflows) or automatically (Renovate presets are read from
   grouped dependency would reset its cooldown clock.
 - **`rebaseWhen: "conflicted"` globally** (`base.json5`), previously only on
   the gated rule. Branch protection is non-strict, so a behind-base PR still
-  auto-merges.
+  auto-merges. _Superseded by
+  [ADR 0012](0012-rebase-automerge-branches-when-behind.md): the global
+  setting is `auto` again; only the gated rule keeps `conflicted`._
 - **A single weekly window**: `* 0-7 * * 6` (Saturday 00:00–07:59
   Europe/Amsterdam) instead of Friday plus the whole weekend, with
   `updateNotScheduled: false`: by default Renovate only _creates_ branches
@@ -157,7 +161,10 @@ and no TODO-to-issue runs for Renovate's automerge pushes.
   their automerge PRs stall behind the base branch. At the time of writing
   that applies to `home-assistant-win-companion` and `net-worth-calculator`.
   Because of `updateNotScheduled: false`, those rebases also happen only in
-  the Saturday window.
+  the Saturday window. _No longer applies since
+  [ADR 0012](0012-rebase-automerge-branches-when-behind.md): the global
+  `rebaseWhen: "auto"` already resolves to `behind-base-branch` in those
+  repositories, so no override is needed._
 - Private repositories see one `all linters` check instead of one check per
   linter, and a lint run takes longer wall-clock. Repositories that require
   per-linter checks and opt into `single` must require `all linters` instead —

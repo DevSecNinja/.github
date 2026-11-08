@@ -86,7 +86,15 @@ jq -e --argjson g "${group_index}" \
     fail "the docker-gated rule must follow the group and keep groupName: null and rebaseWhen: conflicted"
 
 base="$(to_json "${renovate_dir}/base.json5")"
-jq -e '.rebaseWhen == "conflicted"' <<<"${base}" >/dev/null || fail "base.json5 must set rebaseWhen: conflicted"
+jq -e '.rebaseWhen == "auto"' <<<"${base}" >/dev/null ||
+    fail "base.json5 must keep Renovate's default rebaseWhen: auto (ADR 0012); only the docker-gated rule uses conflicted"
+non_gated_conflicted="$(
+    jq -r '.[] | select(.rebaseWhen == "conflicted" and .additionalBranchPrefix != "docker-gated-") | "\(._file): \((.description // "(no description)")[0:120])"' \
+        <<<"${rules_json}"
+)"
+[ -z "${non_gated_conflicted}" ] ||
+    fail "only the docker-gated rule may set rebaseWhen: conflicted (it breaks automerge elsewhere, ADR 0012):
+${non_gated_conflicted}"
 jq -e '.schedule | length == 1' <<<"${base}" >/dev/null || fail "base.json5 must use a single weekly schedule window"
 jq -e '.updateNotScheduled == false' <<<"${base}" >/dev/null ||
     fail "base.json5 must set updateNotScheduled: false so open PRs are not pushed outside the window"

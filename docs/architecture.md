@@ -867,17 +867,15 @@ CI), Renovate batches its work
   required checks pass.
 - **Lock file maintenance:** monthly, on the first day of the month (its
   branch automerge may complete outside the window).
-- **Rebasing:** `rebaseWhen: "conflicted"` — Renovate no longer rebases every
-  open PR each time `main` moves. Branch protection is non-strict, so a
-  behind-base PR still auto-merges. **Repositories whose ruleset requires
-  branches to be up to date** must override this in their own
-  `renovate.json5`, or their automerge PRs stall:
-
-  ```json5
-  {
-    rebaseWhen: "behind-base-branch",
-  }
-  ```
+- **Rebasing:** `rebaseWhen: "auto"` (Renovate's default,
+  [ADR 0012](design-decisions/0012-rebase-automerge-branches-when-behind.md)).
+  An automerge PR that falls behind `main` — or any PR in a repository that
+  requires up-to-date branches — is rebased on Renovate's next run inside the
+  window, so automerged updates are always tested against the latest `main`.
+  No per-repository override is needed. `docker-gated-` PRs keep
+  `rebaseWhen: "conflicted"`, because a rebase restarts their cooldown clock;
+  repositories that require `pr-cooldown` therefore keep "require branches to
+  be up to date" off for now.
 
 ### Auto-merge strategy
 
