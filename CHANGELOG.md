@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.4.0](https://github.com/DevSecNinja/.github/compare/v3.3.0...v3.4.0) (2026-11-08)
+
+
+### 🚀 Features
+
+* standardize central automation on the DevSecNinja Automation App ([#473](https://github.com/DevSecNinja/.github/issues/473)) ([8882d8a](https://github.com/DevSecNinja/.github/commit/8882d8ad5be1af4a1bf1425621841cd6f0ea4a74))
+
 ## [3.3.0](https://github.com/DevSecNinja/.github/compare/v3.2.0...v3.3.0) (2026-11-08)
 
 
