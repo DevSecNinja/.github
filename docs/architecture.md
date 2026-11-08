@@ -174,18 +174,22 @@ jobs:
 Opens or updates release PRs and creates version tags from Conventional
 Commits. GitHub App authentication is mandatory so release PR and tag
 events trigger downstream workflows; the reusable fails closed for
-empty or whitespace-only credentials and never uses `GITHUB_TOKEN`.
+missing, empty or whitespace-only credentials and never uses
+`GITHUB_TOKEN`. It authenticates as the shared DevSecNinja Automation
+App — see [`automation-app.md`](automation-app.md).
 
-| Input / secret    | Description                                            |
-| ----------------- | ------------------------------------------------------ |
-| `app-id`          | **Required.** Release Please GitHub App ID.            |
-| `app-private-key` | **Required secret.** Private key paired with `app-id`. |
-| `target-branch`   | Branch to track. Default: `main`.                      |
-| `config-file`     | Release Please configuration path.                     |
-| `manifest-file`   | Release Please manifest path.                          |
+| Input / secret               | Description                                                                         |
+| ---------------------------- | ----------------------------------------------------------------------------------- |
+| `AUTOMATION_APP_PRIVATE_KEY` | Secret. App private key; pass it by name (v3.4.0+). The App ID is read from `vars`. |
+| `app-id`                     | Explicit App ID; overrides the `AUTOMATION_APP_ID` variable. Default: empty.        |
+| `app-private-key`            | Secret. Explicit private key; overrides `AUTOMATION_APP_PRIVATE_KEY`.               |
+| `app-environment`            | Environment holding the credentials. Default: `production`.                         |
+| `target-branch`              | Branch to track. Default: `main`.                                                   |
+| `config-file`                | Release Please configuration path.                                                  |
+| `manifest-file`              | Release Please manifest path.                                                       |
 
 The App installation needs only Contents and Pull requests write
-permissions (Metadata read is automatic). Every caller must also enable
+permissions (Metadata read is automatic). The repository does not need
 **Allow GitHub Actions to create and approve pull requests**.
 
 Callers choose one publication pattern:
@@ -198,8 +202,9 @@ Callers choose one publication pattern:
    Please still creates the tag in this pattern; use it only when those
    custom publication steps are needed.
 
-See the [onboarding guide](release-please-onboarding.md) and
-[ADR 0007](design-decisions/0007-mandatory-release-please-app-authentication.md).
+See the [onboarding guide](release-please-onboarding.md),
+[ADR 0007](design-decisions/0007-mandatory-release-please-app-authentication.md)
+and [ADR 0011](design-decisions/0011-single-automation-github-app.md).
 
 ### Pages (`pages.yml`)
 
@@ -448,25 +453,38 @@ example, `config-sync/files/.github/CODEOWNERS` lands at
 blank lines are allowed. The `unmanaged` repo topic remains the
 all-or-nothing escape hatch.
 
-| Input            | Description                                                           |
-| ---------------- | --------------------------------------------------------------------- |
-| `sync-templates` | Also bootstrap files from `config-sync/templates/`. Default: `false`. |
-| `central-ref`    | Git ref of `DevSecNinja/.github` to sync from. Default: `main`.       |
+| Input / secret               | Description                                                                         |
+| ---------------------------- | ----------------------------------------------------------------------------------- |
+| `sync-templates`             | Also bootstrap files from `config-sync/templates/`. Default: `false`.               |
+| `central-ref`                | Git ref of `DevSecNinja/.github` to sync from. Default: `main`.                     |
+| `AUTOMATION_APP_PRIVATE_KEY` | Secret. App private key; pass it by name (v3.4.0+). The App ID is read from `vars`. |
+| `app-id`                     | Explicit App ID; overrides the `AUTOMATION_APP_ID` variable. Default: empty.        |
+| `app-private-key`            | Secret. Explicit private key; overrides `AUTOMATION_APP_PRIVATE_KEY`.               |
+| `app-environment`            | Environment holding the credentials. Default: `production`.                         |
 
-The calling job must grant `contents: write`, `pull-requests: write`, **and**
-`issues: write` (the `config-sync` label is created through the issues API).
-A caller that grants less fails with `startup_failure` before any step runs.
+**Authentication (v3.4.0+).** The sync PR is opened as the shared
+DevSecNinja Automation GitHub App (see [`automation-app.md`](automation-app.md)),
+so it runs the repository's CI and needs no _Allow GitHub Actions to create
+and approve pull requests_ setting. Without App credentials the workflow
+falls back to `GITHUB_TOKEN` with a warning naming what is missing; that PR
+only opens when the setting is enabled, and it runs no CI.
+
+The calling job grants `contents: write` and `pull-requests: write` (used by
+the fallback). `issues: write` is no longer needed: the `config-sync` label is
+created with the Pull requests permission. A caller that grants less than the
+job requests fails with `startup_failure` before any step runs.
 
 **Example caller:**
 
 ```yaml
 jobs:
   sync:
-    uses: DevSecNinja/.github/.github/workflows/config-sync.yml@<sha> # v3.3.0
+    uses: DevSecNinja/.github/.github/workflows/config-sync.yml@<sha> # v3.4.0
     permissions:
       contents: write
-      issues: write
       pull-requests: write
+    secrets:
+      AUTOMATION_APP_PRIVATE_KEY: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
     # with:
     #   sync-templates: true   # also bootstrap template files for new repos
 ```

@@ -50,9 +50,12 @@ primitives.
   > Pin an explicit `#vX.Y.Z` so Renovate can track it. `apm_modules/` is the
   > package cache — APM adds it to `.gitignore` on first install; don't commit it.
 
-- The `RELEASE_PLEASE_APP_ID` variable + `RELEASE_PLEASE_APP_PRIVATE_KEY` secret
-  (the same App used for release-please). The materialize workflow opens its PR
-  with the App token so required CI runs on it.
+- The `AUTOMATION_APP_ID` variable + `AUTOMATION_APP_PRIVATE_KEY` secret of the
+  shared DevSecNinja Automation App (see [automation-app.md](automation-app.md)).
+  The materialize workflow opens its PR with the App token so required CI runs on
+  it. Repos onboarded earlier may still hold the same App as
+  `RELEASE_PLEASE_APP_ID` / `RELEASE_PLEASE_APP_PRIVATE_KEY`; the reference
+  workflow accepts both while they migrate.
 
 - The repo extends the org Renovate presets (so it inherits the apm.yml custom
   manager):
@@ -102,8 +105,10 @@ agent-context files.
 ### The materialize PR opens but no CI runs on it
 
 The PR was opened with `GITHUB_TOKEN` instead of the App. Confirm
-`RELEASE_PLEASE_APP_ID` (variable) + `RELEASE_PLEASE_APP_PRIVATE_KEY` (secret)
-exist and the workflow's App-token step is wired.
+`AUTOMATION_APP_ID` (variable) + `AUTOMATION_APP_PRIVATE_KEY` (secret) exist —
+in the `production` environment on public repos — and the workflow's App-token
+step is wired. The reusable `apm-sync.yml` logs a warning naming the missing
+piece when it falls back.
 
 ### Renovate isn't opening apm.yml bump PRs
 
@@ -124,4 +129,5 @@ The repo hasn't installed any APM package yet. Do the one-time `apm install
 - [`.renovate/customManagers.json5`](../.renovate/customManagers.json5) — the apm.yml tag manager.
 - [`.github/workflows/config-sync.yml`](../.github/workflows/config-sync.yml) — static-file sync sibling.
 - [Release Please onboarding](release-please-onboarding.md) — shares the App auth setup.
+- [DevSecNinja Automation App](automation-app.md) — the credential contract.
 - [APM consumer docs](https://microsoft.github.io/apm/consumer/) — `install`, `update`, `outdated`.

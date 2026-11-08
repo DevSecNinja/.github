@@ -29,18 +29,20 @@ assert_matches_across_lines() {
         fail "${file} must match: ${pattern}"
 }
 
-app_id_contract="$(sed -n '/^      app-id:/,/^    secrets:/p' "${workflow}")"
-private_key_contract="$(sed -n '/^      app-private-key:/,/^    outputs:/p' "${workflow}")"
+app_id_contract="$(sed -n '/^      app-id:/,/^      app-environment:/p' "${workflow}")"
 job_permissions="$(sed -n '/^    permissions:/,/^    outputs:/p' "${workflow}")"
 preflight_step="$(sed -n '/      - name: Validate GitHub App credentials/,/      - name: Generate App token/p' "${workflow}")"
 token_step="$(sed -n '/      - name: Generate App token/,/      - name: Run release-please/p' "${workflow}")"
 
-grep -Fq "required: true" <<<"${app_id_contract}" ||
-    fail "app-id must be required"
-grep -Fq "default:" <<<"${app_id_contract}" &&
-    fail "app-id must not have a default"
-grep -Fq "required: true" <<<"${private_key_contract}" ||
-    fail "app-private-key must be required"
+# app-id is optional since ADR 0011 (it resolves from the caller's
+# AUTOMATION_APP_ID variable), but the job still fails closed without both
+# credentials; tests/automation-app-contract.sh exercises the preflight.
+grep -Fq 'default: ""' <<<"${app_id_contract}" ||
+    fail "app-id must default to empty so AUTOMATION_APP_ID is used"
+grep -Fq 'APP_ID: ${{ inputs.app-id || vars.AUTOMATION_APP_ID }}' <<<"${preflight_step}" ||
+    fail "preflight must validate the resolved App ID"
+grep -Fq 'APP_PRIVATE_KEY: ${{ secrets.app-private-key || secrets.AUTOMATION_APP_PRIVATE_KEY }}' <<<"${preflight_step}" ||
+    fail "preflight must validate the resolved private key"
 
 assert_contains "${workflow}" "- name: Validate GitHub App credentials"
 assert_contains "${workflow}" '${APP_ID//[[:space:]]/}'
