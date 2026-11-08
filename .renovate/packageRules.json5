@@ -87,7 +87,7 @@
       groupName: null,
     },
     {
-      description: "Auto-merge dotfiles devcontainer image digest, patch, and minor updates via branch without tests, ignoring the global schedule and release-age soak so they can always merge. Kept out of the weekly non-major group (groupName:null) so it keeps its own at-any-time branch. Placed after the generic docker minimumReleaseAge rule so its minimumReleaseAge:0 wins. Major bumps are intentionally excluded and left for manual review.",
+      description: "Auto-merge dotfiles devcontainer image digest, patch, and minor updates via branch without tests, ignoring the global schedule and release-age soak so they can always merge. Kept out of the weekly non-major group (groupName:null) so it keeps its own at-any-time branch. The image is on ghcr.io, so it also matches the docker-gated rule above; rebaseWhen:auto undoes that rule's conflicted, because branch automerge needs the branch rebased once main moves (otherwise Renovate raises a PR instead, ADR 0013). Placed after the generic docker minimumReleaseAge rule so its minimumReleaseAge:0 wins. Major bumps are intentionally excluded and left for manual review.",
       matchManagers: ["devcontainer"],
       matchDatasources: ["docker"],
       matchDepTypes: ["image"],
@@ -99,6 +99,7 @@
       minimumReleaseAge: "0",
       schedule: ["at any time"],
       groupName: null,
+      rebaseWhen: "auto",
     },
     {
       // The `v` prefix is matched outside `<major>`: capturing it (`v?\d+`) makes
