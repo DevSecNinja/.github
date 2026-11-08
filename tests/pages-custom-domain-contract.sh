@@ -106,6 +106,8 @@ run_validation() {
         TEST_SETUP_COMMAND="" \
         TEST_COMMAND="" \
         BUILD_COMMAND="" \
+        BUILD_GITHUB_TOKEN="false" \
+        ARTIFACT_PATH="dist" \
         ARTIFACT_NAME="" \
         CLOUDFLARE_PREVIEW="false" \
         CLOUDFLARE_PRODUCTION="${production}" \
