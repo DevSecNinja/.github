@@ -104,6 +104,16 @@ on:
         required: false
         type: boolean
         default: true
+      lint-job-mode:
+        description: >-
+          How linters are scheduled. `parallel`: one job per enabled linter (fastest wall-clock time, but every job is
+          billed at least one minute). `single`: all enabled linters run sequentially in one `all linters` job (far fewer
+          billed minutes). `auto` (default): `single` for private repositories, `parallel` for public ones (and for
+          events whose payload has no repository, such as `schedule`). Repos whose branch rulesets require the
+          per-linter checks must require `all linters` instead before switching to `single`: skipped jobs report success.
+        required: false
+        type: string
+        default: auto
 
 permissions:
   contents: read
@@ -115,7 +125,8 @@ defaults:
 jobs:
   dprint:
     name: dprint
-    if: ${{ inputs.lint-dprint }}
+    if: ${{ inputs.lint-dprint && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
+      }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -157,7 +168,8 @@ jobs:
 
   yamlfmt:
     name: yamlfmt
-    if: ${{ inputs.lint-yamlfmt }}
+    if: ${{ inputs.lint-yamlfmt && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
+      }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -198,7 +210,8 @@ jobs:
 
   yamllint:
     name: yamllint
-    if: ${{ inputs.lint-yamllint }}
+    if: ${{ inputs.lint-yamllint && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
+      }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -239,7 +252,8 @@ jobs:
 
   actionlint:
     name: actionlint
-    if: ${{ inputs.lint-actionlint }}
+    if: ${{ inputs.lint-actionlint && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
+      }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -260,7 +274,8 @@ jobs:
 
   gitleaks:
     name: gitleaks
-    if: ${{ inputs.lint-gitleaks }}
+    if: ${{ inputs.lint-gitleaks && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
+      }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -300,7 +315,8 @@ jobs:
 
   go:
     name: go
-    if: ${{ inputs.lint-go }}
+    if: ${{ inputs.lint-go && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
+      }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -344,7 +360,8 @@ jobs:
 
   shellcheck:
     name: shellcheck
-    if: ${{ inputs.lint-shellcheck }}
+    if: ${{ inputs.lint-shellcheck && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
+      }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -399,7 +416,8 @@ jobs:
 
   shfmt:
     name: shfmt
-    if: ${{ inputs.lint-shfmt }}
+    if: ${{ inputs.lint-shfmt && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
+      }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -438,7 +456,8 @@ jobs:
 
   checkov:
     name: checkov
-    if: ${{ inputs.lint-checkov }}
+    if: ${{ inputs.lint-checkov && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
+      }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -462,7 +481,7 @@ jobs:
           UPLOAD_SARIF: ${{ inputs.upload-sarif }}
         run: |-
           if [ "${UPLOAD_SARIF}" = "true" ]; then
-            mise exec -- checkov -d . --output sarif --output-file-path . || true
+            mise exec -- checkov -d . --output sarif --output-file-path "${RUNNER_TEMP}" || true
           else
             # No GitHub Advanced Security: gate on exit code with console output.
             mise exec -- checkov -d . --compact --quiet
@@ -471,27 +490,29 @@ jobs:
       - name: Filter skipped checks from SARIF
         if: ${{ always() && inputs.upload-sarif }}
         run: |-
-          if [ -f results_sarif.sarif ]; then
+          sarif="${RUNNER_TEMP}/results_sarif.sarif"
+          if [ -f "${sarif}" ]; then
             jq '
               .runs |= [
                 .[] | .results |= [
                   .[] | select(.level != "none")
                 ]
               ]
-            ' results_sarif.sarif > results_sarif_filtered.sarif
-            mv results_sarif_filtered.sarif results_sarif.sarif
+            ' "${sarif}" > "${sarif}.filtered"
+            mv "${sarif}.filtered" "${sarif}"
           fi
 
       - name: Upload SARIF report
         uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         if: ${{ always() && inputs.upload-sarif }}
         with:
-          sarif_file: results_sarif.sarif
+          sarif_file: ${{ runner.temp }}/results_sarif.sarif
           category: checkov
 
   trivy:
     name: trivy
-    if: ${{ inputs.lint-trivy }}
+    if: ${{ inputs.lint-trivy && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
+      }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -535,7 +556,7 @@ jobs:
             mise exec -- trivy fs "${trivy_args[@]}" \
               --scanners misconfig,secret \
               --format sarif \
-              --output trivy.sarif . || true
+              --output "${RUNNER_TEMP}/trivy.sarif" . || true
           else
             # No GitHub Advanced Security: gate on exit code with console output.
             mise exec -- trivy fs "${trivy_args[@]}" \
@@ -547,12 +568,13 @@ jobs:
         uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         if: ${{ inputs.upload-sarif }}
         with:
-          sarif_file: trivy.sarif
+          sarif_file: ${{ runner.temp }}/trivy.sarif
           category: trivy
 
   zizmor:
     name: zizmor
-    if: ${{ inputs.lint-zizmor }}
+    if: ${{ inputs.lint-zizmor && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
+      }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -576,7 +598,7 @@ jobs:
           UPLOAD_SARIF: ${{ inputs.upload-sarif }}
         run: |-
           if [ "${UPLOAD_SARIF}" = "true" ]; then
-            mise exec -- zizmor --format sarif . > zizmor.sarif
+            mise exec -- zizmor --format sarif . > "${RUNNER_TEMP}/zizmor.sarif"
           else
             # No GitHub Advanced Security: gate on exit code with console output.
             mise exec -- zizmor .
@@ -586,12 +608,13 @@ jobs:
         uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         if: ${{ always() && inputs.upload-sarif }}
         with:
-          sarif_file: zizmor.sarif
+          sarif_file: ${{ runner.temp }}/zizmor.sarif
           category: zizmor
 
   config-drift:
     name: config drift
-    if: ${{ inputs.lint-config-drift }}
+    if: ${{ inputs.lint-config-drift && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
+      }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -635,3 +658,434 @@ jobs:
 
           echo ""
           echo "All config files match the central repository."
+
+  all-linters:
+    # Single-job mode (`lint-job-mode: single`, or `auto` on a private
+    # repository). Every enabled linter runs as a step of this one job, so a
+    # lint run is billed as one job instead of a rounded-up minute per linter
+    # job, and mise and its tools are installed once instead of ten times.
+    # Each linter step repeats the run script of its per-linter job above
+    # verbatim; tests/lint-job-modes-contract.sh fails when the copies drift.
+    # Linter steps use continue-on-error so one failure does not hide the
+    # others; the final step reports every failure and fails the job.
+    name: all linters
+    if: ${{ !(inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
+      }}
+    continue-on-error: ${{ ! inputs.lint-fail-on-error }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Validate lint-job-mode
+        env:
+          LINT_JOB_MODE: ${{ inputs.lint-job-mode }}
+        run: |-
+          case "${LINT_JOB_MODE}" in
+            auto | single) ;;
+            *)
+              echo "::error::lint-job-mode must be one of: auto, single, parallel (got '${LINT_JOB_MODE}')."
+              exit 1
+              ;;
+          esac
+
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # gitleaks scans the full git history; the other linters need only HEAD.
+          fetch-depth: ${{ !inputs.lint-gitleaks && 1 || 0 }}
+          persist-credentials: false
+
+      - name: Install mise
+        if: >-
+          ${{ inputs.lint-dprint || inputs.lint-yamlfmt || inputs.lint-yamllint || inputs.lint-actionlint || inputs.lint-gitleaks
+          || inputs.lint-shellcheck || inputs.lint-shfmt || inputs.lint-checkov || inputs.lint-trivy || inputs.lint-zizmor
+          }}
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          install: true
+          version: ${{ inputs.mise-version }}
+
+      - name: Check formatting with dprint
+        id: dprint
+        if: ${{ inputs.lint-dprint }}
+        continue-on-error: true
+        env:
+          CONFIG_DIR: ${{ inputs.lint-config-dir }}
+        run: |-
+          # Lint tool versions are owned by the consuming repo: pinned and
+          # Renovate-managed in its mise config. Fail early with guidance when
+          # the tool this job needs is missing, rather than a cryptic mise error.
+          if [ ! -f mise.toml ] && [ ! -f .mise.toml ] && [ ! -f .config/mise/config.toml ] && [ ! -f .config/mise.toml ]; then
+            echo "::error::No mise config found. Add a Renovate-managed mise.toml (or .mise.toml) that pins your lint tools."
+            exit 1
+          fi
+          if ! mise which dprint >/dev/null 2>&1; then
+            echo "::error::'dprint' is not pinned in this repository's mise config. Add it (Renovate-managed), e.g. 'mise use dprint@<version>', so this lint job can run it."
+            exit 1
+          fi
+          if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/dprint.json" ]; then
+            mise exec -- dprint check \
+              --config "${CONFIG_DIR}/dprint.json" \
+              --config-discovery=false \
+              --allow-no-files
+          else
+            mise exec -- dprint check --allow-no-files
+          fi
+
+      - name: Check YAML formatting
+        id: yamlfmt
+        if: ${{ inputs.lint-yamlfmt }}
+        continue-on-error: true
+        env:
+          CONFIG_DIR: ${{ inputs.lint-config-dir }}
+        run: |-
+          # Lint tool versions are owned by the consuming repo: pinned and
+          # Renovate-managed in its mise config. Fail early with guidance when
+          # the tool this job needs is missing, rather than a cryptic mise error.
+          if [ ! -f mise.toml ] && [ ! -f .mise.toml ] && [ ! -f .config/mise/config.toml ] && [ ! -f .config/mise.toml ]; then
+            echo "::error::No mise config found. Add a Renovate-managed mise.toml (or .mise.toml) that pins your lint tools."
+            exit 1
+          fi
+          if ! mise which yamlfmt >/dev/null 2>&1; then
+            echo "::error::'yamlfmt' is not pinned in this repository's mise config. Add it (Renovate-managed), e.g. 'mise use yamlfmt@<version>', so this lint job can run it."
+            exit 1
+          fi
+          if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/.yamlfmt.yaml" ]; then
+            find . \( -name '*.yaml' -o -name '*.yml' \) -print0 |
+              xargs -0 mise exec -- yamlfmt -conf "${CONFIG_DIR}/.yamlfmt.yaml" -lint
+          else
+            find . \( -name '*.yaml' -o -name '*.yml' \) -print0 |
+              xargs -0 mise exec -- yamlfmt -lint
+          fi
+
+      - name: Run yamllint
+        id: yamllint
+        if: ${{ inputs.lint-yamllint }}
+        continue-on-error: true
+        env:
+          CONFIG_DIR: ${{ inputs.lint-config-dir }}
+        run: |-
+          # Lint tool versions are owned by the consuming repo: pinned and
+          # Renovate-managed in its mise config. Fail early with guidance when
+          # the tool this job needs is missing, rather than a cryptic mise error.
+          if [ ! -f mise.toml ] && [ ! -f .mise.toml ] && [ ! -f .config/mise/config.toml ] && [ ! -f .config/mise.toml ]; then
+            echo "::error::No mise config found. Add a Renovate-managed mise.toml (or .mise.toml) that pins your lint tools."
+            exit 1
+          fi
+          if ! mise which yamllint >/dev/null 2>&1; then
+            echo "::error::'yamllint' is not pinned in this repository's mise config. Add it (Renovate-managed), e.g. 'mise use yamllint@<version>', so this lint job can run it."
+            exit 1
+          fi
+          if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/.yamllint.yaml" ]; then
+            find . \( -name '*.yaml' -o -name '*.yml' \) -print0 |
+              xargs -0 mise exec -- yamllint -c "${CONFIG_DIR}/.yamllint.yaml"
+          else
+            find . \( -name '*.yaml' -o -name '*.yml' \) -print0 |
+              xargs -0 mise exec -- yamllint
+          fi
+
+      - name: Run actionlint
+        id: actionlint
+        if: ${{ inputs.lint-actionlint }}
+        continue-on-error: true
+        run: mise exec -- actionlint
+
+      - name: Run gitleaks
+        id: gitleaks
+        if: ${{ inputs.lint-gitleaks }}
+        continue-on-error: true
+        env:
+          CONFIG_DIR: ${{ inputs.lint-config-dir }}
+        run: |-
+          # Lint tool versions are owned by the consuming repo: pinned and
+          # Renovate-managed in its mise config. Fail early with guidance when
+          # the tool this job needs is missing, rather than a cryptic mise error.
+          if [ ! -f mise.toml ] && [ ! -f .mise.toml ] && [ ! -f .config/mise/config.toml ] && [ ! -f .config/mise.toml ]; then
+            echo "::error::No mise config found. Add a Renovate-managed mise.toml (or .mise.toml) that pins your lint tools."
+            exit 1
+          fi
+          if ! mise which gitleaks >/dev/null 2>&1; then
+            echo "::error::'gitleaks' is not pinned in this repository's mise config. Add it (Renovate-managed), e.g. 'mise use gitleaks@<version>', so this lint job can run it."
+            exit 1
+          fi
+          if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/.gitleaks.toml" ]; then
+            mise exec -- gitleaks detect --redact --config "${CONFIG_DIR}/.gitleaks.toml"
+          else
+            mise exec -- gitleaks detect --redact
+          fi
+
+      - name: Check for Go version file
+        id: go-version-file
+        if: ${{ inputs.lint-go }}
+        env:
+          GO_VERSION_FILE: ${{ inputs.go-version-file }}
+        run: |-
+          if [ -f "${GO_VERSION_FILE}" ]; then
+            echo "exists=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "::notice::${GO_VERSION_FILE} not found; skipping Go linter"
+            echo "exists=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Validate golangci-lint version
+        id: golangci-lint-version
+        if: ${{ steps.go-version-file.outputs.exists == 'true' && inputs.golangci-lint-version == '' }}
+        continue-on-error: true
+        env:
+          GO_VERSION_FILE: ${{ inputs.go-version-file }}
+        run: |-
+          echo "::error::Go linting is required (${GO_VERSION_FILE} found) but no golangci-lint-version input was provided. Pass golangci-lint-version when calling this reusable workflow for Go repositories."
+          exit 1
+
+      - name: Setup Go
+        id: setup-go
+        if: ${{ steps.go-version-file.outputs.exists == 'true' && inputs.golangci-lint-version != '' }}
+        continue-on-error: true
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: ${{ inputs.go-version-file }}
+
+      - name: Run golangci-lint
+        id: go
+        if: ${{ steps.setup-go.outcome == 'success' }}
+        continue-on-error: true
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: ${{ inputs.golangci-lint-version }}
+
+      - name: Run shellcheck
+        id: shellcheck
+        if: ${{ inputs.lint-shellcheck }}
+        continue-on-error: true
+        env:
+          CONFIG_DIR: ${{ inputs.lint-config-dir }}
+          EXCLUDE_PATTERN: ${{ inputs.lint-shellcheck-exclude }}
+        run: |
+          # Lint tool versions are owned by the consuming repo: pinned and
+          # Renovate-managed in its mise config. Fail early with guidance when
+          # the tool this job needs is missing, rather than a cryptic mise error.
+          if [ ! -f mise.toml ] && [ ! -f .mise.toml ] && [ ! -f .config/mise/config.toml ] && [ ! -f .config/mise.toml ]; then
+            echo "::error::No mise config found. Add a Renovate-managed mise.toml (or .mise.toml) that pins your lint tools."
+            exit 1
+          fi
+          if ! mise which shellcheck >/dev/null 2>&1; then
+            echo "::error::'shellcheck' is not pinned in this repository's mise config. Add it (Renovate-managed), e.g. 'mise use shellcheck@<version>', so this lint job can run it."
+            exit 1
+          fi
+          repo_dir="${GITHUB_WORKSPACE:-$PWD}"
+          shellcheck_workdir="${repo_dir}"
+
+          if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/.shellcheckrc" ]; then
+            if [ -f "${repo_dir}/.shellcheckrc" ]; then
+              echo "::notice::.shellcheckrc already exists; using the local file"
+            else
+              shellcheck_workdir="${RUNNER_TEMP:-/tmp}/shellcheck-config"
+              mkdir -p "${shellcheck_workdir}"
+              cp "${CONFIG_DIR}/.shellcheckrc" "${shellcheck_workdir}/.shellcheckrc"
+            fi
+          fi
+
+          if [ -n "${EXCLUDE_PATTERN}" ]; then
+            find "${repo_dir}" -name '*.sh' -not -path "${repo_dir}/${EXCLUDE_PATTERN}" -print0 |
+              (cd "${shellcheck_workdir}" && xargs -0 -r mise exec -- shellcheck)
+          else
+            find "${repo_dir}" -name '*.sh' -print0 |
+              (cd "${shellcheck_workdir}" && xargs -0 -r mise exec -- shellcheck)
+          fi
+
+      - name: Run shfmt
+        id: shfmt
+        if: ${{ inputs.lint-shfmt }}
+        continue-on-error: true
+        env:
+          EXCLUDE_PATTERN: ${{ inputs.lint-shfmt-exclude }}
+        run: |
+          # Lint tool versions are owned by the consuming repo: pinned and
+          # Renovate-managed in its mise config. Fail early with guidance when
+          # the tool this job needs is missing, rather than a cryptic mise error.
+          if [ ! -f mise.toml ] && [ ! -f .mise.toml ] && [ ! -f .config/mise/config.toml ] && [ ! -f .config/mise.toml ]; then
+            echo "::error::No mise config found. Add a Renovate-managed mise.toml (or .mise.toml) that pins your lint tools."
+            exit 1
+          fi
+          if ! mise which shfmt >/dev/null 2>&1; then
+            echo "::error::'shfmt' is not pinned in this repository's mise config. Add it (Renovate-managed), e.g. 'mise use shfmt@<version>', so this lint job can run it."
+            exit 1
+          fi
+          if [ -n "${EXCLUDE_PATTERN}" ]; then
+            find . -name '*.sh' -not -path "./${EXCLUDE_PATTERN}" -print0 | xargs -0 -r mise exec -- shfmt --diff
+          else
+            find . -name '*.sh' -print0 | xargs -0 -r mise exec -- shfmt --diff
+          fi
+
+      - name: Run checkov
+        id: checkov
+        if: ${{ inputs.lint-checkov }}
+        continue-on-error: true
+        env:
+          UPLOAD_SARIF: ${{ inputs.upload-sarif }}
+        run: |-
+          if [ "${UPLOAD_SARIF}" = "true" ]; then
+            mise exec -- checkov -d . --output sarif --output-file-path "${RUNNER_TEMP}" || true
+          else
+            # No GitHub Advanced Security: gate on exit code with console output.
+            mise exec -- checkov -d . --compact --quiet
+          fi
+
+      - name: Filter skipped checks from SARIF
+        id: checkov-sarif-filter
+        if: ${{ inputs.lint-checkov && inputs.upload-sarif }}
+        continue-on-error: true
+        run: |-
+          sarif="${RUNNER_TEMP}/results_sarif.sarif"
+          if [ -f "${sarif}" ]; then
+            jq '
+              .runs |= [
+                .[] | .results |= [
+                  .[] | select(.level != "none")
+                ]
+              ]
+            ' "${sarif}" > "${sarif}.filtered"
+            mv "${sarif}.filtered" "${sarif}"
+          fi
+
+      - name: Upload checkov SARIF report
+        id: checkov-sarif
+        if: ${{ inputs.lint-checkov && inputs.upload-sarif }}
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: ${{ runner.temp }}/results_sarif.sarif
+          category: checkov
+
+      - name: Run trivy
+        id: trivy
+        if: ${{ inputs.lint-trivy }}
+        continue-on-error: true
+        env:
+          CONFIG_DIR: ${{ inputs.lint-config-dir }}
+          UPLOAD_SARIF: ${{ inputs.upload-sarif }}
+        run: |-
+          # Lint tool versions are owned by the consuming repo: pinned and
+          # Renovate-managed in its mise config. Fail early with guidance when
+          # the tool this job needs is missing, rather than a cryptic mise error.
+          if [ ! -f mise.toml ] && [ ! -f .mise.toml ] && [ ! -f .config/mise/config.toml ] && [ ! -f .config/mise.toml ]; then
+            echo "::error::No mise config found. Add a Renovate-managed mise.toml (or .mise.toml) that pins your lint tools."
+            exit 1
+          fi
+          if ! mise which trivy >/dev/null 2>&1; then
+            echo "::error::'trivy' is not pinned in this repository's mise config. Add it (Renovate-managed), e.g. 'mise use trivy@<version>', so this lint job can run it."
+            exit 1
+          fi
+          trivy_args=()
+          if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/trivy.yaml" ]; then
+            trivy_args+=(--config "${CONFIG_DIR}/trivy.yaml")
+          fi
+
+          if [ "${UPLOAD_SARIF}" = "true" ]; then
+            mise exec -- trivy fs "${trivy_args[@]}" \
+              --scanners misconfig,secret \
+              --format sarif \
+              --output "${RUNNER_TEMP}/trivy.sarif" . || true
+          else
+            # No GitHub Advanced Security: gate on exit code with console output.
+            mise exec -- trivy fs "${trivy_args[@]}" \
+              --scanners misconfig,secret \
+              --exit-code 1 .
+          fi
+
+      - name: Upload trivy SARIF report
+        id: trivy-sarif
+        if: ${{ inputs.lint-trivy && inputs.upload-sarif }}
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: ${{ runner.temp }}/trivy.sarif
+          category: trivy
+
+      - name: Run zizmor
+        id: zizmor
+        if: ${{ inputs.lint-zizmor }}
+        continue-on-error: true
+        env:
+          UPLOAD_SARIF: ${{ inputs.upload-sarif }}
+        run: |-
+          if [ "${UPLOAD_SARIF}" = "true" ]; then
+            mise exec -- zizmor --format sarif . > "${RUNNER_TEMP}/zizmor.sarif"
+          else
+            # No GitHub Advanced Security: gate on exit code with console output.
+            mise exec -- zizmor .
+          fi
+
+      - name: Upload zizmor SARIF report
+        id: zizmor-sarif
+        if: ${{ inputs.lint-zizmor && inputs.upload-sarif }}
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: ${{ runner.temp }}/zizmor.sarif
+          category: zizmor
+
+      - name: Check config drift against central repo
+        id: config-drift
+        if: ${{ inputs.lint-config-drift }}
+        continue-on-error: true
+        run: |-
+          BASE_URL="https://raw.githubusercontent.com/DevSecNinja/.github/main/config-sync/files"
+          API_URL="https://api.github.com/repos/DevSecNinja/.github/contents/config-sync/files"
+          drifted=0
+
+          # Dynamically discover files from the central repo
+          files=$(curl -sf "${API_URL}" | grep '"name"' | sed 's/.*"name": "\(.*\)".*/\1/')
+
+          for file in ${files}; do
+            if [ ! -f "${file}" ]; then
+              echo "::warning::${file} exists in central repo but not locally (skipping)"
+              continue
+            fi
+
+            echo "Checking ${file}..."
+            if ! curl -sf "${BASE_URL}/${file}" | diff -u "${file}" - > /tmp/diff_output 2>&1; then
+              echo "::error::${file} has drifted from central config"
+              cat /tmp/diff_output
+              drifted=1
+            else
+              echo "  ✓ ${file} matches"
+            fi
+          done
+
+          if [ "${drifted}" -eq 1 ]; then
+            echo ""
+            echo "Config files have drifted from DevSecNinja/.github/config-sync/files/"
+            echo "Run the config-sync workflow or manually update the files."
+            exit 1
+          fi
+
+          echo ""
+          echo "All config files match the central repository."
+
+      - name: Report linter results
+        if: ${{ !cancelled() }}
+        env:
+          STEP_RESULTS: ${{ toJSON(steps) }}
+        run: |-
+          set -euo pipefail
+
+          {
+            echo "### Lint results"
+            echo ""
+            echo "| Step | Outcome |"
+            echo "| ---- | ------- |"
+            jq -r 'to_entries[] | "| `\(.key)` | \(.value.outcome) |"' <<<"${STEP_RESULTS}"
+          } >>"${GITHUB_STEP_SUMMARY}"
+
+          failed="$(jq -r 'to_entries[] | select(.value.outcome == "failure") | .key' <<<"${STEP_RESULTS}")"
+          if [ -n "${failed}" ]; then
+            while IFS= read -r step; do
+              echo "::error::Lint step '${step}' failed; see its log above."
+            done <<<"${failed}"
+            exit 1
+          fi
+
+          echo "All enabled linters passed."

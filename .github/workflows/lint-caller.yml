@@ -28,3 +28,22 @@ jobs:
       # renovate: datasource=github-releases depName=golangci/golangci-lint
       # golangci-lint-version: "v2.12.2"
       lint-config-dir: config-sync/files
+
+  lint-single-job:
+    # Exercises `lint-job-mode: single` — the default for private callers —
+    # on every PR here (this repository is public, so it is free). Results
+    # are gated on exit codes (upload-sarif: false) so the SARIF categories of
+    # the job above are not uploaded twice. zizmor is left to the job above:
+    # in exit-code mode it fails on the low-severity `self-repository` hints
+    # about the local `./` references in this repo's own caller workflows.
+    uses: ./.github/workflows/lint.yml
+    permissions:
+      contents: read
+      security-events: write
+    with:
+      # renovate: datasource=github-releases depName=jdx/mise
+      mise-version: "2026.10.19"
+      lint-config-dir: config-sync/files
+      lint-job-mode: single
+      upload-sarif: false
+      lint-zizmor: false

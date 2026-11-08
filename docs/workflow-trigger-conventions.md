@@ -47,6 +47,23 @@ mis-configuration is a well-known supply-chain footgun. If you must use
 it, restrict to specific event types (e.g. `[labeled]`) and never check
 out the PR head with the elevated token.
 
+**Don't subscribe to events that can't change the result.** Every job
+that starts is billed at least one full minute, and Renovate generates
+a lot of incidental events
+([ADR 0010](design-decisions/0010-batch-renovate-updates-to-save-actions-minutes.md)):
+
+- Leave `edited` out of `pull_request.types` unless the workflow reads
+  the PR title, body, or base branch — Renovate rewrites its PR bodies on
+  most runs.
+- Guard `issues: edited` handlers against `renovate[bot]`, which edits
+  its Dependency Dashboard issue on nearly every run.
+- Skip post-merge work that dependency bumps can't affect (e.g.
+  TODO-to-issue) with `if: github.actor != 'renovate[bot]'` on the
+  calling job.
+- Put such guards on the first job in the `needs:` chain (or on the
+  calling job): a skipped job is free, and every job that needs it is
+  skipped too.
+
 ---
 
 ## Concurrency
@@ -77,6 +94,22 @@ concurrency:
 Mid-run cancellation can corrupt state: half-uploaded release assets,
 partially-deployed Pages builds, release-please's own retry-on-empty-PR
 logic interrupted mid-write. Let the run finish; queue the next one.
+
+**For workflows triggered by both PRs and pushes (Pages, lint with SARIF
+upload) — cancel PR runs only:**
+
+```yaml
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+```
+
+A newer push to a PR cancels its running run. A running push/main run
+is never cancelled, so a production deploy always finishes — but a
+_queued_ push/main run is superseded by a newer push, because a group
+holds at most one pending run. That is intentional: only the latest
+commit's result (or deploy) matters, and dropping the stale run saves
+Actions minutes.
 
 **Reusable workflows (`on: workflow_call`) generally should not declare
 their own concurrency** — the caller owns it. A reusable that sets its
@@ -211,16 +244,16 @@ to make this automatic.
 
 ## Quick reference
 
-| Workflow type               | Triggers                                                    | Concurrency   | Notify IRM |
-| --------------------------- | ----------------------------------------------------------- | ------------- | ---------- |
-| Lint / test (PR-validation) | `pull_request`                                              | cancel=true   | no         |
-| Docs publish                | `push: main`, `pull_request` (preview-only)                 | cancel=false  | yes        |
-| release-please              | `push: main`, `workflow_dispatch`                           | cancel=false  | yes        |
-| Release publish             | `push: tags ["v*"]`                                         | cancel=false  | yes        |
-| Image security scan         | `schedule`, `workflow_dispatch`, `pull_request`             | cancel=false  | yes        |
-| Label sync                  | `push: main` (apply), `pull_request` (validate), `schedule` | cancel=false  | optional   |
-| TODO-to-issue               | `push: main`                                                | n/a           | optional   |
-| Reusable workflow           | `workflow_call`                                             | none (caller) | n/a        |
+| Workflow type               | Triggers                                                    | Concurrency    | Notify IRM |
+| --------------------------- | ----------------------------------------------------------- | -------------- | ---------- |
+| Lint / test (PR-validation) | `pull_request`                                              | cancel=true    | no         |
+| Docs publish                | `push: main`, `pull_request` (preview-only)                 | cancel=PR only | yes        |
+| release-please              | `push: main`, `workflow_dispatch`                           | cancel=false   | yes        |
+| Release publish             | `push: tags ["v*"]`                                         | cancel=false   | yes        |
+| Image security scan         | `schedule`, `workflow_dispatch`, `pull_request`             | cancel=false   | yes        |
+| Label sync                  | `push: main` (apply), `pull_request` (validate), `schedule` | cancel=false   | optional   |
+| TODO-to-issue               | `push: main`                                                | n/a            | optional   |
+| Reusable workflow           | `workflow_call`                                             | none (caller)  | n/a        |
 
 ---
 

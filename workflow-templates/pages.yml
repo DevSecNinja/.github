@@ -7,9 +7,10 @@ on:
     paths-ignore:
       - "**.md"
   pull_request:
+    # No `edited`: title/body edits (Renovate rewrites its PR bodies on most runs)
+    # never change the site, and the reusable workflow skips them anyway.
     types:
       - opened
-      - edited
       - synchronize
       - reopened
       - closed
@@ -18,6 +19,13 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+# One run per PR (or branch). A newer push to a PR cancels its running run.
+# A running push/main run is never cancelled, but a queued one is superseded
+# by a newer push: only the latest commit's result matters, and dropping the
+# stale run saves Actions minutes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   pages:
     uses: DevSecNinja/.github/.github/workflows/pages.yml@7a3e8e1475c658c60c23bedc7daf2e559bfe60b4 # v3.1.0

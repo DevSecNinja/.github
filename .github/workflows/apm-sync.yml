@@ -145,6 +145,22 @@ jobs:
           # shellcheck disable=SC2086 # PACKAGES is an intentional arg list.
           apm update --yes ${PACKAGES}
 
+      - name: Fetch sync branch
+        # The pinned open-pr version pushes with a bare --force-with-lease,
+        # which needs a remote-tracking ref for the branch; without it a push
+        # to an already existing branch is rejected with "stale info".
+        # open-pr v3.3.0+ leases against `git ls-remote` itself; this step is
+        # harmless there.
+        if: steps.precheck.outputs.skip != 'true'
+        env:
+          BRANCH: ${{ inputs.pr-branch }}
+        run: |-
+          depth=()
+          if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then
+            depth=(--depth=1)
+          fi
+          git fetch --no-tags "${depth[@]}" origin "+refs/heads/${BRANCH}:refs/remotes/origin/${BRANCH}" || true
+
       - name: Open sync PR
         id: open-pr
         if: steps.precheck.outputs.skip != 'true'

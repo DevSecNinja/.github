@@ -19,10 +19,24 @@
   labels: ["dependencies"],
   osvVulnerabilityAlerts: true,
   timezone: 'Europe/Amsterdam',
+  // One weekly window. Every Renovate run inside the window may push to an
+  // open branch, and every push re-runs the repo's CI, so a single short
+  // window (instead of Friday + the whole weekend) keeps the number of pushes
+  // per week low. Automerge itself is not limited by this schedule: GitHub
+  // merges as soon as the required checks pass. See
+  // docs/design-decisions/0010-batch-renovate-updates-to-save-actions-minutes.md.
   schedule: [
-    'every weekend',
-    'on Friday',
+    '* 0-7 * * 6',
   ],
+  // Only rebase a Renovate branch when it has a merge conflict. The default
+  // (`auto`, which becomes `behind-base-branch` because automerge is on)
+  // rebases every open Renovate PR each time the base branch moves — i.e. after
+  // every automerge — and each rebase re-runs CI on every open PR. Branch
+  // protection is non-strict, so a behind-base PR still auto-merges. Repos
+  // whose ruleset requires branches to be up to date before merging must
+  // override this with `rebaseWhen: "behind-base-branch"` in their own
+  // renovate.json5, otherwise their automerge PRs stall.
+  rebaseWhen: "conflicted",
   ignorePaths: [
     '**/*.sops.*',
   ],
@@ -31,6 +45,11 @@
   vulnerabilityAlerts: {
     labels: ["security"],
     minimumReleaseAge: "0",
+    // Renovate's defaults already do this; stated explicitly because security
+    // fixes must never be batched into the weekly non-major group
+    // (groups.json5) or wait for the weekly schedule.
+    groupName: null,
+    schedule: ["at any time"],
   },
   lockFileMaintenance: {
     enabled: true,
@@ -39,6 +58,9 @@
     addLabels: ["merge: auto"],
     commitMessageSuffix: "[automerge]",
     minimumReleaseAge: "0",
+    // Monthly (first day of the month) instead of Renovate's weekly default:
+    // a lock refresh rarely matters week to week, and each one costs a CI run.
+    schedule: ["* 0-7 1 * *"],
   },
   registryAliases: {
     "dhi.io": "dhi.io",

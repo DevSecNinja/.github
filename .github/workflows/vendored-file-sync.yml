@@ -146,6 +146,22 @@ jobs:
           done <<< "${PATHS}"
           exit 1
 
+      - name: Fetch working branch
+        # The pinned open-pr version pushes with a bare --force-with-lease,
+        # which needs a remote-tracking ref for the branch; without it a push
+        # to an already existing branch is rejected with "stale info".
+        # open-pr v3.3.0+ leases against `git ls-remote` itself; this step is
+        # harmless there.
+        if: ${{ inputs.create-pr && steps.detect.outputs.changed == 'true' }}
+        env:
+          BRANCH: ${{ inputs.branch }}
+        run: |-
+          depth=()
+          if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then
+            depth=(--depth=1)
+          fi
+          git fetch --no-tags "${depth[@]}" origin "+refs/heads/${BRANCH}:refs/remotes/origin/${BRANCH}" || true
+
       - name: Open or update vendored-file sync PR
         id: open-pr
         if: ${{ inputs.create-pr && steps.detect.outputs.changed == 'true' }}

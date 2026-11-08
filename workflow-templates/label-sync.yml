@@ -9,8 +9,10 @@ on:
     paths:
       - .github/labels.yaml
       - .github/labels-base.yaml
+  # Weekly drift correction for labels edited in the UI; changes to the label
+  # files themselves are applied by the push trigger above.
   schedule:
-    - cron: "0 0 * * *"
+    - cron: "0 0 * * 1"
 
 permissions:
   contents: read

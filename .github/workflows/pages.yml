@@ -189,6 +189,17 @@ permissions:
 jobs:
   validate-inputs:
     name: Validate inputs
+    # Every other job needs this one (directly or transitively), so skipping it
+    # skips the whole run without billing a single minute. On pull_request:
+    # - `edited` also fires for title/body edits, which Renovate makes on most
+    #   of its runs; only a base-branch change can affect the outcome.
+    # - On `closed`, only close-preview has work to do, and only for
+    #   same-repository, non-bot PRs with previews enabled.
+    if: >-
+      github.event_name != 'pull_request' || ((github.event.action != 'edited' || github.event.changes.base) && (github.event.action
+      != 'closed' || (inputs.cloudflare-preview && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login
+      != 'renovate[bot]' && github.event.pull_request.user.login != 'dependabot[bot]' && github.actor != 'renovate[bot]' &&
+      github.actor != 'dependabot[bot]')))
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -289,6 +300,12 @@ jobs:
     name: Detect Cloudflare configuration
     needs:
       - validate-inputs
+    # On pull_request this job only feeds the preview jobs, which never run for
+    # Renovate/Dependabot PRs, so skip it for those PRs. Never skipped on push,
+    # release, or workflow_dispatch: production deploys depend on it.
+    if: >-
+      github.event_name != 'pull_request' || github.event.action == 'closed' || (github.event.pull_request.user.login != 'renovate[bot]'
+      && github.event.pull_request.user.login != 'dependabot[bot]' && github.actor != 'renovate[bot]' && github.actor != 'dependabot[bot]')
     runs-on: ubuntu-24.04
     outputs:
       enabled: ${{ steps.detect.outputs.enabled }}
@@ -954,9 +971,12 @@ jobs:
     needs:
       - detect-cloudflare
       - test
+    # Bot PRs are matched on the PR author as well as the triggering actor, so
+    # a human pushing "Update branch" on a Renovate PR still deploys no preview.
     if: >-
       inputs.cloudflare-preview && github.event_name == 'pull_request' && github.event.action != 'closed' && github.event.pull_request.head.repo.full_name
-      == github.repository && github.actor != 'renovate[bot]' && github.actor != 'dependabot[bot]' && needs.detect-cloudflare.outputs.enabled
+      == github.repository && github.event.pull_request.user.login != 'renovate[bot]' && github.event.pull_request.user.login
+      != 'dependabot[bot]' && github.actor != 'renovate[bot]' && github.actor != 'dependabot[bot]' && needs.detect-cloudflare.outputs.enabled
       == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -1084,7 +1104,8 @@ jobs:
       - detect-cloudflare
     if: >-
       inputs.cloudflare-preview && github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.head.repo.full_name
-      == github.repository && github.actor != 'renovate[bot]' && github.actor != 'dependabot[bot]' && needs.detect-cloudflare.outputs.enabled
+      == github.repository && github.event.pull_request.user.login != 'renovate[bot]' && github.event.pull_request.user.login
+      != 'dependabot[bot]' && github.actor != 'renovate[bot]' && github.actor != 'dependabot[bot]' && needs.detect-cloudflare.outputs.enabled
       == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 5

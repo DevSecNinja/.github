@@ -27,5 +27,25 @@
       groupName: "vite",
       matchPackageNames: ["vite", "@vitejs/**", "vitest", "@vitest/**"],
     },
+    {
+      description: "Group .chezmoiversion and .mise.toml chezmoi pin updates into one PR so both files are always updated atomically and CI stays green.",
+      groupName: "chezmoi",
+      matchDepNames: ["twpayne/chezmoi", "chezmoi"],
+    },
+    {
+      // Keep this the LAST rule in this file. It overrides the specific groups
+      // above for non-major updates (which then still land together, just in
+      // the one weekly PR), so those groups only keep their own PR for major
+      // updates. It must also stay BEFORE packageRules.json5 (see the extends
+      // order in renovate.json5): rules there opt dependencies back out with
+      // `groupName: null` — notably every `docker-gated-` dependency, whose
+      // 14-day pr-cooldown soak needs its own branch (ADR 0005).
+      // Majors are not matched, so they keep separate, manually merged PRs;
+      // vulnerability fixes are excluded via vulnerabilityAlerts in base.json5.
+      description: "Batch every non-major update into a single weekly PR. One PR (instead of one per dependency) means one CI run per Renovate push, and with rebaseWhen:conflicted no cascade of rebases after each automerge. See docs/design-decisions/0010-batch-renovate-updates-to-save-actions-minutes.md.",
+      matchUpdateTypes: ["minor", "patch", "pin", "pinDigest", "digest"],
+      groupName: "all non-major dependencies",
+      groupSlug: "all-non-major",
+    },
   ],
 }
