@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted
+Accepted. Amended by [ADR 0011](0011-single-automation-github-app.md): the
+credentials may also come from the standard `AUTOMATION_APP_*` names, and the
+Actions PR-creation setting is no longer required.
 
 ## Context
 

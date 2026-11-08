@@ -111,19 +111,19 @@ fi
 grep -Fq "stale info" "${tmp_dir}/legacy.err" ||
     fail "expected a stale-info rejection, got: $(cat "${tmp_dir}/legacy.err")"
 
-# The pre-fetch step that config-sync.yml runs before the pinned (pre-fix)
-# open-pr makes that legacy push succeed.
+# The pre-fetch step that vendored-file-sync.yml runs before its pinned
+# (pre-fix) open-pr makes that legacy push succeed.
 prefetch="${tmp_dir}/prefetch.sh"
 awk '
-    $0 == "      - name: Fetch config-sync branch" { in_step = 1; next }
+    $0 == "      - name: Fetch working branch" { in_step = 1; next }
     in_step && $0 ~ /^        run: [|]/ { in_run = 1; next }
     in_run {
         if ($0 ~ /^      - name:/ || $0 ~ /^        [a-z-]+:/) exit
         sub(/^          /, "")
         print
     }
-' "${repo_root}/.github/workflows/config-sync.yml" >"${prefetch}"
-[ -s "${prefetch}" ] || fail "could not extract the pre-fetch step from config-sync.yml"
+' "${repo_root}/.github/workflows/vendored-file-sync.yml" >"${prefetch}"
+[ -s "${prefetch}" ] || fail "could not extract the pre-fetch step from vendored-file-sync.yml"
 workaround="${tmp_dir}/workaround"
 new_checkout "${workaround}"
 (cd "${workaround}" && BRANCH="${branch}" bash "${prefetch}") >/dev/null 2>&1
@@ -131,7 +131,7 @@ git -C "${workaround}" checkout --quiet -B "${branch}"
 echo "workaround" >"${workaround}/config.txt"
 git -C "${workaround}" commit --quiet -am "workaround push"
 git -C "${workaround}" push --quiet --force-with-lease origin "${branch}" 2>/dev/null ||
-    fail "config-sync's pre-fetch step does not unblock the pinned open-pr push"
+    fail "vendored-file-sync's pre-fetch step does not unblock the pinned open-pr push"
 [ "$(remote_tip "${branch}")" = "$(git -C "${workaround}" rev-parse HEAD)" ] ||
     fail "workaround push did not update the remote branch"
 

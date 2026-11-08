@@ -23,3 +23,4 @@ that supersedes the old one.
 | [0008](0008-pages-custom-domain-registration.md)               | Register Pages domains without managing DNS                            | Accepted |
 | [0009](0009-pages-managed-dns-cutover.md)                      | Opt into safe Pages DNS cutover                                        | Accepted |
 | [0010](0010-batch-renovate-updates-to-save-actions-minutes.md) | Batch Renovate updates and consolidate CI jobs to save Actions minutes | Accepted |
+| [0011](0011-single-automation-github-app.md)                   | One GitHub App for every central automation that opens pull requests   | Accepted |

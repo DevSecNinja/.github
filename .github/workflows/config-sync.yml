@@ -3,8 +3,7 @@ name: Reusable — Config Sync
 
 # Pull-based config sync: each repo calls this workflow to pull the
 # latest config files from the public DevSecNinja/.github repo and open
-# a PR if anything changed. Only requires the default GITHUB_TOKEN (no
-# PAT needed).
+# a PR if anything changed.
 #
 # Source layout mirrors target layout: anything under
 # `config-sync/files/` in the central repo is synced (overwriting) to
@@ -16,11 +15,26 @@ name: Reusable — Config Sync
 # in `.github/.config-sync-ignore` to skip them during sync. Blank
 # lines and `#` comments are allowed.
 #
-# Caller permissions: the calling job MUST grant `contents: write`,
-# `pull-requests: write` AND `issues: write` (the `config-sync` label is
-# created through the issues API). A caller that grants less fails before
-# any step runs (`startup_failure`), because a reusable workflow's jobs can
-# never request more than the calling job grants.
+# Authentication (single-App contract, see docs/automation-app.md): the
+# sync PR is opened with a short-lived token of the DevSecNinja
+# Automation GitHub App, minted from the caller repository's
+# `AUTOMATION_APP_ID` variable and `AUTOMATION_APP_PRIVATE_KEY` secret.
+# The variable is read automatically; the caller passes the secret:
+#
+#   secrets:
+#     AUTOMATION_APP_PRIVATE_KEY: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
+#
+# (or `secrets: inherit`). The `app-id` input and `app-private-key`
+# secret override those names. App-opened PRs trigger the repository's
+# CI and need no "Allow GitHub Actions to create and approve pull
+# requests" setting. Without App credentials the workflow falls back to
+# GITHUB_TOKEN with a warning; that PR only opens when the setting above
+# is enabled, and it does not trigger CI.
+#
+# Caller permissions: `contents: write` and `pull-requests: write` (used
+# by the GITHUB_TOKEN fallback). `issues: write` is not needed: labels
+# are created with the Pull requests permission. A caller that grants
+# less than the job requests fails with `startup_failure`.
 
 on:
   workflow_call:
@@ -36,6 +50,28 @@ on:
         required: false
         type: string
         default: main
+      app-id:
+        description: >-
+          GitHub App ID used to open the sync PR. Empty (default) reads the caller repository's AUTOMATION_APP_ID
+          variable. See docs/automation-app.md.
+        required: false
+        type: string
+        default: ""
+      app-environment:
+        description: >-
+          Actions environment that holds the App credentials (the dotfiles GitHubRepoConfig module provisions them into
+          `production`, pinned to the default branch). Repository-level credentials work with the default too: environment
+          values only take precedence when they exist.
+        required: false
+        type: string
+        default: production
+    secrets:
+      AUTOMATION_APP_PRIVATE_KEY:
+        description: "PEM private key of the GitHub App. Pass it by name, or use `secrets: inherit`."
+        required: false
+      app-private-key:
+        description: "Explicit private key; overrides AUTOMATION_APP_PRIVATE_KEY (e.g. for a differently named secret)."
+        required: false
 permissions:
   contents: read
 
@@ -43,11 +79,57 @@ jobs:
   sync:
     name: Sync config from central repo
     runs-on: ubuntu-24.04
+    # Exposes the environment's AUTOMATION_APP_* values without creating a
+    # deployment record on every run.
+    environment:
+      name: ${{ inputs.app-environment }}
+      deployment: false
     permissions:
+      # Only used by the GITHUB_TOKEN fallback; the App token carries its own
+      # permissions.
       contents: write
-      issues: write
       pull-requests: write
     steps:
+      - name: Resolve GitHub App credentials
+        id: app
+        env:
+          APP_ID: ${{ inputs.app-id || vars.AUTOMATION_APP_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.app-private-key || secrets.AUTOMATION_APP_PRIVATE_KEY }}
+        run: |-
+          set -euo pipefail
+
+          id_set=false
+          key_set=false
+          [[ -n "${APP_ID//[[:space:]]/}" ]] && id_set=true
+          [[ -n "${APP_PRIVATE_KEY//[[:space:]]/}" ]] && key_set=true
+
+          if [[ "${id_set}" == true && "${key_set}" == true ]]; then
+            echo "available=true" >>"${GITHUB_OUTPUT}"
+            echo "Opening the PR as the GitHub App (ID ${APP_ID})."
+            exit 0
+          fi
+
+          echo "available=false" >>"${GITHUB_OUTPUT}"
+          if [[ "${id_set}" == true ]]; then
+            reason="AUTOMATION_APP_ID is set, but the calling job does not pass the AUTOMATION_APP_PRIVATE_KEY secret."
+          elif [[ "${key_set}" == true ]]; then
+            reason="A private key was passed, but neither the AUTOMATION_APP_ID variable nor the app-id input is set."
+          else
+            reason="No GitHub App credentials (AUTOMATION_APP_ID variable, AUTOMATION_APP_PRIVATE_KEY secret)."
+          fi
+          echo "::warning title=Config Sync falls back to GITHUB_TOKEN::${reason} GITHUB_TOKEN can only open the PR when 'Allow GitHub Actions to create and approve pull requests' is enabled, and that PR does not trigger CI. See https://github.com/DevSecNinja/.github/blob/main/docs/automation-app.md"
+      - name: Generate App token
+        id: app-token
+        if: steps.app.outputs.available == 'true'
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ inputs.app-id || vars.AUTOMATION_APP_ID }}
+          private-key: ${{ secrets.app-private-key || secrets.AUTOMATION_APP_PRIVATE_KEY }}
+          # Only the calling repository, and only what the sync needs (labels
+          # are covered by Pull requests), whatever the App installation has.
+          repositories: ${{ github.repository }}
+          permission-contents: write
+          permission-pull-requests: write
       - name: Checkout calling repository
         # zizmor: ignore[artipacked]
         # Persisted credentials are required: the `actions/open-pr` step
@@ -58,6 +140,8 @@ jobs:
         # content fetched from the central repo (it only reads files
         # from `.config-sync-source/` to copy them).
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          token: ${{ steps.app-token.outputs.token || github.token }}
       - name: Checkout central config source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -169,7 +253,7 @@ jobs:
       - name: Ensure config-sync label exists
         if: steps.pull.outputs.updated == '1'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token || github.token }}
         run: |-
           if ! gh label create "config-sync" \
               --color "0075ca" \
@@ -177,30 +261,15 @@ jobs:
               --force; then
             echo "::warning::Could not create/update config-sync label (transient error or org policy). The PR will be created without it."
           fi
-      - name: Fetch config-sync branch
-        # The pinned open-pr version pushes with a bare --force-with-lease,
-        # which needs a remote-tracking ref for the branch. Without this fetch,
-        # every run where chore/config-sync already exists on the remote (an
-        # open PR, or a branch left behind after merge) is rejected with
-        # "stale info". open-pr v3.3.0+ leases against `git ls-remote` itself;
-        # this step is harmless there.
-        if: steps.pull.outputs.updated == '1'
-        env:
-          BRANCH: chore/config-sync
-        run: |-
-          depth=()
-          if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then
-            depth=(--depth=1)
-          fi
-          git fetch --no-tags "${depth[@]}" origin "+refs/heads/${BRANCH}:refs/remotes/origin/${BRANCH}" || true
       - name: Create PR if configs changed
         if: steps.pull.outputs.updated == '1'
-        uses: DevSecNinja/.github/actions/open-pr@0d0f448de257f354c89dc3a128871235d6ba8c11 # v2.5.0
+        uses: DevSecNinja/.github/actions/open-pr@9c281b38f863550ddff25df04e6fda0b9b23d00c # v3.3.0
         with:
           branch: chore/config-sync
           title: 'chore: sync config files from central repo'
           commit-message: 'chore: sync config files from DevSecNinja/.github'
           labels: config-sync
+          github-token: ${{ steps.app-token.outputs.token || github.token }}
           body: |-
             Automated PR — config files pulled from
             [DevSecNinja/.github](https://github.com/DevSecNinja/.github/tree/main/config-sync)

@@ -36,6 +36,13 @@ jobs:
   materialize:
     name: Materialize APM primitives
     runs-on: ubuntu-24.04
+    # The DevSecNinja Automation App credentials live in the `production`
+    # environment (pinned to main) once provisioned by the dotfiles
+    # GitHubRepoConfig module; `deployment: false` reads them without creating
+    # a deployment record. See docs/automation-app.md.
+    environment:
+      name: production
+      deployment: false
     permissions:
       contents: write
       pull-requests: write
@@ -49,8 +56,11 @@ jobs:
         # renovate: datasource=github-releases depName=actions/create-github-app-token
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
-          app-id: ${{ vars.RELEASE_PLEASE_APP_ID }}
-          private-key: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
+          # Standard AUTOMATION_APP_* names; the RELEASE_PLEASE_APP_* names are
+          # the same App and only kept until they are removed from this repo.
+          client-id: ${{ vars.AUTOMATION_APP_ID || vars.RELEASE_PLEASE_APP_ID }}
+          private-key: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY || secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
+          repositories: ${{ github.repository }}
           permission-contents: write
           permission-pull-requests: write
 
@@ -92,19 +102,10 @@ jobs:
           apm --version
           apm install
 
-      - name: Fetch materialize branch
-        # Populate refs/remotes/origin/chore/apm-materialize so that the
-        # --force-with-lease push in open-pr has a valid lease to compare
-        # against. Without this fetch the branch exists on the remote but the
-        # local clone has no tracking ref, causing git to report "stale info"
-        # and reject the push.
-        if: steps.precheck.outputs.skip != 'true'
-        run: git fetch origin chore/apm-materialize || true
-
       - name: Open materialize PR
         if: steps.precheck.outputs.skip != 'true'
         # renovate: datasource=github-tags depName=DevSecNinja/.github
-        uses: DevSecNinja/.github/actions/open-pr@0d0f448de257f354c89dc3a128871235d6ba8c11 # v2.5.0
+        uses: DevSecNinja/.github/actions/open-pr@9c281b38f863550ddff25df04e6fda0b9b23d00c # v3.3.0
         with:
           branch: chore/apm-materialize
           base: main

@@ -25,6 +25,7 @@ run = [
   "bash ./tests/renovate-custom-manager-coverage.sh",
   "bash ./tests/renovate-batching-contract.sh",
   "bash ./tests/release-please-auth-contract.sh",
+  "bash ./tests/automation-app-contract.sh",
   "bash ./tests/lint-job-modes-contract.sh",
   "bash ./tests/open-pr-push.sh",
   "python3 ./tests/workflow-job-conditions.py",

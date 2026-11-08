@@ -9,56 +9,64 @@ release vX.Y.Z` PR that you merge to ship. **GitHub App authentication
 is mandatory, and branch protection is respected end-to-end — no bypass
 actor needed.**
 
+Release Please authenticates as the shared **DevSecNinja Automation**
+GitHub App, the same App Config Sync and APM Sync use. The full
+credential contract — App permissions, the `AUTOMATION_APP_ID` /
+`AUTOMATION_APP_PRIVATE_KEY` names, how they are provisioned and passed —
+lives in [`automation-app.md`](automation-app.md); this guide covers only
+what is specific to Release Please.
+
 ---
 
 ## Prerequisites
 
-Before the first repo can adopt this, the org/account needs a **shared
-GitHub App**. This is a _one-time_ setup. Skip ahead to [Per-repo adoption](#per-repo-adoption) if the App already exists (it does for
-DevSecNinja — see below).
+The App already exists for DevSecNinja: **DevSecNinja Automation**
+(`devsecninja-automation`, App ID `3563533`), with repository
+permissions **Contents** and **Pull requests** (read and write) plus
+Metadata. Skip ahead to [Per-repo adoption](#per-repo-adoption).
 
-### One-time: create the GitHub App
+### One-time: create the GitHub App (other accounts only)
 
 > Personal accounts can use App credentials too — secrets just live at
-> the **repo level** instead of the org level.
+> the **repo level** (or in a repo environment) instead of the org level.
 
 1. Go to <https://github.com/settings/apps/new> (or org-level: _Org
    Settings → Developer settings → GitHub Apps → New GitHub App_).
 2. Fill in:
-   - **Name**: `DevSecNinja Release Please` (or org equivalent).
+   - **Name**: `<Org> Automation`.
    - **Homepage URL**: this repo's URL.
    - **Description** (255 char max):
 
-     > Opens release PRs via release-please across the DevSecNinja org.
-     > Uses short-lived App tokens so release PRs trigger required CI
-     > status checks under branch protection — replacing the legacy
-     > `cog bump` direct-push flow.
+     > Opens automation PRs (release-please, config sync, APM sync)
+     > with short-lived App tokens so they trigger required CI under
+     > branch protection.
 
    - **Webhook → Active**: ❌ uncheck (no webhooks needed).
-3. **Repository permissions**:
-   - `Contents`: **Read and write** (push the release branch + tag).
-   - `Pull requests`: **Read and write** (open / update the release PR).
+3. **Repository permissions** — only these:
+   - `Contents`: **Read and write** (push branches, release commits and tags).
+   - `Pull requests`: **Read and write** (open / update PRs, labels).
    - `Metadata`: Read-only (auto-required).
+
+   Never add Administration, Workflows, Secrets or Actions — see
+   [App permissions](automation-app.md#app-permissions).
 4. **Where can this GitHub App be installed?**: _Only on this account_.
 5. Create the App. From the App's settings page, capture the **App
    ID** (numeric, top of the page).
 6. **Generate a private key** ("Private keys" section → _Generate a
-   private key_). Save the downloaded `.pem` file securely — you'll
-   only need it once per repo to copy into a secret.
-7. **Install the App** on the repos that will adopt release-please
-   ("Install App" tab on the App's public page).
-
-For reference, the DevSecNinja App is `DevSecNinja Release Please`
-(App ID `3563533`).
+   private key_) and store it in 1Password with the App ID
+   (`op://Private/GitHub Automation App/{app-id,private-key}` is what
+   the dotfiles provisioning module expects).
+7. **Install the App** on the repos that will use it ("Install App" tab
+   on the App's public page).
 
 ---
 
 ## Per-repo adoption
 
 You'll do these once per repo. Order matters — do the **App install +
-credentials + Actions PR-creation setting** before merging the workflow
-PR. The reusable workflow deliberately fails closed when either
-credential is empty; it never falls back to `GITHUB_TOKEN`.
+credentials** before merging the workflow PR. The reusable workflow
+deliberately fails closed when either credential is missing; it never
+falls back to `GITHUB_TOKEN`.
 
 ### 1. Install the App on the repo
 
@@ -66,45 +74,33 @@ From the App's public page, _Install App → Configure_, and tick the
 repo. Or navigate to _Repo Settings → Integrations → GitHub Apps →
 Configure_.
 
-### 2. Add the secret + variable
+### 2. Provision the credentials
 
-In _Repo Settings → Secrets and variables → Actions_:
+Provision the variable `AUTOMATION_APP_ID` and the secret
+`AUTOMATION_APP_PRIVATE_KEY` from 1Password with the dotfiles
+`GitHubRepoConfig` module (`-Check AppCredential`, then apply without
+`-WhatIf`), as described in
+[Per-repository credentials](automation-app.md#per-repository-credentials).
+On public repos it stores them in the `production` environment, pinned
+to the default branch; on private repos at repository level. Either
+works with the caller below.
 
-- **Variables tab → New repository variable**
-  - Name: `RELEASE_PLEASE_APP_ID`
-  - Value: the App's numeric ID (e.g. `3563533`).
-  - App IDs are not sensitive — a variable is fine and surfaces in logs
-    for easier debugging.
-- **Secrets tab → New repository secret**
-  - Name: `RELEASE_PLEASE_APP_PRIVATE_KEY`
-  - Value: the _full_ contents of the `.pem` file generated in the
-    one-time setup, including `-----BEGIN/END RSA PRIVATE KEY-----`
-    lines.
-
-> Renovate cannot manage these. They are configured once per repo and
+> Renovate cannot manage these. They are provisioned once per repo and
 > rotated only if the App's private key is compromised.
 
-### 3. Enable Actions PR-creation
+### 3. Leave Actions PR-creation off
 
 _Repo Settings → Actions → General → Workflow permissions →_
-**✅ "Allow GitHub Actions to create and approve pull requests"** →
-Save.
-
-This is a separate, GitHub-side guardrail and **cannot** be granted via
-workflow YAML `permissions:` alone. Without it, release-please's first
-run fails with:
-
-> `GitHub Actions is not permitted to create or approve pull requests`
-
-(The workflow successfully creates the branch + commit; only the
-final PR-open step is blocked.)
+**"Allow GitHub Actions to create and approve pull requests"** is **not
+required**: that setting governs `GITHUB_TOKEN` only, and Release Please
+opens its PR with the App token. Leave it **off** (or turn it off), so
+no workflow can approve pull requests with `GITHUB_TOKEN`.
 
 ### 4. Choose a publication pattern
 
 The authentication contract is the same for both supported patterns:
-the App installation, `RELEASE_PLEASE_APP_ID`,
-`RELEASE_PLEASE_APP_PRIVATE_KEY`, and the Actions PR-creation setting
-are mandatory.
+the App installation and the `AUTOMATION_APP_ID` /
+`AUTOMATION_APP_PRIVATE_KEY` credentials are mandatory.
 
 #### Pattern A: Direct Release Please GitHub Release
 
@@ -131,9 +127,13 @@ Commit the following on a feature branch:
 
 #### `.github/workflows/release-please.yml`
 
-Use the [`workflow-templates/release-please.yml`](../workflow-templates/release-please.yml)
-in this repo (also available via the GitHub UI's "New workflow"
-picker), or paste:
+Paste the snippet below. The
+[`workflow-templates/release-please.yml`](../workflow-templates/release-please.yml)
+starter (also in the GitHub UI's "New workflow" picker) is equivalent once it
+pins v3.4.0 or later; older copies of it pass the legacy
+`RELEASE_PLEASE_APP_*` names, which only exist in repos onboarded before
+v3.4.0, so a repo provisioned with just the standard names cannot release
+with them.
 
 ```yaml
 ---
@@ -149,15 +149,21 @@ concurrency:
   cancel-in-progress: false
 jobs:
   release-please:
-    uses: DevSecNinja/.github/.github/workflows/release-please.yml@<sha> # vX.Y.Z
+    uses: DevSecNinja/.github/.github/workflows/release-please.yml@<sha> # v3.4.0
     permissions:
       contents: write
       pull-requests: write
-    with:
-      app-id: ${{ vars.RELEASE_PLEASE_APP_ID }}
     secrets:
-      app-private-key: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
+      AUTOMATION_APP_PRIVATE_KEY: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
 ```
+
+The App ID is read from the `AUTOMATION_APP_ID` variable automatically;
+the private key has to be passed by the calling job, as above. Repos
+onboarded before v3.4.0 pass the legacy names explicitly
+(`app-id: ${{ vars.RELEASE_PLEASE_APP_ID }}` and
+`app-private-key: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}`); that
+keeps working — see
+[Migrating from `RELEASE_PLEASE_APP_*`](automation-app.md#migrating-from-release_please_app_).
 
 Pin `<sha>` to a release-tagged commit of `DevSecNinja/.github`. The
 `# vX.Y.Z` version comment on the `uses:` line is all Renovate needs:
@@ -253,25 +259,36 @@ On merge to `main`:
 
 ### `GitHub Actions is not permitted to create or approve pull requests`
 
-Step 3 above wasn't done. Toggle the setting and re-run the workflow
-(or just push another commit — the workflow runs on every push to main).
+The run used `GITHUB_TOKEN` instead of the App — only possible with a
+central workflow pinned below v3.0.0, which allowed that fallback.
+Bump the pin and provision the App credentials (steps 1–2); do not
+enable the Actions setting.
+
+### `GitHub App authentication required`
+
+The preflight found no App ID or no private key. "AUTOMATION_APP_ID is
+set, but the calling job does not pass the AUTOMATION_APP_PRIVATE_KEY
+secret" means the caller lacks the `secrets:` mapping from step 5.
+Otherwise provision the credentials (step 2).
 
 ### `Bad credentials` from `actions/create-github-app-token`
 
 - Check the App is **installed** on the repo (step 1).
-- Check `RELEASE_PLEASE_APP_PRIVATE_KEY` contains the entire `.pem`
+- Check `AUTOMATION_APP_PRIVATE_KEY` contains the entire `.pem`
   including header/footer lines.
-- Check `RELEASE_PLEASE_APP_ID` is the App ID, not the Installation ID
-  (different number).
+- Check `AUTOMATION_APP_ID` is the App ID, not the client ID or the
+  Installation ID (different values).
+
+See [Troubleshooting](automation-app.md#troubleshooting) for the
+environment and permission errors shared with the other workflows.
 
 ### Release PR opens but no CI runs on it
 
 Current versions fail before running Release Please when either App
-credential is empty. If a PR was opened by `github-actions[bot]`, the
+credential is missing. If a PR was opened by `github-actions[bot]`, the
 caller is pinned to an older central workflow that allowed the
-`GITHUB_TOKEN` fallback. Update its central workflow pin, then verify in
-_Repo Settings → Variables → Actions_ that `RELEASE_PLEASE_APP_ID`
-exists and is non-empty.
+`GITHUB_TOKEN` fallback. Update its central workflow pin and provision
+the credentials.
 
 Quick unblock for an already-open release PR: a _human user_ closes
 and reopens it (which fires `pull_request` events from a user identity,

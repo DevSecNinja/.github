@@ -204,12 +204,15 @@ Conventions:
 
 ## Release flow with release-please
 
-Every release-please caller must authenticate with the Release Please
-GitHub App. The App must be installed with Contents and Pull requests
-write permissions, both credentials must be configured, and the
-repository must enable **Allow GitHub Actions to create and approve pull
-requests**. The reusable workflow fails closed rather than falling back
-to `GITHUB_TOKEN`, whose events do not trigger downstream workflows.
+Every release-please caller must authenticate with the shared
+DevSecNinja Automation GitHub App (see [`automation-app.md`](automation-app.md)).
+The App must be installed with Contents and Pull requests write
+permissions and the `AUTOMATION_APP_ID` / `AUTOMATION_APP_PRIVATE_KEY`
+credentials must be provisioned. The repository does **not** need
+**Allow GitHub Actions to create and approve pull requests** — that
+setting governs `GITHUB_TOKEN` only, so leave it off. The reusable
+workflow fails closed rather than falling back to `GITHUB_TOKEN`, whose
+events do not trigger downstream workflows.
 
 Two publication patterns are supported:
 
