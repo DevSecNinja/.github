@@ -80,6 +80,15 @@ on:
         required: false
         type: string
         default: ""
+      build-github-token:
+        description: >-
+          Run `build-command` once in the read-only (`contents: read`) test job with `GITHUB_TOKEN` in its environment, and have the
+          deploy jobs download the result instead of building. Use this when the build calls the GitHub API (avoids unauthenticated
+          rate limits) without giving the build step the deploy jobs' write permissions. The build then runs with the test job's
+          package-manager cache enabled.
+        required: false
+        type: boolean
+        default: false
       pre-deploy-command:
         description: "Optional command before the GitHub Pages upload"
         required: false
@@ -427,6 +436,9 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # Fetch tags so a build-github-token build can read the release tag
+          # at HEAD (footer/version metadata). Safe when no tags exist.
+          fetch-tags: ${{ inputs.build-github-token }}
       - name: Setup Node.js
         if: ${{ inputs.node-version != '' }}
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -454,6 +466,25 @@ jobs:
         env:
           TEST_COMMAND: ${{ inputs.test-command }}
         run: bash -euo pipefail -c "${TEST_COMMAND}"
+      # Runs here, in a contents: read job, rather than in the privileged deploy
+      # jobs: the build gets GITHUB_TOKEN for authenticated API calls (rate
+      # limits) without any deployment, pages, or PR write permission.
+      - name: Build site
+        if: ${{ inputs.build-command != '' && inputs.build-github-token }}
+        env:
+          BUILD_COMMAND: ${{ inputs.build-command }}
+          GITHUB_TOKEN: ${{ github.token }}
+          APP_COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: bash -euo pipefail -c "${BUILD_COMMAND}"
+      - name: Upload built site
+        if: ${{ inputs.build-command != '' && inputs.build-github-token }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ format('pages-build-{0}', inputs.cloudflare-project-name || 'site') }}
+          path: ${{ inputs.artifact-path }}
+          if-no-files-found: error
+          # v4+ omits dotfiles; needed for .well-known, .nojekyll, …
+          include-hidden-files: true
   deploy:
     name: Deploy to GitHub Pages
     needs:
@@ -510,23 +541,24 @@ jobs:
           # cache-poisoning surface (zizmor), matching setup-node above.
           cache: false
       - name: Install dependencies
-        if: ${{ inputs.build-command != '' && inputs.install-command != '' }}
+        if: ${{ inputs.build-command != '' && inputs.install-command != '' && !inputs.build-github-token }}
         env:
           INSTALL_COMMAND: ${{ inputs.install-command }}
         run: bash -euo pipefail -c "${INSTALL_COMMAND}"
       - name: Build site
-        if: ${{ inputs.build-command != '' }}
+        if: ${{ inputs.build-command != '' && !inputs.build-github-token }}
         env:
           BUILD_COMMAND: ${{ inputs.build-command }}
         run: bash -euo pipefail -c "${BUILD_COMMAND}"
       # Artifacts are scoped to the workflow run, and a reusable workflow's jobs
       # are part of the caller's run — so this picks up an artifact uploaded by
-      # an earlier caller job with no extra permissions and no token handoff.
+      # an earlier caller job (or the test job, with build-github-token) with no
+      # extra permissions and no token handoff.
       - name: Download prebuilt site
-        if: ${{ inputs.artifact-name != '' }}
+        if: ${{ inputs.artifact-name != '' || (inputs.build-command != '' && inputs.build-github-token) }}
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: ${{ inputs.artifact-name }}
+          name: ${{ inputs.artifact-name || format('pages-build-{0}', inputs.cloudflare-project-name || 'site') }}
           path: ${{ inputs.artifact-path }}
       - name: Run pre-deploy command
         if: ${{ inputs.pre-deploy-command != '' }}
@@ -617,23 +649,24 @@ jobs:
           # cache-poisoning surface (zizmor), matching setup-node above.
           cache: false
       - name: Install dependencies
-        if: ${{ inputs.build-command != '' && inputs.install-command != '' }}
+        if: ${{ inputs.build-command != '' && inputs.install-command != '' && !inputs.build-github-token }}
         env:
           INSTALL_COMMAND: ${{ inputs.install-command }}
         run: bash -euo pipefail -c "${INSTALL_COMMAND}"
       - name: Build site
-        if: ${{ inputs.build-command != '' }}
+        if: ${{ inputs.build-command != '' && !inputs.build-github-token }}
         env:
           BUILD_COMMAND: ${{ inputs.build-command }}
         run: bash -euo pipefail -c "${BUILD_COMMAND}"
       # Artifacts are scoped to the workflow run, and a reusable workflow's jobs
       # are part of the caller's run — so this picks up an artifact uploaded by
-      # an earlier caller job with no extra permissions and no token handoff.
+      # an earlier caller job (or the test job, with build-github-token) with no
+      # extra permissions and no token handoff.
       - name: Download prebuilt site
-        if: ${{ inputs.artifact-name != '' }}
+        if: ${{ inputs.artifact-name != '' || (inputs.build-command != '' && inputs.build-github-token) }}
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: ${{ inputs.artifact-name }}
+          name: ${{ inputs.artifact-name || format('pages-build-{0}', inputs.cloudflare-project-name || 'site') }}
           path: ${{ inputs.artifact-path }}
       - name: Run pre-deploy command
         if: ${{ inputs.pre-deploy-command != '' }}
@@ -1020,23 +1053,24 @@ jobs:
           # cache-poisoning surface (zizmor), matching setup-node above.
           cache: false
       - name: Install dependencies
-        if: ${{ inputs.build-command != '' && inputs.install-command != '' }}
+        if: ${{ inputs.build-command != '' && inputs.install-command != '' && !inputs.build-github-token }}
         env:
           INSTALL_COMMAND: ${{ inputs.install-command }}
         run: bash -euo pipefail -c "${INSTALL_COMMAND}"
       - name: Build site
-        if: ${{ inputs.build-command != '' }}
+        if: ${{ inputs.build-command != '' && !inputs.build-github-token }}
         env:
           BUILD_COMMAND: ${{ inputs.build-command }}
         run: bash -euo pipefail -c "${BUILD_COMMAND}"
       # Artifacts are scoped to the workflow run, and a reusable workflow's jobs
       # are part of the caller's run — so this picks up an artifact uploaded by
-      # an earlier caller job with no extra permissions and no token handoff.
+      # an earlier caller job (or the test job, with build-github-token) with no
+      # extra permissions and no token handoff.
       - name: Download prebuilt site
-        if: ${{ inputs.artifact-name != '' }}
+        if: ${{ inputs.artifact-name != '' || (inputs.build-command != '' && inputs.build-github-token) }}
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: ${{ inputs.artifact-name }}
+          name: ${{ inputs.artifact-name || format('pages-build-{0}', inputs.cloudflare-project-name || 'site') }}
           path: ${{ inputs.artifact-path }}
       - name: Run pre-preview command
         if: ${{ inputs.pre-preview-command != '' }}

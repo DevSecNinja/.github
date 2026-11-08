@@ -204,7 +204,7 @@ Callers choose one publication pattern:
 
 See the [onboarding guide](release-please-onboarding.md),
 [ADR 0007](design-decisions/0007-mandatory-release-please-app-authentication.md)
-and [ADR 0011](design-decisions/0011-single-automation-github-app.md).
+and [ADR 0012](design-decisions/0011-single-automation-github-app.md).
 
 ### Pages (`pages.yml`)
 
@@ -230,6 +230,7 @@ may also opt into safe DNS CNAME creation; DNS remains unmanaged by default.
 | `test-command`                     | Validation command block. Default: empty.                                                        |
 | `test-setup-command`               | Optional command after install and before tests.                                                 |
 | `build-command`                    | Optional build command before deployment.                                                        |
+| `build-github-token`               | Run `build-command` in the read-only test job with `GITHUB_TOKEN`. Default: `false`.             |
 | `pre-deploy-command`               | Optional production-only pre-upload command.                                                     |
 | `pre-preview-command`              | Optional preview-only pre-deploy command.                                                        |
 | `update-sitemap-lastmod`           | Update sitemap `<lastmod>` dates. Default: `false`.                                              |
@@ -321,6 +322,12 @@ not cancel or serialise each other. Give each call its own
 `artifact-name` and `build-command` are mutually exclusive — the artifact is
 deployed exactly as uploaded. With `artifact-name` set the deploy jobs skip
 Node/Go setup, install and build entirely.
+
+For builds that only need `GITHUB_TOKEN` (for example to avoid GitHub API rate
+limits), set `build-github-token: true` with `build-command` instead. The
+command runs once in the `contents: read` test job with the token exported, and
+the deploy jobs download the result; no deploy job sees the token. See
+[ADR 0012](design-decisions/0012-pages-build-github-token.md).
 
 #### Cloudflare custom-domain migration
 
