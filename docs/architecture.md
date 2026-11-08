@@ -231,6 +231,7 @@ may also opt into safe DNS CNAME creation; DNS remains unmanaged by default.
 | `test-setup-command`               | Optional command after install and before tests.                                                 |
 | `build-command`                    | Optional build command before deployment.                                                        |
 | `build-github-token`               | Run `build-command` in the read-only test job with `GITHUB_TOKEN`. Default: `false`.             |
+| `build-artifact-name`              | Artifact name used by `build-github-token`; unique per call. Default: `pages-build`.             |
 | `pre-deploy-command`               | Optional production-only pre-upload command.                                                     |
 | `pre-preview-command`              | Optional preview-only pre-deploy command.                                                        |
 | `update-sitemap-lastmod`           | Update sitemap `<lastmod>` dates. Default: `false`.                                              |

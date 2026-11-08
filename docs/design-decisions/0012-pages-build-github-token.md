@@ -27,8 +27,12 @@ with `build-command`:
   `contents: read` and already runs the pull request's own code.
 - That step receives `GITHUB_TOKEN` (`github.token`). Public data needs no
   permission, so a `contents: read` token is enough to lift the rate limit.
-- The built `artifact-path` is uploaded as `pages-build-<cloudflare-project-name
-  or site>`; the deploy jobs download it instead of building.
+- The built `artifact-path` is uploaded as `build-artifact-name` (default
+  `pages-build`); the deploy jobs clear `artifact-path` and download it instead
+  of building. Artifact names must be unique per workflow run, so callers
+  making several calls with `build-github-token` set distinct names.
+  `artifact-path` must be a dedicated subdirectory (validated), so files the
+  build deleted cannot survive from the checkout.
 
 No deploy job ever exposes a token to build code. No caller-supplied secret is
 involved, so nothing here widens a credential's reach.

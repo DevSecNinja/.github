@@ -89,6 +89,13 @@ on:
         required: false
         type: boolean
         default: false
+      build-artifact-name:
+        description: >-
+          Name of the artifact `build-github-token` uploads and the deploy jobs download. Artifact names must be unique within a
+          workflow run, so give each call of this workflow its own name when more than one call sets `build-github-token`.
+        required: false
+        type: string
+        default: pages-build
       pre-deploy-command:
         description: "Optional command before the GitHub Pages upload"
         required: false
@@ -220,6 +227,8 @@ jobs:
           TEST_SETUP_COMMAND: ${{ inputs.test-setup-command }}
           TEST_COMMAND: ${{ inputs.test-command }}
           BUILD_COMMAND: ${{ inputs.build-command }}
+          BUILD_GITHUB_TOKEN: ${{ inputs.build-github-token }}
+          ARTIFACT_PATH: ${{ inputs.artifact-path }}
           ARTIFACT_NAME: ${{ inputs.artifact-name }}
           CLOUDFLARE_PREVIEW: ${{ inputs.cloudflare-preview }}
           CLOUDFLARE_PRODUCTION: ${{ inputs.cloudflare-production }}
@@ -244,6 +253,22 @@ jobs:
           if [ -n "${ARTIFACT_NAME}" ] && [ -n "${BUILD_COMMAND}" ]; then
             echo "::error::artifact-name and build-command are mutually exclusive; the artifact is deployed as-is."
             exit 1
+          fi
+
+          if [ "${BUILD_GITHUB_TOKEN}" = "true" ]; then
+            if [ -z "${BUILD_COMMAND}" ]; then
+              echo "::error::build-github-token requires build-command."
+              exit 1
+            fi
+
+            # The deploy jobs delete artifact-path before restoring the built
+            # artifact, so it must be a dedicated subdirectory of the workspace.
+            case "${ARTIFACT_PATH}" in
+              "" | "." | "./" | /* | .. | ../* | */.. | */../*)
+                echo "::error::build-github-token requires artifact-path to be a dedicated relative subdirectory (for example 'dist'), not '${ARTIFACT_PATH}'."
+                exit 1
+                ;;
+            esac
           fi
 
           if [ -z "${WRANGLER_VERSION}" ] && {
@@ -480,7 +505,7 @@ jobs:
         if: ${{ inputs.build-command != '' && inputs.build-github-token }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: ${{ format('pages-build-{0}', inputs.cloudflare-project-name || 'site') }}
+          name: ${{ inputs.build-artifact-name }}
           path: ${{ inputs.artifact-path }}
           if-no-files-found: error
           # v4+ omits dotfiles; needed for .well-known, .nojekyll, …
@@ -554,11 +579,16 @@ jobs:
       # are part of the caller's run — so this picks up an artifact uploaded by
       # an earlier caller job (or the test job, with build-github-token) with no
       # extra permissions and no token handoff.
+      - name: Clear stale files from artifact path
+        if: ${{ inputs.build-command != '' && inputs.build-github-token }}
+        env:
+          ARTIFACT_PATH: ${{ inputs.artifact-path }}
+        run: rm -rf -- "${ARTIFACT_PATH}"
       - name: Download prebuilt site
         if: ${{ inputs.artifact-name != '' || (inputs.build-command != '' && inputs.build-github-token) }}
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: ${{ inputs.artifact-name || format('pages-build-{0}', inputs.cloudflare-project-name || 'site') }}
+          name: ${{ inputs.artifact-name || inputs.build-artifact-name }}
           path: ${{ inputs.artifact-path }}
       - name: Run pre-deploy command
         if: ${{ inputs.pre-deploy-command != '' }}
@@ -662,11 +692,16 @@ jobs:
       # are part of the caller's run — so this picks up an artifact uploaded by
       # an earlier caller job (or the test job, with build-github-token) with no
       # extra permissions and no token handoff.
+      - name: Clear stale files from artifact path
+        if: ${{ inputs.build-command != '' && inputs.build-github-token }}
+        env:
+          ARTIFACT_PATH: ${{ inputs.artifact-path }}
+        run: rm -rf -- "${ARTIFACT_PATH}"
       - name: Download prebuilt site
         if: ${{ inputs.artifact-name != '' || (inputs.build-command != '' && inputs.build-github-token) }}
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: ${{ inputs.artifact-name || format('pages-build-{0}', inputs.cloudflare-project-name || 'site') }}
+          name: ${{ inputs.artifact-name || inputs.build-artifact-name }}
           path: ${{ inputs.artifact-path }}
       - name: Run pre-deploy command
         if: ${{ inputs.pre-deploy-command != '' }}
@@ -1066,11 +1101,16 @@ jobs:
       # are part of the caller's run — so this picks up an artifact uploaded by
       # an earlier caller job (or the test job, with build-github-token) with no
       # extra permissions and no token handoff.
+      - name: Clear stale files from artifact path
+        if: ${{ inputs.build-command != '' && inputs.build-github-token }}
+        env:
+          ARTIFACT_PATH: ${{ inputs.artifact-path }}
+        run: rm -rf -- "${ARTIFACT_PATH}"
       - name: Download prebuilt site
         if: ${{ inputs.artifact-name != '' || (inputs.build-command != '' && inputs.build-github-token) }}
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: ${{ inputs.artifact-name || format('pages-build-{0}', inputs.cloudflare-project-name || 'site') }}
+          name: ${{ inputs.artifact-name || inputs.build-artifact-name }}
           path: ${{ inputs.artifact-path }}
       - name: Run pre-preview command
         if: ${{ inputs.pre-preview-command != '' }}
