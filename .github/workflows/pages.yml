@@ -82,16 +82,19 @@ on:
         default: ""
       build-github-token:
         description: >-
-          Run `build-command` once in the read-only (`contents: read`) test job with `GITHUB_TOKEN` in its environment, and have the
+          Run `build-command` once in the read-only (`contents: read`) test job with `GITHUB_TOKEN` in its environment, and
+          have the
           deploy jobs download the result instead of building. Use this when the build calls the GitHub API (avoids unauthenticated
-          rate limits) without giving the build step the deploy jobs' write permissions. The build then runs with the test job's
+          rate limits) without giving the build step the deploy jobs' write permissions. The build then runs with the test
+          job's
           package-manager cache enabled.
         required: false
         type: boolean
         default: false
       build-artifact-name:
         description: >-
-          Name of the artifact `build-github-token` uploads and the deploy jobs download. Artifact names must be unique within a
+          Name of the artifact `build-github-token` uploads and the deploy jobs download. Artifact names must be unique within
+          a
           workflow run, so give each call of this workflow its own name when more than one call sets `build-github-token`.
         required: false
         type: string
