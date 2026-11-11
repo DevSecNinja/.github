@@ -60,9 +60,9 @@ inputs:
     default: "."
   labels:
     description: |
-      Newline-delimited list of labels to apply on PR creation. Labels
-      that don't yet exist on the repo are skipped by `gh` with a
-      warning. Empty by default.
+      Newline-delimited list of labels to apply when opening the PR, and to
+      add when an existing PR is reused. Missing labels are created first; a
+      label that can't be created is skipped with a warning. Empty by default.
     required: false
     default: ""
   draft:
@@ -224,13 +224,32 @@ runs:
       run: |-
         set -euo pipefail
 
-        # Build label flags from newline-delimited input.
-        label_args=()
+        # Collect labels from newline-delimited input.
+        labels=()
         while IFS= read -r line; do
           trimmed="${line#"${line%%[![:space:]]*}"}"
           trimmed="${trimmed%"${trimmed##*[![:space:]]}"}"
-          [ -n "${trimmed}" ] && label_args+=(--label "${trimmed}")
+          [ -n "${trimmed}" ] && labels+=("${trimmed}")
         done <<< "${LABELS}"
+
+        # `gh pr create --label` fails outright on a label the repo doesn't
+        # have. Create missing labels first (the Pull requests permission is
+        # enough); drop one that can't be created with a warning rather than
+        # failing the whole PR.
+        label_args=()
+        add_label_args=()
+        if [ "${#labels[@]}" -gt 0 ]; then
+          repo_labels="$(gh label list --limit 1000 --json name --jq '.[].name' 2>/dev/null)" || repo_labels=""
+          for label in "${labels[@]}"; do
+            if ! grep -Fxiq -- "${label}" <<< "${repo_labels}" &&
+              ! gh label create "${label}" >/dev/null 2>&1; then
+              echo "::warning::Label '${label}' does not exist and could not be created; continuing without it."
+              continue
+            fi
+            label_args+=(--label "${label}")
+            add_label_args+=(--add-label "${label}")
+          done
+        fi
 
         draft_args=()
         if [ "${DRAFT}" = "true" ]; then
@@ -270,6 +289,10 @@ runs:
           fi
           number=$(printf '%s' "${existing}" | jq -r '.number')
           url=$(printf '%s' "${existing}"    | jq -r '.url')
+          if [ "${#add_label_args[@]}" -gt 0 ] &&
+            ! gh pr edit "${number}" "${add_label_args[@]}" >/dev/null; then
+            echo "::warning::Could not add labels to existing PR #${number}."
+          fi
           {
             echo "created=false"
             echo "pr-url=${url}"
