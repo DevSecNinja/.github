@@ -40,8 +40,22 @@ cat >"${tmp_dir}/bin/gh" <<'EOF'
 set -euo pipefail
 echo "$*" >>"${STATE}/calls"
 has_label() { grep -Fxiq -- "$1" "${STATE}/labels"; }
+encode() { jq -rn --arg l "$1" '$l | @uri | ascii_downcase'; }
+if [ "$1" = "api" ]; then
+    # GET repos/{owner}/{repo}/labels/<name>; a `flaky` label fails once.
+    name="$(tr '[:upper:]' '[:lower:]' <<<"${2##*/}")"
+    while IFS= read -r label; do
+        [ "$(encode "${label}")" = "${name}" ] || continue
+        if grep -Fxq -- "${label}" "${STATE}/flaky"; then
+            grep -Fxv -- "${label}" "${STATE}/flaky" >"${STATE}/flaky.new" || true
+            mv "${STATE}/flaky.new" "${STATE}/flaky"
+            exit 1
+        fi
+        exit 0
+    done <"${STATE}/labels"
+    exit 1
+fi
 case "$1 $2" in
-    "label list") cat "${STATE}/labels" ;;
     "label create")
         if grep -Fxq -- "$3" "${STATE}/uncreatable" || has_label "$3"; then exit 1; fi
         echo "$3" >>"${STATE}/labels"
@@ -66,13 +80,15 @@ esac
 EOF
 chmod +x "${tmp_dir}/bin/gh"
 
-# run_case NAME LABELS: fresh state seeded with `apm-sync` missing.
+# run_case NAME LABELS [pr-exists] [UNCREATABLE] [FLAKY]: fresh state seeded
+# with `apm-sync` missing.
 run_case() {
     export STATE="${tmp_dir}/$1"
     mkdir -p "${STATE}"
     printf 'bug\nMerge: Manual\n' >"${STATE}/labels"
     : >"${STATE}/uncreatable"
     : >"${STATE}/calls"
+    echo "${5:-}" >"${STATE}/flaky"
     [ "${3:-}" = "pr-exists" ] && touch "${STATE}/pr-exists"
     [ -n "${4:-}" ] && echo "$4" >"${STATE}/uncreatable"
     PATH="${tmp_dir}/bin:${PATH}" \
@@ -107,7 +123,13 @@ grep -Fxq "pr edit 7 --add-label apm-sync --add-label bug" "${STATE}/calls" || f
 
 # 4. No labels: no label API calls.
 run_case none "" || fail "PR creation without labels failed"
-grep -Fq "label " "${STATE}/calls" && fail "no label calls expected without labels"
+grep -Eq "^(api|label) " "${STATE}/calls" && fail "no label calls expected without labels"
 grep -Fq "pr edit" "${STATE}/calls" && fail "no pr edit expected without labels"
 
-echo "✓ open-pr: missing, uncreatable, reused and absent labels all handled."
+# 5. An existing label whose first lookup fails (create then reports it exists)
+#    is kept, not dropped.
+run_case recheck $'bug' "" "" bug || fail "PR creation failed when a label lookup failed once"
+grep -Fq "::warning::" "${STATE}/log" && fail "an existing label must not be dropped after a failed lookup"
+grep -F "pr create" "${STATE}/calls" | grep -Fq -- "--label bug" || fail "existing label was dropped after a failed lookup"
+
+echo "✓ open-pr: missing, uncreatable, reused, absent and re-checked labels all handled."

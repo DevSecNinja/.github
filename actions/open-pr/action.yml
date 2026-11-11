@@ -235,21 +235,24 @@ runs:
         # `gh pr create --label` fails outright on a label the repo doesn't
         # have. Create missing labels first (the Pull requests permission is
         # enough); drop one that can't be created with a warning rather than
-        # failing the whole PR.
+        # failing the whole PR. Check each label directly: a listing is paged
+        # and can miss labels. Re-check after a failed create, which also
+        # covers another run creating the label first.
+        label_exists() {
+          gh api "repos/{owner}/{repo}/labels/$(jq -rn --arg l "$1" '$l | @uri')" --silent >/dev/null 2>&1
+        }
         label_args=()
         add_label_args=()
-        if [ "${#labels[@]}" -gt 0 ]; then
-          repo_labels="$(gh label list --limit 1000 --json name --jq '.[].name' 2>/dev/null)" || repo_labels=""
-          for label in "${labels[@]}"; do
-            if ! grep -Fxiq -- "${label}" <<< "${repo_labels}" &&
-              ! gh label create "${label}" >/dev/null 2>&1; then
-              echo "::warning::Label '${label}' does not exist and could not be created; continuing without it."
-              continue
-            fi
-            label_args+=(--label "${label}")
-            add_label_args+=(--add-label "${label}")
-          done
-        fi
+        for label in ${labels[@]+"${labels[@]}"}; do
+          if ! label_exists "${label}" &&
+            ! gh label create "${label}" >/dev/null 2>&1 &&
+            ! label_exists "${label}"; then
+            echo "::warning::Label '${label}' does not exist and could not be created; continuing without it."
+            continue
+          fi
+          label_args+=(--label "${label}")
+          add_label_args+=(--add-label "${label}")
+        done
 
         draft_args=()
         if [ "${DRAFT}" = "true" ]; then
