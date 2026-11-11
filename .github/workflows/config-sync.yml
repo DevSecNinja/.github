@@ -15,6 +15,11 @@ name: Reusable — Config Sync
 # in `.github/.config-sync-ignore` to skip them during sync. Blank
 # lines and `#` comments are allowed.
 #
+# APM-managed paths: a path listed under `deployed_files` in the
+# calling repo's `apm.lock.yaml` is skipped automatically, so repos that
+# install DevSecNinja/ai-toolkit through APM keep their own copy of the
+# synced ai-toolkit instructions (see docs/architecture.md).
+#
 # Authentication (single-App contract, see docs/automation-app.md): the
 # sync PR is opened with a short-lived token of the DevSecNinja
 # Automation GitHub App, minted from the caller repository's
@@ -191,6 +196,18 @@ jobs:
               return 1
           }
 
+          # Paths that APM deploys in this repository (`deployed_files` in
+          # apm.lock.yaml) belong to APM. A repo that installs ai-toolkit
+          # itself keeps its own pinned copy instead of a second one.
+          apm_managed=""
+          if [ -f apm.lock.yaml ]; then
+              apm_managed=$(sed -n 's/^[[:space:]]*-[[:space:]]\{1,\}\([^:[:space:]]\{1,\}\)[[:space:]]*$/\1/p' apm.lock.yaml)
+          fi
+
+          is_apm_managed() {
+              [ -n "${apm_managed}" ] && grep -Fxq -- "$1" <<< "${apm_managed}"
+          }
+
           sync_tree() {
               local kind="$1"   # "files" or "templates"
               local src_root="${SOURCE_DIR}/${kind}"
@@ -212,6 +229,11 @@ jobs:
 
                   if is_ignored "${dest}"; then
                       echo "  ⊘ ${dest} (ignored via ${IGNORE_FILE})"
+                      continue
+                  fi
+
+                  if is_apm_managed "${dest}"; then
+                      echo "  ⊘ ${dest} (deployed by APM, see apm.lock.yaml)"
                       continue
                   fi
 

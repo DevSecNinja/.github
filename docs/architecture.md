@@ -20,7 +20,9 @@ repositories use it.
 ├── copilot-models.json     # Reviewed model choices (data; explicit consumer opt-in)
 ├── config-sync/
 │   ├── files/              # Files auto-synced to every repo (read-only)
+│   │   ├── .github/instructions/     # Org-wide AI instructions, generated from ai-toolkit
 │   │   └── .github/labels-base.yaml  # Base label set synced to all repos
+│   ├── sync-ai-toolkit-instructions.sh  # Regenerates files/.github/instructions/
 │   └── templates/          # Starting-point files — copy & adapt per repo
 ├── docs/
 │   └── design-decisions/   # Architecture Decision Records (ADRs)
@@ -461,6 +463,12 @@ example, `config-sync/files/.github/CODEOWNERS` lands at
 blank lines are allowed. The `unmanaged` repo topic remains the
 all-or-nothing escape hatch.
 
+**APM-managed paths are skipped.** When the calling repo has an
+`apm.lock.yaml`, every path listed there under `deployed_files` is left
+alone, so a repo that installs `DevSecNinja/ai-toolkit` through APM keeps
+its own pinned copy of the org-wide AI instructions instead of getting a
+second one. See [Org-wide AI instructions](#org-wide-ai-instructions-ai-toolkit).
+
 | Input / secret               | Description                                                                         |
 | ---------------------------- | ----------------------------------------------------------------------------------- |
 | `sync-templates`             | Also bootstrap files from `config-sync/templates/`. Default: `false`.               |
@@ -806,20 +814,69 @@ The directory tree mirrors the layout in the calling repo: a file at
 repo out of a specific path, list it in `.github/.config-sync-ignore` at
 the repo root.
 
-| File                       | Purpose                                       |
-| -------------------------- | --------------------------------------------- |
-| `.editorconfig`            | Editor formatting defaults                    |
-| `.github/CODEOWNERS`       | Canonical CODEOWNERS (default `@DevSecNinja`) |
-| `.github/labels-base.yaml` | Base label set synced to all repos            |
-| `.gitleaks.toml`           | Gitleaks allow-list                           |
-| `.markdownlint.yaml`       | Markdown lint rules                           |
-| `.shellcheckrc`            | ShellCheck configuration                      |
-| `.yamlfmt.yaml`            | yamlfmt formatting rules                      |
-| `.yamllint.yaml`           | yamllint rules                                |
-| `dprint.json`              | dprint Markdown formatter config              |
-| `issue-labeler.yaml`       | Issue auto-label rules                        |
-| `pr-labeler.yaml`          | PR auto-label rules                           |
-| `renovate.json5`           | Renovate base config reference                |
+| File                                                           | Purpose                                               |
+| -------------------------------------------------------------- | ----------------------------------------------------- |
+| `.editorconfig`                                                | Editor formatting defaults                            |
+| `.github/CODEOWNERS`                                           | Canonical CODEOWNERS (default `@DevSecNinja`)         |
+| `.github/instructions/devsecninja-conventions.instructions.md` | Org engineering conventions for AI agents (generated) |
+| `.github/instructions/writing-style.instructions.md`           | Writing style for agent-written prose (generated)     |
+| `.github/labels-base.yaml`                                     | Base label set synced to all repos                    |
+| `.gitleaks.toml`                                               | Gitleaks allow-list                                   |
+| `.markdownlint.yaml`                                           | Markdown lint rules                                   |
+| `.shellcheckrc`                                                | ShellCheck configuration                              |
+| `.yamlfmt.yaml`                                                | yamlfmt formatting rules                              |
+| `.yamllint.yaml`                                               | yamllint rules                                        |
+| `dprint.json`                                                  | dprint Markdown formatter config                      |
+| `issue-labeler.yaml`                                           | Issue auto-label rules                                |
+| `pr-labeler.yaml`                                              | PR auto-label rules                                   |
+| `renovate.json5`                                               | Renovate base config reference                        |
+
+### Org-wide AI instructions (ai-toolkit)
+
+The Copilot instructions that every repository should carry come from
+[`DevSecNinja/ai-toolkit`](https://github.com/DevSecNinja/ai-toolkit), which
+stays the single source of truth. Config-sync delivers them to the repos that
+don't install ai-toolkit themselves:
+
+1. This repository installs ai-toolkit through APM (`apm.yml`). `apm install`
+   materializes its instructions into `.github/instructions/`.
+2. [`config-sync/sync-ai-toolkit-instructions.sh`](../config-sync/sync-ai-toolkit-instructions.sh)
+   copies the org-wide ones to `config-sync/files/.github/instructions/` and
+   adds a provenance marker after the front matter. The
+   [APM Materialize](../.github/workflows/apm-materialize.yml) workflow runs it
+   after every `apm install`, so a Renovate bump of ai-toolkit produces one
+   materialize PR that updates both. `mise run test` fails when the copies are
+   stale.
+3. Config-sync writes them to `<repo>/.github/instructions/` in every caller.
+
+| Instruction               | Synced | Why                                                                              |
+| ------------------------- | ------ | -------------------------------------------------------------------------------- |
+| `devsecninja-conventions` | Yes    | Org engineering rules: PR titles, an issue per PR, reviewable PRs, pre-PR checks |
+| `writing-style`           | Yes    | How agents write docs, commit messages and PR descriptions                       |
+| `untrusted-repositories`  | No     | Personal policy for third-party clones; belongs in user-level config             |
+
+To change which instructions are synced, edit the list at the top of the
+script and run it.
+
+**Provenance marker.** Each synced copy carries one line that names the
+ai-toolkit release it came from, so drift checks (such as
+DevSecNinja/repo-steward#29) can compare a repo's copy with the current one
+without parsing the body:
+
+```markdown
+<!-- config-sync: source=DevSecNinja/ai-toolkit ref=v0.9.1 commit=446c325d… path=.github/instructions/devsecninja-conventions.instructions.md; generated by DevSecNinja/.github, do not edit (change ai-toolkit instead) -->
+```
+
+**Repos that install ai-toolkit through APM** (for example `az-vm-start-stop`)
+keep their own copy: config-sync skips any path listed in the repo's
+`apm.lock.yaml`. Two cases need a manual step:
+
+- A caller pinned to a config-sync release from before this skip would still
+  sync the file. Add the paths to its `.github/.config-sync-ignore`, or bump
+  the pin.
+- A repo that already has the synced copy and then adopts APM: delete the
+  synced files before `apm install`, otherwise APM keeps them as
+  locally-authored files and skips its own deploy.
 
 ### Templates (`config-sync/templates/`)
 

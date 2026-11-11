@@ -34,6 +34,14 @@ This is the agentic-primitive counterpart to
 static files (linters, editorconfig, renovate), APM distributes installable agent
 primitives.
 
+Repos that don't install ai-toolkit still get its org-wide instructions
+(`devsecninja-conventions`, `writing-style`): config-sync copies them from this
+repository's materialized output. Installing ai-toolkit through APM is only
+needed for the rest of its primitives. Config-sync then leaves the
+APM-deployed instructions alone; see
+[Org-wide AI instructions](architecture.md#org-wide-ai-instructions-ai-toolkit)
+for the details, including what to delete before the first `apm install`.
+
 ---
 
 ## Prerequisites
@@ -103,6 +111,8 @@ second consumer adopts it, extract a reusable + config-sync template.
 2. Installs the pinned `apm` CLI (`pip install apm-cli`).
 3. Runs `apm install` — re-resolves `apm.lock.yaml` to the new pin and redeploys
    the primitives into the harness directories (`.github/`, `.claude/`, …).
+   In `DevSecNinja/.github` it then regenerates the config-sync copies of the
+   org-wide ai-toolkit instructions.
 4. Opens a separate `chore: materialize APM primitives` PR (App token → CI runs).
    When nothing changed, it's a no-op (no PR).
 
