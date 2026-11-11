@@ -104,8 +104,10 @@ jobs:
 
       - name: Refresh config-sync copies of the ai-toolkit instructions
         # Keeps config-sync/files/.github/instructions/ in step with the
-        # instructions just materialized, so the same PR carries both.
-        if: steps.precheck.outputs.skip != 'true'
+        # instructions just materialized, so the same PR carries both. Only
+        # DevSecNinja/.github has the script; repos that copied this workflow
+        # skip the step.
+        if: steps.precheck.outputs.skip != 'true' && hashFiles('config-sync/sync-ai-toolkit-instructions.sh') != ''
         run: bash config-sync/sync-ai-toolkit-instructions.sh
 
       - name: Open materialize PR

@@ -27,7 +27,8 @@ The `unmanaged` repo topic remains the all-or-nothing escape hatch
 (the calling workflow simply isn't installed in those repos).
 
 Paths that the calling repo deploys through APM (listed under
-`deployed_files` in its `apm.lock.yaml`) are skipped automatically.
+`deployed_files` in its `apm.lock.yaml`) are skipped automatically, as are
+generated files from a package the repo installs through APM.
 
 ### Generated: ai-toolkit instructions
 

@@ -16,9 +16,11 @@ name: Reusable — Config Sync
 # lines and `#` comments are allowed.
 #
 # APM-managed paths: a path listed under `deployed_files` in the
-# calling repo's `apm.lock.yaml` is skipped automatically, so repos that
-# install DevSecNinja/ai-toolkit through APM keep their own copy of the
-# synced ai-toolkit instructions (see docs/architecture.md).
+# calling repo's `apm.lock.yaml` is skipped automatically, and so is a
+# generated file whose provenance marker names a package the repo
+# installs through APM (or the calling repo itself). Repos that install
+# DevSecNinja/ai-toolkit through APM keep their own copy of the synced
+# ai-toolkit instructions (see docs/architecture.md).
 #
 # Authentication (single-App contract, see docs/automation-app.md): the
 # sync PR is opened with a short-lived token of the DevSecNinja
@@ -196,16 +198,38 @@ jobs:
               return 1
           }
 
-          # Paths that APM deploys in this repository (`deployed_files` in
-          # apm.lock.yaml) belong to APM. A repo that installs ai-toolkit
-          # itself keeps its own pinned copy instead of a second one.
+          # Files APM owns in this repository are left alone:
+          # - paths APM deploys here (`deployed_files` in apm.lock.yaml);
+          # - files generated from a package (their `<!-- config-sync:
+          #   source=<owner/repo>` marker) that this repository installs
+          #   through APM, even when its pinned release doesn't ship them,
+          #   so a later APM upgrade isn't blocked by a config-sync copy;
+          # - files generated from this repository itself.
           apm_managed=""
+          apm_sources=""
           if [ -f apm.lock.yaml ]; then
               apm_managed=$(sed -n 's/^[[:space:]]*-[[:space:]]\{1,\}\([^:[:space:]]\{1,\}\)[[:space:]]*$/\1/p' apm.lock.yaml)
+              apm_sources=$(sed -n 's/^-[[:space:]]*repo_url:[[:space:]]*\([^[:space:]]*\).*/\1/p' apm.lock.yaml | tr '[:upper:]' '[:lower:]')
           fi
+          self_repo=$(tr '[:upper:]' '[:lower:]' <<< "${GITHUB_REPOSITORY:-}")
 
-          is_apm_managed() {
-              [ -n "${apm_managed}" ] && grep -Fxq -- "$1" <<< "${apm_managed}"
+          apm_owner() {
+              local dest="$1" src="$2" source
+              if [ -n "${apm_managed}" ] && grep -Fxq -- "${dest}" <<< "${apm_managed}"; then
+                  echo "deployed by APM, see apm.lock.yaml"
+                  return 0
+              fi
+              source=$(sed -n 's/^<!-- config-sync: source=\([^[:space:]]*\) .*/\1/p;/^<!-- config-sync: /q' "${src}" | tr '[:upper:]' '[:lower:]')
+              [ -n "${source}" ] || return 1
+              if [ -n "${apm_sources}" ] && grep -Fxq -- "${source}" <<< "${apm_sources}"; then
+                  echo "${source} is installed through APM, see apm.lock.yaml"
+                  return 0
+              fi
+              if [ "${source}" = "${self_repo}" ]; then
+                  echo "generated from this repository"
+                  return 0
+              fi
+              return 1
           }
 
           sync_tree() {
@@ -226,14 +250,15 @@ jobs:
               while IFS= read -r src; do
                   local rel="${src#"${src_root}/"}"
                   local dest="${rel}"
+                  local reason
 
                   if is_ignored "${dest}"; then
                       echo "  ⊘ ${dest} (ignored via ${IGNORE_FILE})"
                       continue
                   fi
 
-                  if is_apm_managed "${dest}"; then
-                      echo "  ⊘ ${dest} (deployed by APM, see apm.lock.yaml)"
+                  if reason=$(apm_owner "${dest}" "${src}"); then
+                      echo "  ⊘ ${dest} (${reason})"
                       continue
                   fi
 

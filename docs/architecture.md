@@ -465,9 +465,12 @@ all-or-nothing escape hatch.
 
 **APM-managed paths are skipped.** When the calling repo has an
 `apm.lock.yaml`, every path listed there under `deployed_files` is left
-alone, so a repo that installs `DevSecNinja/ai-toolkit` through APM keeps
-its own pinned copy of the org-wide AI instructions instead of getting a
-second one. See [Org-wide AI instructions](#org-wide-ai-instructions-ai-toolkit).
+alone. So is every generated file whose provenance marker names a package
+the repo installs through APM, even when the repo's pinned release doesn't
+ship that file yet, and every file generated from the calling repo itself.
+A repo that installs `DevSecNinja/ai-toolkit` through APM keeps its own
+pinned copy of the org-wide AI instructions instead of getting a second
+one. See [Org-wide AI instructions](#org-wide-ai-instructions-ai-toolkit).
 
 | Input / secret               | Description                                                                         |
 | ---------------------------- | ----------------------------------------------------------------------------------- |
@@ -868,15 +871,18 @@ without parsing the body:
 ```
 
 **Repos that install ai-toolkit through APM** (for example `az-vm-start-stop`)
-keep their own copy: config-sync skips any path listed in the repo's
-`apm.lock.yaml`. Two cases need a manual step:
+get none of these copies: config-sync skips any path listed in the repo's
+`apm.lock.yaml` and any file whose marker names a package listed there, so
+APM stays the only writer even for instructions that the repo's pinned
+ai-toolkit release doesn't ship yet. `DevSecNinja/ai-toolkit` itself is
+skipped too. Two cases need a manual step:
 
 - A caller pinned to a config-sync release from before this skip would still
-  sync the file. Add the paths to its `.github/.config-sync-ignore`, or bump
+  sync the files. Add the paths to its `.github/.config-sync-ignore`, or bump
   the pin.
-- A repo that already has the synced copy and then adopts APM: delete the
-  synced files before `apm install`, otherwise APM keeps them as
-  locally-authored files and skips its own deploy.
+- A repo that already has the synced copies and then adopts APM: delete them
+  before `apm install`, otherwise APM keeps them as locally-authored files
+  and skips its own deploy.
 
 ### Templates (`config-sync/templates/`)
 
