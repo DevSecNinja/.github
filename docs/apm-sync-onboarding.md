@@ -46,6 +46,8 @@ primitives.
   ```sh
   apm install \
     DevSecNinja/ai-toolkit/.apm/instructions/devsecninja-conventions.instructions.md#v0.9.1 \
+    DevSecNinja/ai-toolkit/.apm/instructions/untrusted-repositories.instructions.md#v0.9.1 \
+    DevSecNinja/ai-toolkit/.apm/instructions/writing-style.instructions.md#v0.9.1 \
     DevSecNinja/ai-toolkit/.apm/skills/renovate-triage-and-merge#v0.9.1 \
     --target copilot
   git add apm.yml apm.lock.yaml .github/ .agents/   # plus any other harness dirs APM wrote
@@ -53,7 +55,9 @@ primitives.
   ```
 
   `DevSecNinja/.github`'s own [`apm.yml`](../apm.yml) is the reference: the
-  three org-wide instructions and the `renovate-triage-and-merge` skill.
+  three org-wide instructions (`devsecninja-conventions` relies on
+  `untrusted-repositories`, so install them together) and the
+  `renovate-triage-and-merge` skill.
 
   > Pin an explicit `#vX.Y.Z` so Renovate can track it; subpath pins are
   > tracked by their `owner/repo`. `apm_modules/` is the package cache. APM
