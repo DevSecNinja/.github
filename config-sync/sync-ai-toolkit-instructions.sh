@@ -75,8 +75,9 @@ lock_entry() {
 entry="$(lock_entry)"
 ref="$(sed -n 's/^ref //p' <<<"${entry}")"
 commit="$(sed -n 's/^commit //p' <<<"${entry}")"
-[ -n "${ref}" ] && [ -n "${commit}" ] ||
+if [ -z "${ref}" ] || [ -z "${commit}" ]; then
     fail "no resolved ref/commit for ${package_name} in ${lockfile}"
+fi
 
 # Inserts the provenance marker after the YAML front matter (or at the top).
 render() {
