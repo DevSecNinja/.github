@@ -841,8 +841,9 @@ The Copilot instructions that every repository should carry come from
 stays the single source of truth. Config-sync delivers them to the repos that
 don't install ai-toolkit themselves:
 
-1. This repository installs ai-toolkit through APM (`apm.yml`). `apm install`
-   materializes its instructions into `.github/instructions/`.
+1. This repository installs the ai-toolkit instructions through APM, each
+   pinned by subpath in `apm.yml`. `apm install` materializes them into
+   `.github/instructions/`.
 2. [`config-sync/sync-ai-toolkit-instructions.sh`](../config-sync/sync-ai-toolkit-instructions.sh)
    copies the org-wide ones to `config-sync/files/.github/instructions/` and
    adds a provenance marker after the front matter. The
