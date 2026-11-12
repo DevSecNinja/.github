@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-11-11T19:56:50.660070+00:00'
+generated_at: '2026-11-12T10:50:56.535458+00:00'
 apm_version: 0.35.0
 dependencies:
 - repo_url: devsecninja/ai-toolkit
@@ -57,86 +57,8 @@ dependencies:
   virtual_path: .apm/skills/renovate-triage-and-merge
   is_virtual: true
   package_type: claude_skill
-  deployed_files:
-  - .agents/skills/renovate-triage-and-merge
-  - .agents/skills/renovate-triage-and-merge/SKILL.md
-  - .agents/skills/renovate-triage-and-merge/references/dashboard.md
-  - .agents/skills/renovate-triage-and-merge/references/handoff.md
-  - .agents/skills/renovate-triage-and-merge/references/processing-order.md
-  - .agents/skills/renovate-triage-and-merge/references/testing.md
-  - .agents/skills/renovate-triage-and-merge/scripts/renovate_prs.py
-  deployed_file_hashes:
-    .agents/skills/renovate-triage-and-merge/SKILL.md: sha256:e9de7093d511a2320f48cce13c8717919dbd7856533d71876672eba8eb8de057
-    .agents/skills/renovate-triage-and-merge/references/dashboard.md: sha256:d9bf9f37ed711a6fa9d1dbe7af160cdaf432294cf343939e9134f1820a7fa976
-    .agents/skills/renovate-triage-and-merge/references/handoff.md: sha256:070f6a08eec8cfcc531df231b244a1ad4507b479f99763787360f12fb1df3f35
-    .agents/skills/renovate-triage-and-merge/references/processing-order.md: sha256:7fd21952556551ce957ddba53ec0d2e4e560068fde9877b2dbb22dfbbad46857
-    .agents/skills/renovate-triage-and-merge/references/testing.md: sha256:1b91d6596dde5d65643efb78b30ebc308ac77984c4b1a94e8188d05b4b0e901f
-    .agents/skills/renovate-triage-and-merge/scripts/renovate_prs.py: sha256:724dbda09f1cdb491a3e8e7700429e48b3ecdbb986b7885278944850e8779fbc
   content_hash: sha256:8e402686c02d7df870c7128da7f3ae2659eda8e8ca6d4753d330c1b52e74e2c9
 deployments:
-- kind: project-relative
-  target: copilot
-  value: .agents/skills/renovate-triage-and-merge
-  runtime: null
-  scope: project
-  owners:
-  - devsecninja/ai-toolkit/.apm/skills/renovate-triage-and-merge
-  active_owner: devsecninja/ai-toolkit/.apm/skills/renovate-triage-and-merge
-  content_hash: null
-- kind: project-relative
-  target: copilot
-  value: .agents/skills/renovate-triage-and-merge/SKILL.md
-  runtime: null
-  scope: project
-  owners:
-  - devsecninja/ai-toolkit/.apm/skills/renovate-triage-and-merge
-  active_owner: devsecninja/ai-toolkit/.apm/skills/renovate-triage-and-merge
-  content_hash: sha256:e9de7093d511a2320f48cce13c8717919dbd7856533d71876672eba8eb8de057
-- kind: project-relative
-  target: copilot
-  value: .agents/skills/renovate-triage-and-merge/references/dashboard.md
-  runtime: null
-  scope: project
-  owners:
-  - devsecninja/ai-toolkit/.apm/skills/renovate-triage-and-merge
-  active_owner: devsecninja/ai-toolkit/.apm/skills/renovate-triage-and-merge
-  content_hash: sha256:d9bf9f37ed711a6fa9d1dbe7af160cdaf432294cf343939e9134f1820a7fa976
-- kind: project-relative
-  target: copilot
-  value: .agents/skills/renovate-triage-and-merge/references/handoff.md
-  runtime: null
-  scope: project
-  owners:
-  - devsecninja/ai-toolkit/.apm/skills/renovate-triage-and-merge
-  active_owner: devsecninja/ai-toolkit/.apm/skills/renovate-triage-and-merge
-  content_hash: sha256:070f6a08eec8cfcc531df231b244a1ad4507b479f99763787360f12fb1df3f35
-- kind: project-relative
-  target: copilot
-  value: .agents/skills/renovate-triage-and-merge/references/processing-order.md
-  runtime: null
-  scope: project
-  owners:
-  - devsecninja/ai-toolkit/.apm/skills/renovate-triage-and-merge
-  active_owner: devsecninja/ai-toolkit/.apm/skills/renovate-triage-and-merge
-  content_hash: sha256:7fd21952556551ce957ddba53ec0d2e4e560068fde9877b2dbb22dfbbad46857
-- kind: project-relative
-  target: copilot
-  value: .agents/skills/renovate-triage-and-merge/references/testing.md
-  runtime: null
-  scope: project
-  owners:
-  - devsecninja/ai-toolkit/.apm/skills/renovate-triage-and-merge
-  active_owner: devsecninja/ai-toolkit/.apm/skills/renovate-triage-and-merge
-  content_hash: sha256:1b91d6596dde5d65643efb78b30ebc308ac77984c4b1a94e8188d05b4b0e901f
-- kind: project-relative
-  target: copilot
-  value: .agents/skills/renovate-triage-and-merge/scripts/renovate_prs.py
-  runtime: null
-  scope: project
-  owners:
-  - devsecninja/ai-toolkit/.apm/skills/renovate-triage-and-merge
-  active_owner: devsecninja/ai-toolkit/.apm/skills/renovate-triage-and-merge
-  content_hash: sha256:724dbda09f1cdb491a3e8e7700429e48b3ecdbb986b7885278944850e8779fbc
 - kind: project-relative
   target: copilot
   value: .github/instructions/devsecninja-conventions.instructions.md
