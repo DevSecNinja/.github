@@ -202,14 +202,24 @@ jobs:
           # - paths APM deploys here (`deployed_files` in apm.lock.yaml);
           # - files generated from a package (their `<!-- config-sync:
           #   source=<owner/repo>` marker) that this repository installs
-          #   through APM, even when its pinned release doesn't ship them,
-          #   so a later APM upgrade isn't blocked by a config-sync copy;
+          #   whole through APM, even when its pinned release doesn't ship
+          #   them, so a later APM upgrade isn't blocked by a config-sync
+          #   copy. Subpath pins (`virtual_path`) only own what they deploy;
           # - files generated from this repository itself.
           apm_managed=""
           apm_sources=""
           if [ -f apm.lock.yaml ]; then
               apm_managed=$(sed -n 's/^[[:space:]]*-[[:space:]]\{1,\}\([^:[:space:]]\{1,\}\)[[:space:]]*$/\1/p' apm.lock.yaml)
-              apm_sources=$(sed -n 's/^-[[:space:]]*repo_url:[[:space:]]*\([^[:space:]]*\).*/\1/p' apm.lock.yaml | tr '[:upper:]' '[:lower:]')
+              apm_sources=$(awk '
+                  function flush() { if (repo != "" && !virtual) print tolower(repo); repo = ""; virtual = 0 }
+                  /^[^[:space:]-]/ { flush(); in_deps = ($0 ~ /^dependencies:/); next }
+                  !in_deps { next }
+                  /^- / { flush() }
+                  { line = $0; sub(/^- /, "  ", line) }
+                  line ~ /^  repo_url:/ { repo = line; sub(/^  repo_url:[[:space:]]*/, "", repo); sub(/[[:space:]].*/, "", repo) }
+                  line ~ /^  virtual_path:/ { virtual = 1 }
+                  END { flush() }
+              ' apm.lock.yaml)
           fi
           self_repo=$(tr '[:upper:]' '[:lower:]' <<< "${GITHUB_REPOSITORY:-}")
 
@@ -222,7 +232,7 @@ jobs:
               source=$(sed -n 's/^<!-- config-sync: source=\([^[:space:]]*\) .*/\1/p;/^<!-- config-sync: /q' "${src}" | tr '[:upper:]' '[:lower:]')
               [ -n "${source}" ] || return 1
               if [ -n "${apm_sources}" ] && grep -Fxq -- "${source}" <<< "${apm_sources}"; then
-                  echo "${source} is installed through APM, see apm.lock.yaml"
+                  echo "${source} is installed whole through APM, see apm.lock.yaml"
                   return 0
               fi
               if [ "${source}" = "${self_repo}" ]; then

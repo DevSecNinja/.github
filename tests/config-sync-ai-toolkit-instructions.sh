@@ -103,6 +103,31 @@ if ! synced "${instruction}" || ! synced "${other_instruction}"; then
     fail "a repo without ai-toolkit in APM must receive the ai-toolkit instructions"
 fi
 
+# Installs only an ai-toolkit skill by subpath: the instructions still sync.
+run_sync DevSecNinja/example "dependencies:
+- repo_url: devsecninja/ai-toolkit
+  name: renovate-triage-and-merge
+  virtual_path: .apm/skills/renovate-triage-and-merge
+  is_virtual: true
+  deployed_files:
+  - .agents/skills/renovate-triage-and-merge"
+if ! synced "${instruction}" || ! synced "${other_instruction}"; then
+    fail "a subpath pin of another ai-toolkit primitive must not block the instructions"
+fi
+
+# Installs one instruction by subpath: APM keeps that one, the other syncs.
+run_sync DevSecNinja/example "dependencies:
+- repo_url: devsecninja/ai-toolkit
+  name: ai-toolkit-devsecninja-conventions
+  virtual_path: .apm/instructions/devsecninja-conventions.instructions.md
+  is_virtual: true
+  deployed_files:
+  - ${instruction}"
+[ "$(cat "${tmp_dir}/consumer/${instruction}")" = "apm" ] ||
+    fail "config-sync overwrote the subpath-deployed ${instruction}"
+synced "${other_instruction}" ||
+    fail "config-sync must sync instructions that a subpath pin does not deploy"
+
 # ai-toolkit itself must not get copies of its own instructions.
 run_sync DevSecNinja/ai-toolkit ""
 [ ! -e "${tmp_dir}/consumer/${instruction}" ] ||
