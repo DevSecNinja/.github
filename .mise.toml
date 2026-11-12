@@ -23,6 +23,7 @@ run = [
   "bash ./tests/copilot-model-policy-contract.sh",
   "bash ./tests/pages-custom-domain-contract.sh",
   "bash ./tests/renovate-custom-manager-coverage.sh",
+  "bash ./tests/renovate-apm-manager.sh",
   "bash ./tests/renovate-batching-contract.sh",
   "bash ./tests/release-please-auth-contract.sh",
   "bash ./tests/automation-app-contract.sh",
