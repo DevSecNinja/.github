@@ -102,6 +102,14 @@ jobs:
           apm --version
           apm install
 
+      - name: Refresh config-sync copies of the ai-toolkit instructions
+        # Keeps config-sync/files/.github/instructions/ in step with the
+        # instructions just materialized, so the same PR carries both. Only
+        # DevSecNinja/.github has the script; repos that copied this workflow
+        # skip the step.
+        if: steps.precheck.outputs.skip != 'true' && hashFiles('config-sync/sync-ai-toolkit-instructions.sh') != ''
+        run: bash config-sync/sync-ai-toolkit-instructions.sh
+
       - name: Open materialize PR
         if: steps.precheck.outputs.skip != 'true'
         # renovate: datasource=github-tags depName=DevSecNinja/.github
@@ -120,6 +128,8 @@ jobs:
             Automated PR — materializes the APM primitives for the current
             `apm.yml`. Runs `apm install` to refresh `apm.lock.yaml` and redeploy
             the primitives into the harness directories after an `apm.yml` change
-            landed on `main` (e.g. a Renovate tag bump).
+            landed on `main` (e.g. a Renovate tag bump). It also refreshes the
+            config-sync copies of the org-wide ai-toolkit instructions, which
+            reach every config-sync caller once this PR merges.
 
             Triggered by `${{ github.workflow }}` at commit `${{ github.sha }}`.
