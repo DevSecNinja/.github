@@ -35,7 +35,8 @@ static files (linters, editorconfig, renovate), APM distributes installable agen
 primitives.
 
 Repos that don't install ai-toolkit still get its org-wide instructions
-(`devsecninja-conventions`, `writing-style`): config-sync copies them from this
+(`devsecninja-conventions`, `untrusted-repositories`, `writing-style`):
+config-sync copies them from this
 repository's materialized output. Installing ai-toolkit through APM is only
 needed for the rest of its primitives. Config-sync then leaves the
 APM-deployed instructions alone; see

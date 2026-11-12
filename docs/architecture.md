@@ -823,6 +823,7 @@ the repo root.
 | `.editorconfig`                                                | Editor formatting defaults                            |
 | `.github/CODEOWNERS`                                           | Canonical CODEOWNERS (default `@DevSecNinja`)         |
 | `.github/instructions/devsecninja-conventions.instructions.md` | Org engineering conventions for AI agents (generated) |
+| `.github/instructions/untrusted-repositories.instructions.md`  | When agents may execute code (generated)              |
 | `.github/instructions/writing-style.instructions.md`           | Writing style for agent-written prose (generated)     |
 | `.github/labels-base.yaml`                                     | Base label set synced to all repos                    |
 | `.gitleaks.toml`                                               | Gitleaks allow-list                                   |
@@ -854,11 +855,11 @@ don't install ai-toolkit themselves:
    stale.
 3. Config-sync writes them to `<repo>/.github/instructions/` in every caller.
 
-| Instruction               | Synced | Why                                                                              |
-| ------------------------- | ------ | -------------------------------------------------------------------------------- |
-| `devsecninja-conventions` | Yes    | Org engineering rules: PR titles, an issue per PR, reviewable PRs, pre-PR checks |
-| `writing-style`           | Yes    | How agents write docs, commit messages and PR descriptions                       |
-| `untrusted-repositories`  | No     | Personal policy for third-party clones; belongs in user-level config             |
+| Instruction               | Why                                                                              |
+| ------------------------- | -------------------------------------------------------------------------------- |
+| `devsecninja-conventions` | Org engineering rules: PR titles, an issue per PR, reviewable PRs, pre-PR checks |
+| `untrusted-repositories`  | When agents may execute repository code; `devsecninja-conventions` requires it   |
+| `writing-style`           | How agents write docs, commit messages and PR descriptions                       |
 
 To change which instructions are synced, edit the list at the top of the
 script and run it.

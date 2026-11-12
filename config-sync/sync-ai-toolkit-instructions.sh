@@ -16,11 +16,11 @@
 
 set -euo pipefail
 
-# Org-wide instructions. ai-toolkit also ships `untrusted-repositories`, which
-# is a personal agent-safety policy for third-party clones and belongs in
-# user-level config rather than in every repository.
+# Org-wide instructions. `devsecninja-conventions` requires
+# `untrusted-repositories`, so the two always ship together.
 instructions=(
     devsecninja-conventions
+    untrusted-repositories
     writing-style
 )
 
