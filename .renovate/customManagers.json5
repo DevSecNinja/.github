@@ -62,6 +62,21 @@
     },
     {
       customType: "regex",
+      description: "Process DevSecNinja/.github refs pinned by SHA with a main branch comment",
+      managerFilePatterns: [
+        "/.github/workflows/.+\\.ya?ml$/",
+        "/workflow-templates/.+\\.ya?ml$/",
+      ],
+      matchStrings: [
+        "# renovate: datasource=github-tags depName=(?<depName>DevSecNinja/\\.github)\\n(?<indent>\\s+)uses: (?<packagePath>DevSecNinja/\\.github/[^@\\s]+)@(?<currentDigest>[a-f0-9]{40}) # main",
+      ],
+      currentValueTemplate: "0.0.0",
+      datasourceTemplate: "github-tags",
+      versioningTemplate: "semver",
+      autoReplaceStringTemplate: "# renovate: datasource=github-tags depName={{{depName}}}\n{{{indent}}}uses: {{{packagePath}}}@{{#if newDigest}}{{{newDigest}}}{{else}}{{{currentDigest}}}{{/if}} # {{{newValue}}}",
+    },
+    {
+      customType: "regex",
       description: "Update DevSecNinja/dotfiles log.sh release pin",
       managerFilePatterns: ["/(^|/)scripts/lib/log\\.sh$/", "/\\.sh$/", "/\\.sh\\.tmpl$/"],
       matchStrings: [
