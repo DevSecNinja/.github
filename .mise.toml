@@ -31,5 +31,6 @@ run = [
   "bash ./tests/open-pr-push.sh",
   "bash ./tests/open-pr-labels.sh",
   "bash ./tests/config-sync-ai-toolkit-instructions.sh",
+  "node ./tests/renovate-pr-cooldown.test.mjs",
   "python3 ./tests/workflow-job-conditions.py",
 ]
