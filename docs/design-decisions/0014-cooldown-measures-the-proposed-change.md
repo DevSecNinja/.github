@@ -44,22 +44,30 @@ been on its branch:
    changes it. A diff whose files lack a patch (binary, oversized), or that hits
    the compare API's 300-file cap, cannot be fingerprinted.
 2. **Trace.** The start of the soak is when that fingerprint first appeared,
-   found from the PR's history (GraphQL): first the commits on the branch
-   (pushes on top, such as "Update branch" merges or human commits), then the
-   force-push timeline, newest first, comparing the commit each push replaced.
-   The trace stops at the first push that brought a different change, or as soon
-   as the change is known to predate the cooldown window.
+   found from the PR's history (GraphQL). First the commits pushed on top of
+   the newest force push (such as "Update branch" merges or human commits);
+   commits a force push brought along, as in a rebased multi-commit branch, are
+   judged by the next step instead. Then the force-push timeline, newest first,
+   comparing the commit each push replaced. The trace stops at the first push
+   that brought a different change, or as soon as the change is known to
+   predate the cooldown window. Commits that were pushed between two force
+   pushes are no longer on the branch and cannot be inspected (a change and
+   its revert there would be invisible), so the start is then the newer push.
 3. **Record.** Every status records what it found:
    `change <first 16 hex> since <ISO time>`. A later run reuses the record on the
-   same commit (scheduled re-evaluation: one API call) or on the commit the
-   newest force push replaced (a rebase: a few calls), instead of walking the
-   whole history again. Only the latest status in the `pr-cooldown` context
-   written by `github-actions[bot]` (the workflow token) is trusted.
+   same commit (scheduled re-evaluation: two API calls, no comparison) or on the
+   commit the newest force push replaced (a rebase: about four calls), instead
+   of walking the whole history again. Only the latest status in the
+   `pr-cooldown` context written by `github-actions[bot]` (the workflow token)
+   is trusted, and only for the commit's current stint: a force push can
+   restore an old commit, so a record must be newer than the force push that
+   last made its commit the head.
 4. **Fail towards waiting.** Anything that cannot be established — a diff
    without patches, an unreadable history, a branch that moves during
    evaluation — falls back to the old head-commit date. Every shortcut (history
-   not inspected, more than 50 comparisons, a force-pushed-away commit that can
-   no longer be compared) returns a _later_ start, never an earlier one.
+   not inspected, a per-PR budget of 50 uncached comparisons used up, a
+   force-pushed-away commit that can no longer be compared) returns a _later_
+   start, never an earlier one.
 5. **Gated PRs rebase like everything else.** The docker-gated rule no longer
    sets `rebaseWhen: "conflicted"`; the global `auto` applies, so Renovate
    rebases gated PRs that fall behind, and they merge under strict protection.
@@ -85,8 +93,8 @@ been on its branch:
 - **Walk the full history on every run, without records.** Correct, but
   `truenas-apps` alone has gated PRs with up to 48 force pushes and `main` moves
   about twice a day; repeated walks would approach the 1,000-requests-per-hour
-  limit of the workflow token. Measured on its 10 gated PRs: 48 API calls for a
-  first run without records, then about 1 per PR.
+  limit of the workflow token. Measured on its gated PRs: 39–48 API calls for a first run without records
+  (about 4–5 per PR), then about 2 per PR.
 - **Patch-ids per commit** (`git patch-id`). Equivalent to the fingerprint but
   needs a clone with the full history in the check; the compare API gives the
   same information without one.
