@@ -85,7 +85,7 @@ permissions:
 jobs:
   sync:
     name: Sync config from central repo
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     # Exposes the environment's AUTOMATION_APP_* values without creating a
     # deployment record on every run.
     environment:
