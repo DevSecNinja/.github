@@ -1,6 +1,6 @@
 # Template — adapt per repo. Remove tools you don't need.
 # renovate: datasource=github-releases depName=jdx/mise
-min_version = "2026.10.19"
+min_version = "2026.10.24"
 
 [tools]
 actionlint = "1.7.12"
@@ -12,5 +12,5 @@ shfmt = "3.14.1"
 trivy = "0.76.1"
 yamlfmt = "0.21.0"
 "pipx:yamllint" = "1.38.0"
-"pipx:checkov" = "3.3.30"
+"pipx:checkov" = "3.4.0"
 zizmor = "1.31.1"

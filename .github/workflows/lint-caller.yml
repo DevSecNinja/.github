@@ -24,7 +24,7 @@ jobs:
       security-events: write
     with:
       # renovate: datasource=github-releases depName=jdx/mise
-      mise-version: "2026.10.19"
+      mise-version: "2026.10.24"
       # renovate: datasource=github-releases depName=golangci/golangci-lint
       # golangci-lint-version: "v2.12.2"
       lint-config-dir: config-sync/files
@@ -42,7 +42,7 @@ jobs:
       security-events: write
     with:
       # renovate: datasource=github-releases depName=jdx/mise
-      mise-version: "2026.10.19"
+      mise-version: "2026.10.24"
       lint-config-dir: config-sync/files
       lint-job-mode: single
       upload-sarif: false
