@@ -26,6 +26,19 @@ relative to repo root. `#` comments and blank lines are allowed.
 The `unmanaged` repo topic remains the all-or-nothing escape hatch
 (the calling workflow simply isn't installed in those repos).
 
+Paths that the calling repo deploys through APM (listed under
+`deployed_files` in its `apm.lock.yaml`) are skipped automatically, as are
+generated files from a package the repo installs whole through APM.
+
+### Generated: ai-toolkit instructions
+
+`files/.github/instructions/*.instructions.md` are not edited by hand.
+`config-sync/sync-ai-toolkit-instructions.sh` generates them from the
+instructions that APM materializes from `DevSecNinja/ai-toolkit`, and
+stamps each one with the ai-toolkit ref and commit. Change the text in
+ai-toolkit; see
+[Org-wide AI instructions](../../docs/architecture.md#org-wide-ai-instructions-ai-toolkit).
+
 ## `config-sync/templates/`
 
 These files are **starting points** for repos that need them.

@@ -75,15 +75,17 @@
       //   dependencies:
       //     apm:
       //     - DevSecNinja/ai-toolkit#v0.1.1
+      //     - DevSecNinja/ai-toolkit/.apm/skills/some-skill#v0.1.1
       // Renovate bumps the `#vX.Y.Z` ref to the latest GitHub tag of the
-      // referenced owner/repo. The companion `apm-materialize.yml` workflow then
-      // runs `apm install` on the PR to refresh apm.lock.yaml and redeploy the
-      // primitives (Mend-hosted Renovate cannot run that postUpgrade itself).
+      // referenced owner/repo; a subpath pin is looked up by its owner/repo.
+      // Post-merge, the `apm-materialize.yml` workflow runs `apm install` to
+      // refresh apm.lock.yaml and redeploy the primitives (Mend-hosted Renovate
+      // cannot run that postUpgrade itself).
       customType: "regex",
       description: "Process APM package tag pins in apm.yml",
       managerFilePatterns: ["/(^|/)apm\\.yml$/"],
       matchStrings: [
-        "-\\s+(?<depName>[^#\\s]+/[^#\\s]+)#(?<currentValue>v[0-9][^\\s]*)",
+        "-\\s+(?<depName>[^#\\s/]+/[^#\\s/]+)(?:/[^#\\s]*)?#(?<currentValue>v[0-9][^\\s]*)",
       ],
       datasourceTemplate: "github-tags",
     },

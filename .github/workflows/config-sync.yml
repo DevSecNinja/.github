@@ -15,6 +15,13 @@ name: Reusable — Config Sync
 # in `.github/.config-sync-ignore` to skip them during sync. Blank
 # lines and `#` comments are allowed.
 #
+# APM-managed paths: a path listed under `deployed_files` in the
+# calling repo's `apm.lock.yaml` is skipped automatically, and so is a
+# generated file whose provenance marker names a package the repo
+# installs through APM (or the calling repo itself). Repos that install
+# DevSecNinja/ai-toolkit through APM keep their own copy of the synced
+# ai-toolkit instructions (see docs/architecture.md).
+#
 # Authentication (single-App contract, see docs/automation-app.md): the
 # sync PR is opened with a short-lived token of the DevSecNinja
 # Automation GitHub App, minted from the caller repository's
@@ -191,6 +198,50 @@ jobs:
               return 1
           }
 
+          # Files APM owns in this repository are left alone:
+          # - paths APM deploys here (`deployed_files` in apm.lock.yaml);
+          # - files generated from a package (their `<!-- config-sync:
+          #   source=<owner/repo>` marker) that this repository installs
+          #   whole through APM, even when its pinned release doesn't ship
+          #   them, so a later APM upgrade isn't blocked by a config-sync
+          #   copy. Subpath pins (`virtual_path`) only own what they deploy;
+          # - files generated from this repository itself.
+          apm_managed=""
+          apm_sources=""
+          if [ -f apm.lock.yaml ]; then
+              apm_managed=$(sed -n 's/^[[:space:]]*-[[:space:]]\{1,\}\([^:[:space:]]\{1,\}\)[[:space:]]*$/\1/p' apm.lock.yaml)
+              apm_sources=$(awk '
+                  function flush() { if (repo != "" && !virtual) print tolower(repo); repo = ""; virtual = 0 }
+                  /^[^[:space:]-]/ { flush(); in_deps = ($0 ~ /^dependencies:/); next }
+                  !in_deps { next }
+                  /^- / { flush() }
+                  { line = $0; sub(/^- /, "  ", line) }
+                  line ~ /^  repo_url:/ { repo = line; sub(/^  repo_url:[[:space:]]*/, "", repo); sub(/[[:space:]].*/, "", repo) }
+                  line ~ /^  virtual_path:/ { virtual = 1 }
+                  END { flush() }
+              ' apm.lock.yaml)
+          fi
+          self_repo=$(tr '[:upper:]' '[:lower:]' <<< "${GITHUB_REPOSITORY:-}")
+
+          apm_owner() {
+              local dest="$1" src="$2" source
+              if [ -n "${apm_managed}" ] && grep -Fxq -- "${dest}" <<< "${apm_managed}"; then
+                  echo "deployed by APM, see apm.lock.yaml"
+                  return 0
+              fi
+              source=$(sed -n 's/^<!-- config-sync: source=\([^[:space:]]*\) .*/\1/p;/^<!-- config-sync: /q' "${src}" | tr '[:upper:]' '[:lower:]')
+              [ -n "${source}" ] || return 1
+              if [ -n "${apm_sources}" ] && grep -Fxq -- "${source}" <<< "${apm_sources}"; then
+                  echo "${source} is installed whole through APM, see apm.lock.yaml"
+                  return 0
+              fi
+              if [ "${source}" = "${self_repo}" ]; then
+                  echo "generated from this repository"
+                  return 0
+              fi
+              return 1
+          }
+
           sync_tree() {
               local kind="$1"   # "files" or "templates"
               local src_root="${SOURCE_DIR}/${kind}"
@@ -209,9 +260,15 @@ jobs:
               while IFS= read -r src; do
                   local rel="${src#"${src_root}/"}"
                   local dest="${rel}"
+                  local reason
 
                   if is_ignored "${dest}"; then
                       echo "  ⊘ ${dest} (ignored via ${IGNORE_FILE})"
+                      continue
+                  fi
+
+                  if reason=$(apm_owner "${dest}" "${src}"); then
+                      echo "  ⊘ ${dest} (${reason})"
                       continue
                   fi
 

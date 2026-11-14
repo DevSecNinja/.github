@@ -34,21 +34,43 @@ This is the agentic-primitive counterpart to
 static files (linters, editorconfig, renovate), APM distributes installable agent
 primitives.
 
+Repos that don't install ai-toolkit still get its org-wide instructions
+(`devsecninja-conventions`, `untrusted-repositories`, `writing-style`):
+config-sync copies them from this
+repository's materialized output. Installing ai-toolkit through APM is only
+needed for the rest of its primitives. Config-sync then leaves the
+APM-deployed instructions alone; see
+[Org-wide AI instructions](architecture.md#org-wide-ai-instructions-ai-toolkit)
+for the details, including what to delete before the first `apm install`.
+
 ---
 
 ## Prerequisites
 
-- The repo already depends on at least one APM package. Run this once locally and
-  commit the result:
+- The repo already depends on at least one APM package. Install only the
+  primitives the repo needs, each pinned by subpath, rather than the whole
+  package with its agents, prompts, hooks and MCP servers. Run this once locally
+  and commit the result:
 
   ```sh
-  apm install DevSecNinja/ai-toolkit#v0.3.0 --target copilot
-  git add apm.yml apm.lock.yaml .github/   # plus any other harness dirs APM wrote
+  apm install \
+    DevSecNinja/ai-toolkit/.apm/instructions/devsecninja-conventions.instructions.md#v0.9.1 \
+    DevSecNinja/ai-toolkit/.apm/instructions/untrusted-repositories.instructions.md#v0.9.1 \
+    DevSecNinja/ai-toolkit/.apm/instructions/writing-style.instructions.md#v0.9.1 \
+    DevSecNinja/ai-toolkit/.apm/skills/renovate-triage-and-merge#v0.9.1 \
+    --target copilot
+  git add apm.yml apm.lock.yaml .github/ .agents/   # plus any other harness dirs APM wrote
   git commit -m "feat: install ai-toolkit APM primitives"
   ```
 
-  > Pin an explicit `#vX.Y.Z` so Renovate can track it. `apm_modules/` is the
-  > package cache — APM adds it to `.gitignore` on first install; don't commit it.
+  `DevSecNinja/.github`'s own [`apm.yml`](../apm.yml) is the reference: the
+  three org-wide instructions (`devsecninja-conventions` relies on
+  `untrusted-repositories`, so install them together) and the
+  `renovate-triage-and-merge` skill.
+
+  > Pin an explicit `#vX.Y.Z` so Renovate can track it; subpath pins are
+  > tracked by their `owner/repo`. `apm_modules/` is the package cache. APM
+  > adds it to `.gitignore` on first install; don't commit it.
 
 - The `AUTOMATION_APP_ID` variable + `AUTOMATION_APP_PRIVATE_KEY` secret of the
   shared DevSecNinja Automation App (see [automation-app.md](automation-app.md)).
@@ -90,6 +112,8 @@ second consumer adopts it, extract a reusable + config-sync template.
 2. Installs the pinned `apm` CLI (`pip install apm-cli`).
 3. Runs `apm install` — re-resolves `apm.lock.yaml` to the new pin and redeploys
    the primitives into the harness directories (`.github/`, `.claude/`, …).
+   In `DevSecNinja/.github` it then regenerates the config-sync copies of the
+   org-wide ai-toolkit instructions.
 4. Opens a separate `chore: materialize APM primitives` PR (App token → CI runs).
    When nothing changed, it's a no-op (no PR).
 

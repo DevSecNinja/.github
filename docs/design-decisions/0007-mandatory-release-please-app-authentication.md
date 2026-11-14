@@ -15,8 +15,9 @@ without its required CI, and create a tag that did not trigger the
 repository's publisher.
 
 The central onboarding contract already requires the Release Please
-GitHub App installation, an App ID, a private key, and the repository
-setting that allows Actions to create and approve pull requests. All
+GitHub App installation, an App ID, and a private key. The repository
+setting that allows Actions to create and approve pull requests is not
+part of it. All
 known callers supply the corresponding variable and secret. Keeping a
 fallback provides no supported capability and hides broken onboarding.
 
@@ -34,9 +35,10 @@ unconditional after that preflight, and Release Please receives only
 the minted App token. There is no `GITHUB_TOKEN` fallback.
 
 The App token and release job retain only Contents and Pull requests
-write permissions; Metadata read access is automatic. Every caller must
-also enable **Allow GitHub Actions to create and approve pull requests**
-in repository Actions settings.
+write permissions; Metadata read access is automatic. Callers do not need
+**Allow GitHub Actions to create and approve pull requests**: that setting
+restricts only `GITHUB_TOKEN`, and the release PR is opened with the App
+token (verified in repositories where it is off).
 
 Two publication patterns are supported:
 
@@ -56,7 +58,7 @@ Two publication patterns are supported:
 - Release PRs run normal pull-request CI, and version tags can trigger
   split publishers reliably.
 - Adopting the central workflow requires the App installation, both
-  credentials, and the Actions PR-creation setting.
+  credentials.
 - Making previously optional inputs required is a breaking reusable
   workflow contract change and requires a major central release.
 - Consumer repositories do not need edits before that release because

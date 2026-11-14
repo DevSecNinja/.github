@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.6.0](https://github.com/DevSecNinja/.github/compare/v3.5.0...v3.6.0) (2026-11-12)
+
+
+### 🚀 Features
+
+* **config-sync:** distribute ai-toolkit instructions to fleet repos ([#486](https://github.com/DevSecNinja/.github/issues/486)) ([f36a042](https://github.com/DevSecNinja/.github/commit/f36a04262bea623da035f9e3d91234a44a4c74cf))
+
+
+### 🐛 Bug Fixes
+
+* **apm:** install only the org-wide ai-toolkit primitives by subpath ([#485](https://github.com/DevSecNinja/.github/issues/485)) ([8d32c89](https://github.com/DevSecNinja/.github/commit/8d32c89eafaed8774148f5e51918fbd6c08cd61b))
+* **open-pr:** create missing labels instead of failing the PR ([#484](https://github.com/DevSecNinja/.github/issues/484)) ([c5e2bcf](https://github.com/DevSecNinja/.github/commit/c5e2bcfc076ea399f9445d73b75a6dac9c307097))
+* **renovate:** disable digest pinning for regex github-releases deps ([#479](https://github.com/DevSecNinja/.github/issues/479)) ([01e5d5a](https://github.com/DevSecNinja/.github/commit/01e5d5a5b3a3f834efd98acc19df98b544a5b84b))
+* **renovate:** rebase automerge branches when they fall behind ([#477](https://github.com/DevSecNinja/.github/issues/477)) ([c33bf36](https://github.com/DevSecNinja/.github/commit/c33bf36db4adaef0535f5c06f57fed0e684bc2a4))
+
 ## [3.5.0](https://github.com/DevSecNinja/.github/compare/v3.4.0...v3.5.0) (2026-11-08)
 
 
