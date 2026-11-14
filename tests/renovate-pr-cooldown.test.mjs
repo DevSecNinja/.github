@@ -59,9 +59,10 @@ const fingerprintOf = (change) => {
   return hash.digest('hex');
 };
 // A status an earlier run set on a commit.
-const record = (change, sinceDaysAgo, creator = 'github-actions[bot]') => ({
+const record = (change, sinceDaysAgo, { creator = 'github-actions[bot]', createdDaysAgo = 0.05 } = {}) => ({
   context: 'pr-cooldown',
   creator: { login: creator },
+  created_at: daysAgo(createdDaysAgo),
   description: `Soaking: 3 day(s) left of 14-day cooldown (change ${fingerprintOf(change).slice(0, 16)} since ${daysAgo(sinceDaysAgo)})`,
 });
 
@@ -331,7 +332,78 @@ const scenarios = {
     const entries = Array.from({ length: 60 }, (_, i) => ({ ageDays: 6 - i * 0.1, before: commit(`r${i}`, 7 - i * 0.1, v('1.1.0')) }));
     const status = await evaluate({ chain: [head], pushes: history(head, ...entries) });
     assert.equal(status.state, 'pending', `${this.name}: ${status.description}`);
-    assert.ok(status.calls.compare <= 52, `${this.name}: compare calls are capped (got ${status.calls.compare})`);
+    assert.ok(status.calls.compare <= 50, `${this.name}: compare calls are capped (got ${status.calls.compare})`);
+  },
+  async 'the comparison budget also covers commits pushed on top'() {
+    // 80 commits, all carrying the same change, never force-pushed: the first
+    // is 30 days old, the rest from the last 3 days. Verifying all of them
+    // would prove a 30-day soak; the budget stops the walk among the recent
+    // ones, so it must stay pending.
+    const chain = Array.from({ length: 80 }, (_, i) => commit(`c${i}`, i === 0 ? 30 : 3 - i * 0.03, v('1.1.0')));
+    const status = await evaluate({ chain });
+    assert.equal(status.state, 'pending', `${this.name}: ${status.description}`);
+    assert.ok(status.calls.compare <= 50, `${this.name}: compare calls are capped (got ${status.calls.compare})`);
+  },
+  async 'a rebased multi-commit branch keeps the clock'() {
+    // An image update with a human edit on top (20d), rebased yesterday:
+    // the commits are rewritten but the branch still proposes the same change.
+    const edited = [...v('1.1.0'), '+    restart: always'];
+    const head = commit('h2', 1, edited);
+    expectSoaked(
+      await evaluate({
+        chain: [commit('r2', 1, v('1.1.0')), head],
+        pushes: history(head, { ageDays: 1, before: commit('h1', 20, edited) }),
+      }),
+      this.name,
+    );
+  },
+  async 'a change reverted between two force pushes counts from the newer push'() {
+    // r1 carried 1.1.0; commits pushed on top (no longer visible) changed it
+    // and changed it back before the rebase at 1d. Their content cannot be
+    // inspected, so the soak starts at the newer push.
+    const head = commit('r4', 1, v('1.1.0'));
+    expectDaysLeft(
+      await evaluate({
+        chain: [head],
+        pushes: [
+          { ageDays: 20, before: commit('r0', 25, v('1.1.0')), after: commit('r1', 20, v('1.1.0')) },
+          { ageDays: 1, before: commit('r3', 3, v('1.1.0')), after: head },
+        ],
+      }),
+      13,
+      this.name,
+    );
+  },
+  async 'a record on the head from an earlier stint is ignored'() {
+    // a (1.1.0) was recorded 25 days ago, replaced by b (1.2.0), and
+    // force-pushed back 2 days ago: its soak restarts.
+    const a = commit('a', 30, v('1.1.0'));
+    const status = await evaluate({
+      chain: [a],
+      pushes: history(a, { ageDays: 20, before: a }, { ageDays: 2, before: commit('b', 20, v('1.2.0')) }),
+      records: { a: record(v('1.1.0'), 30, { createdDaysAgo: 25 }) },
+    });
+    expectDaysLeft(status, 12, this.name);
+  },
+  async 'a record on a replaced commit from an earlier stint is ignored'() {
+    // a (1.1.0) was recorded 25 days ago, replaced by b (1.2.0) at 20d,
+    // restored at 5d and rebased at 1d: the soak counts from the restore.
+    const a = commit('a', 30, v('1.1.0'));
+    const head = commit('a2', 1, v('1.1.0'));
+    expectDaysLeft(
+      await evaluate({
+        chain: [head],
+        pushes: history(
+          head,
+          { ageDays: 20, before: a },
+          { ageDays: 5, before: commit('b', 20, v('1.2.0')) },
+          { ageDays: 1, before: a },
+        ),
+        records: { a: record(v('1.1.0'), 30, { createdDaysAgo: 25 }) },
+      }),
+      9,
+      this.name,
+    );
   },
   async 'a recorded status on the head is reused without comparing'() {
     const head = commit('r2', 1, v('1.1.0'));
@@ -341,7 +413,7 @@ const scenarios = {
       records: { r2: record(v('1.1.0'), 20) },
     });
     expectSoaked(status, this.name);
-    assert.deepEqual(status.calls, { compare: 0, statuses: 1, graphql: 0, getCommit: 0 }, `${this.name}: one call only`);
+    assert.deepEqual(status.calls, { compare: 0, statuses: 1, graphql: 1, getCommit: 0 }, `${this.name}: no comparison`);
   },
   async 'after a rebase, the record on the replaced commit carries the clock over'() {
     // r1 was evaluated before the rebase; its record says 1.1.0 since 20d,
@@ -373,7 +445,7 @@ const scenarios = {
   },
   async 'a record written by another identity is ignored'() {
     const head = commit('r2', 1, v('1.1.0'));
-    expectDaysLeft(await evaluate({ chain: [head], records: { r2: record(v('1.1.0'), 30, 'mallory') } }), 13, this.name);
+    expectDaysLeft(await evaluate({ chain: [head], records: { r2: record(v('1.1.0'), 30, { creator: 'mallory' }) } }), 13, this.name);
   },
   async 'a diff without patches falls back to the head commit date'() {
     const head = commit('r2', 1, 'binary');

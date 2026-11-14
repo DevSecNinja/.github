@@ -106,11 +106,18 @@ jobs:
             // against the base branch (taken from the merge base). A rebase,
             // or a merge from the base branch ("Update branch"), keeps it; a
             // new version or a re-pushed digest changes it. Null when the
-            // diff cannot be fingerprinted reliably.
+            // diff cannot be fingerprinted reliably, or when the PR's budget
+            // of comparisons is used up; callers treat null as "changed",
+            // which always errs towards a later start.
             const fingerprints = new Map();
-            const fingerprint = (baseRef, sha) => {
+            const fingerprint = (baseRef, sha, budget) => {
               const basehead = `${baseRef}...${sha}`;
               if (!fingerprints.has(basehead)) {
+                if (budget.left <= 0) {
+                  budget.exhausted = true;
+                  return Promise.resolve(null);
+                }
+                budget.left -= 1;
                 fingerprints.set(basehead, (async () => {
                   try {
                     const { data } = await github.rest.repos.compareCommitsWithBasehead({
@@ -185,15 +192,19 @@ jobs:
                 const status = data.find((s) => s.context === context_name);
                 if (!status || !status.creator || status.creator.login !== 'github-actions[bot]') return null;
                 const match = recordPattern.exec(status.description || '');
-                return match ? { change: match[1], since: new Date(match[2]) } : null;
+                return match
+                  ? { change: match[1], since: new Date(match[2]), createdAt: new Date(status.created_at) }
+                  : null;
               } catch (error) {
                 core.warning(`Cannot read the statuses of ${sha}: ${error.message}`);
                 return null;
               }
             };
 
-            // Fingerprint comparisons allowed per PR when no record helps.
-            const maxCompares = 50;
+            // Uncached comparisons allowed per PR. Records keep a usual
+            // evaluation to a handful of API calls; the budget only bounds
+            // the first run on a long history.
+            const compareBudget = 50;
 
             // When the change now on the PR branch first appeared, so that
             // rebases and base-branch merges do not restart the soak but any
@@ -206,13 +217,8 @@ jobs:
                 const { data } = await github.rest.repos.getCommit({ owner, repo, ref: pr.head.sha });
                 return { since: new Date(data.commit.committer.date), change: null, reason };
               };
-              const own = await recorded(pr.head.sha);
-              if (own) return { since: own.since, change: own.change, reason: 'recorded on this commit' };
-
+              const budget = { left: compareBudget, exhausted: false };
               const baseRef = pr.base.ref;
-              const current = await fingerprint(baseRef, pr.head.sha);
-              if (!current) return fallback('diff not comparable');
-              const key = current.slice(0, 16);
 
               let history;
               try {
@@ -229,45 +235,81 @@ jobs:
               if (commits[commits.length - 1].oid !== pr.head.sha) {
                 return fallback('branch moved during evaluation');
               }
-              const found = (since, reason) => ({ since: new Date(since), change: current, reason });
+              // Newest first.
+              const pushes = history.timelineItems.nodes.filter((node) => node && node.createdAt).reverse();
+              const allPushesListed = history.timelineItems.totalCount <= pushes.length;
+
+              // A force push can restore an old commit, so a record only
+              // describes the stint of its commit it was written in. It is
+              // trusted when written after the force push that last made the
+              // commit the head (null: no such push; undefined: unknown).
+              const isCurrent = (rec, stintStart) =>
+                stintStart === null || (stintStart !== undefined && rec.createdAt >= new Date(stintStart));
+
+              // A previous run on this very commit, in its current stint.
+              const own = await recorded(pr.head.sha);
+              const headStint = pushes.length ? pushes[0].createdAt : allPushesListed ? null : undefined;
+              if (own && isCurrent(own, headStint)) {
+                return { since: own.since, change: own.change, reason: 'recorded on this commit' };
+              }
+
+              const current = await fingerprint(baseRef, pr.head.sha, budget);
+              if (!current) return fallback('diff not comparable');
+              const key = current.slice(0, 16);
+              const found = (since, reason) => ({
+                since: new Date(since),
+                change: current,
+                reason: budget.exhausted ? 'comparison budget used up' : reason,
+              });
+              const later = (a, b) => (new Date(a) > new Date(b) ? a : b);
               const olderThanCooldown = (time) => Date.now() - new Date(time).getTime() >= cooldownDays * dayMs;
 
-              // Pushes on top of the branch: the change arrived with the
-              // oldest commit of the trailing run that carries it.
-              for (let i = commits.length - 1; i > 0; i -= 1) {
-                if ((await fingerprint(baseRef, commits[i - 1].oid)) !== current) {
-                  return found(commits[i].committedDate, 'pushed on top of the branch');
+              // Commits pushed on top of the newest force push (or of the
+              // branch, if it was never force-pushed): the change arrived
+              // with the oldest commit of the trailing run that carries it.
+              // Commits a force push brought along (a rebased multi-commit
+              // branch) are judged by the force-push walk below instead.
+              let first = 0;
+              if (pushes.length) {
+                const after = pushes[0].afterCommit && pushes[0].afterCommit.oid;
+                first = commits.findIndex((c) => c.oid === after);
+                if (first < 0) return found(pushes[0].createdAt, 'branch history unclear');
+              }
+              for (let i = commits.length - 1; i > first; i -= 1) {
+                if ((await fingerprint(baseRef, commits[i - 1].oid, budget)) !== current) {
+                  const pushedAt = pushes.length
+                    ? later(commits[i].committedDate, pushes[0].createdAt)
+                    : commits[i].committedDate;
+                  return found(pushedAt, 'pushed on top of the branch');
                 }
               }
 
               // Force pushes (Renovate rebases and version updates), newest
               // first: the change arrived with the newest one that did not
               // already carry it.
-              const pushes = history.timelineItems.nodes.filter((node) => node && node.createdAt).reverse();
-              let compared = 0;
               let newer = null;
-              for (const push of pushes) {
-                // The branch right after this push must already carry the
-                // change; otherwise a push between this force push and the
-                // newer one brought it.
+              for (const [index, push] of pushes.entries()) {
+                // Commits pushed between two force pushes are no longer on the
+                // branch and cannot be inspected; a change and its revert in
+                // between would be invisible. Start at the newer push instead.
                 if (newer) {
                   const after = push.afterCommit && push.afterCommit.oid;
-                  if (!after || (after !== newer.beforeCommit.oid && (await fingerprint(baseRef, after)) !== current)) {
+                  if (!after || after !== newer.beforeCommit.oid) {
                     return found(newer.createdAt, 'pushed between force pushes');
                   }
                 }
                 const before = push.beforeCommit;
                 if (!before) return found(push.createdAt, 'force-pushed');
+                // `before` became the head with the next older force push.
+                const older = pushes[index + 1];
+                const stintStart = older ? older.createdAt : allPushesListed ? null : undefined;
                 const record = await recorded(before.oid);
-                if (record) {
+                if (record && isCurrent(record, stintStart)) {
                   return record.change === key
                     ? found(record.since, 'unchanged since a recorded run')
                     : found(push.createdAt, 'force-pushed');
                 }
-                // The change is known to be there since this push.
-                if (compared >= maxCompares) return found(push.createdAt, 'history too long to verify');
-                compared += 1;
-                if ((await fingerprint(baseRef, before.oid)) !== current) {
+                if ((await fingerprint(baseRef, before.oid, budget)) !== current) {
                   return found(push.createdAt, 'force-pushed');
                 }
                 // The change predates this push; once that is older than the
@@ -279,9 +321,7 @@ jobs:
                 return found(commits[0].committedDate, 'unchanged since the branch was created');
               }
               const oldest = pushes[pushes.length - 1];
-              if (history.timelineItems.totalCount > pushes.length) {
-                return found(oldest.createdAt, 'older force pushes not inspected');
-              }
+              if (!allPushesListed) return found(oldest.createdAt, 'older force pushes not inspected');
               return found(oldest.beforeCommit.committedDate, 'unchanged since the branch was created');
             };
 
