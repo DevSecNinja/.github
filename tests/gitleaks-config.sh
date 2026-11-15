@@ -46,8 +46,8 @@ scan() {
             --report-format csv --report-path "${report}" >/dev/null 2>"${tmp_dir}/$1.log"
     ) || status=$?
     case "${status}" in
-        0 | 42) ;;
-        *) fail "gitleaks failed on $1: $(cat "${tmp_dir}/$1.log")" ;;
+    0 | 42) ;;
+    *) fail "gitleaks failed on $1: $(cat "${tmp_dir}/$1.log")" ;;
     esac
     tail -n +2 "${report}" | cut -d, -f1
 }
