@@ -684,6 +684,16 @@ OIDC subject, or pre-existing job state — things a reusable workflow
 Pin the `uses:` ref to a full commit SHA with a version comment, just
 like reusable workflows.
 
+### AI commits badge (`actions/ai-commits-badge/`)
+
+Generates compact badges, Shields endpoint JSON, statistics and theme-aware
+README cards from complete Git history. Measures recognized AI authors and
+co-author trailers, excludes merges and automation bots, and exposes the
+percentage and counts as step outputs. Publishing stays with the caller.
+
+See [`actions/ai-commits-badge/README.md`](../actions/ai-commits-badge/README.md)
+for attribution caveats, inputs and docs-site or standalone Pages examples.
+
 ### Open PR (`actions/open-pr/`)
 
 Opens (or force-updates) a pull request from the current working tree.

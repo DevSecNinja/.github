@@ -32,4 +32,5 @@ run = [
   "bash ./tests/open-pr-labels.sh",
   "bash ./tests/config-sync-ai-toolkit-instructions.sh",
   "python3 ./tests/workflow-job-conditions.py",
+  "python3 ./tests/ai-commits-badge.py",
 ]
