@@ -62,9 +62,9 @@
               KEY: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
             run: '[[ -n "${KEY//[[:space:]]/}" ]]'
 
-- name: allowlisted emptiness check echoes the key
+- name: allowlisted emptiness check writes the key through an emptiness-style expansion
   as-workflow: .github/workflows/release-please.yml
-  expect: for more than an emptiness test
+  expect: reads $APP_PRIVATE_KEY outside an emptiness test
   workflow:
     jobs:
       release-please:
@@ -76,11 +76,11 @@
               APP_PRIVATE_KEY: ${{ secrets.app-private-key || secrets.AUTOMATION_APP_PRIVATE_KEY }}
             run: |-
               [[ -n "${APP_PRIVATE_KEY//[[:space:]]/}" ]] || exit 1
-              echo "${APP_PRIVATE_KEY}" >> "${GITHUB_OUTPUT}"
+              echo -n "${APP_PRIVATE_KEY//[[:space:]]/}" > key.pem
 
-- name: allowlisted emptiness check dumps the environment
+- name: allowlisted emptiness check pipes into another command
   as-workflow: .github/workflows/config-sync.yml
-  expect: dumps the environment
+  expect: reads $APP_PRIVATE_KEY outside an emptiness test
   workflow:
     jobs:
       sync:
@@ -91,6 +91,72 @@
             env:
               APP_PRIVATE_KEY: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
             run: '[[ -n "${APP_PRIVATE_KEY//[[:space:]]/}" ]] && printenv'
+
+- name: allowlisted emptiness check writes the environment to a file
+  as-workflow: .github/workflows/config-sync.yml
+  expect: changed since review
+  workflow:
+    jobs:
+      sync:
+        runs-on: ubuntu-24.04
+        environment: production
+        steps:
+          - name: Resolve GitHub App credentials
+            env:
+              APP_PRIVATE_KEY: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
+            run: |-
+              [[ -n "${APP_PRIVATE_KEY//[[:space:]]/}" ]] && key_set=true
+              export > key.env
+
+- name: allowlisted emptiness check inherits a tracing job shell
+  as-workflow: .github/workflows/apm-sync.yml
+  expect: must run in plain bash
+  workflow:
+    jobs:
+      apm-sync:
+        runs-on: ubuntu-24.04
+        environment: production
+        defaults:
+          run:
+            shell: bash -ex {0}
+        steps:
+          - name: Resolve GitHub App credentials
+            env:
+              APP_PRIVATE_KEY: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
+            run: '[[ -n "${APP_PRIVATE_KEY//[[:space:]]/}" ]] && key_set=true'
+
+- name: allowlisted emptiness check inherits a tracing workflow shell
+  as-workflow: .github/workflows/apm-sync.yml
+  expect: must run in plain bash
+  workflow:
+    defaults:
+      run:
+        shell: bash -x {0}
+    jobs:
+      apm-sync:
+        runs-on: ubuntu-24.04
+        environment: production
+        steps:
+          - name: Resolve GitHub App credentials
+            env:
+              APP_PRIVATE_KEY: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
+            run: '[[ -n "${APP_PRIVATE_KEY//[[:space:]]/}" ]] && key_set=true'
+
+- name: allowlisted emptiness check runs with SHELLOPTS from the job
+  as-workflow: .github/workflows/apm-sync.yml
+  expect: shell-behaviour variable
+  workflow:
+    jobs:
+      apm-sync:
+        runs-on: ubuntu-24.04
+        environment: production
+        env:
+          SHELLOPTS: xtrace
+        steps:
+          - name: Resolve GitHub App credentials
+            env:
+              APP_PRIVATE_KEY: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
+            run: '[[ -n "${APP_PRIVATE_KEY//[[:space:]]/}" ]] && key_set=true'
 
 - name: token action pinned to a tag
   expect: not pinned to a full commit SHA
@@ -139,6 +205,28 @@
         runs-on: ubuntu-24.04
         steps:
           - run: echo '${{ toJSON(secrets) }}'
+
+- name: computed secrets index
+  expect: exposes every secret
+  workflow:
+    jobs:
+      build:
+        runs-on: ubuntu-24.04
+        steps:
+          - run: echo '${{ secrets['AUTOMATION_APP_PRIVATE_KEY' || 'fallback'] }}'
+
+- name: literal secrets index with spaces in the token step is allowed
+  expect: null
+  workflow:
+    jobs:
+      build:
+        runs-on: ubuntu-24.04
+        environment: production
+        steps:
+          - uses: actions/create-github-app-token@0123456789abcdef0123456789abcdef01234567
+            with:
+              client-id: ${{ vars.AUTOMATION_APP_ID }}
+              private-key: ${{ secrets[ 'AUTOMATION_APP_PRIVATE_KEY' ] }}
 
 - name: secrets inherit to a foreign reusable workflow
   expect: "secrets: inherit hands the App key"

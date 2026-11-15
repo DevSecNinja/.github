@@ -147,16 +147,20 @@ workflow in `.github/workflows/` and `workflow-templates/` and fails when
   full commit SHA, in a job that declares `environment:`;
 - the `env:` of an allowlisted step that only tests the key for emptiness
   (`EMPTINESS_CHECKS`: the "Validate/Resolve GitHub App credentials" steps).
-  Its bash `run:` may read the variable only in
-  `[[ -n|-z "${APP_PRIVATE_KEY//[[:space:]]/}" ]]` and must not dump the
-  environment;
+  Its `run:` is pinned by SHA-256, so any edit fails the test until someone
+  reviews it and updates the hash. It must run in plain bash (no tracing
+  `shell:` or `defaults.run.shell`, no `SHELLOPTS`/`BASH_ENV`-style variables)
+  and may read the variable only in
+  `[[ -n|-z "${APP_PRIVATE_KEY//[[:space:]]/}" ]]` conditions;
 - the `secrets:` mapping of a job that calls `config-sync.yml`,
   `release-please.yml` or `apm-sync.yml` of this repository (pinned by SHA),
   as `AUTOMATION_APP_PRIVATE_KEY` or `app-private-key`.
 
 It therefore rejects the key in workflow- or job-level `env:`, in `run:`
 scripts, in another action's `with:`, in a reusable workflow's `with:`, and
-`toJSON(secrets)` anywhere. `secrets: inherit` is only allowed towards the
+any other use of the `secrets` context than `secrets.NAME` or
+`secrets['NAME']` (such as `toJSON(secrets)` or a computed index) anywhere.
+`secrets: inherit` is only allowed towards the
 three reusables above. Removing the key from the emptiness checks altogether
 is tracked in [#495](https://github.com/DevSecNinja/.github/issues/495). The test runs in `mise run test` (CI); its negative cases
 are in
