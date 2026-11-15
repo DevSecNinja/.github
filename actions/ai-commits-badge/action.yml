@@ -1,0 +1,82 @@
+---
+name: AI commits badge
+description: Generate README badges from commit authors and recorded AI co-authorship, excluding merges and automation bots.
+inputs:
+  ref:
+    description: "Commit, branch or tag to measure."
+    default: HEAD
+  since:
+    description: "Optional git date filter, for example 90 days ago."
+    default: ""
+  name:
+    description: "Repository name shown in the card and tooltip."
+    default: ${{ github.repository }}
+  label:
+    description: "Compact badge and Shields endpoint label."
+    default: AI commits
+  out:
+    description: "Output directory, relative to the caller's working directory."
+    default: badges
+  themes:
+    description: "Also generate separate light and dark cards (true or false)."
+    default: "false"
+  repo-dir:
+    description: "Repository to measure. Must have complete history."
+    default: "."
+outputs:
+  ai-percent:
+    description: "AI share of considered commits, rounded to one decimal; n/a for an empty denominator."
+    value: ${{ steps.generate.outputs.ai-percent }}
+  commits:
+    description: "Non-merge commits excluding automation bots."
+    value: ${{ steps.generate.outputs.commits }}
+  ai-commits:
+    description: "Agent-authored plus AI-co-authored commits."
+    value: ${{ steps.generate.outputs.ai-commits }}
+  agent:
+    description: "Commits authored by a recognized AI identity."
+    value: ${{ steps.generate.outputs.agent }}
+  coauthored:
+    description: "Commits with a recognized AI Co-authored-by trailer."
+    value: ${{ steps.generate.outputs.coauthored }}
+  unattributed:
+    description: "Commits with no recorded AI attribution."
+    value: ${{ steps.generate.outputs.unattributed }}
+  excluded-automation:
+    description: "Excluded non-merge automation-bot commits."
+    value: ${{ steps.generate.outputs.excluded-automation }}
+runs:
+  using: composite
+  steps:
+    - name: Generate AI commits badges
+      id: generate
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        BADGE_REF: ${{ inputs.ref }}
+        BADGE_SINCE: ${{ inputs.since }}
+        BADGE_NAME: ${{ inputs.name }}
+        BADGE_LABEL: ${{ inputs.label }}
+        BADGE_OUT: ${{ inputs.out }}
+        BADGE_THEMES: ${{ inputs.themes }}
+        BADGE_REPO_DIR: ${{ inputs.repo-dir }}
+      run: |-
+        set -euo pipefail
+        args=(
+            "--repo-dir=${BADGE_REPO_DIR}"
+            "--ref=${BADGE_REF}"
+            "--since=${BADGE_SINCE}"
+            "--name=${BADGE_NAME}"
+            "--label=${BADGE_LABEL}"
+            "--out=${BADGE_OUT}"
+            "--github-output=${GITHUB_OUTPUT}"
+        )
+        case "${BADGE_THEMES}" in
+            true) args+=(--themes) ;;
+            false) ;;
+            *)
+                echo "::error::themes must be true or false." >&2
+                exit 1
+                ;;
+        esac
+        python3 "${ACTION_PATH}/ai_commits_badge.py" "${args[@]}"
