@@ -44,7 +44,6 @@ CASES = ROOT / "tests" / "fixtures" / "app-key-confinement-cases.yml"
 
 # Contexts and secret names are case-insensitive in GitHub expressions.
 KEY_NAMES = {"automation_app_private_key", "app-private-key", "release_please_app_private_key"}
-EXPRESSION = re.compile(r"\$\{\{(.*?)\}\}", re.S)
 # A string literal, or the `secrets` context outside one.
 SECRETS_TOKEN = re.compile(r"'(?:[^']|'')*'|(?<![\w.-])(secrets)(?![\w-])", re.I)
 SECRET_DOT = re.compile(r"\s*\.\s*([A-Za-z_][\w-]*)")
@@ -97,9 +96,29 @@ def walk(node, path=()):
         yield path, node
 
 
+def find_expressions(text: str) -> list[str]:
+    """Bodies of the ${{ }} expressions in `text`; a `}}` inside a '...' literal does not close one."""
+    expressions = []
+    start = text.find("${{")
+    while start != -1:
+        pos, quoted = start + 3, False
+        while pos < len(text):
+            if text[pos] == "'":
+                if quoted and text.startswith("''", pos):
+                    pos += 2
+                    continue
+                quoted = not quoted
+            elif not quoted and text.startswith("}}", pos):
+                break
+            pos += 1
+        expressions.append(text[start + 3:pos])
+        start = text.find("${{", pos + 2)
+    return expressions
+
+
 def secret_reads(path: tuple, text: str) -> tuple[bool, bool]:
     """Return (reads the App key, exposes the whole secrets context)."""
-    expressions = EXPRESSION.findall(text)
+    expressions = find_expressions(text)
     if path and path[-1] == "if" and "${{" not in text:
         expressions = [text]
     key = dump = False
@@ -153,6 +172,8 @@ def emptiness_problem(doc: dict, job: dict, step: dict, var: str, digest: str) -
     shell = run_shell(doc, job, step)
     if shell not in (None, "bash"):
         return f"the allowlisted emptiness check must run in plain bash (effective shell: {shell!r})"
+    if job.get("container"):
+        return "the allowlisted emptiness check must not run in a job container (its env and options reach the shell)"
     for scope in (doc, job, step):
         risky = SHELL_BEHAVIOUR_VARS & set(scope.get("env") or {})
         if risky:

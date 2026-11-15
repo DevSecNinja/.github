@@ -149,7 +149,8 @@ workflow in `.github/workflows/` and `workflow-templates/` and fails when
   (`EMPTINESS_CHECKS`: the "Validate/Resolve GitHub App credentials" steps).
   Its `run:` is pinned by SHA-256, so any edit fails the test until someone
   reviews it and updates the hash. It must run in plain bash (no tracing
-  `shell:` or `defaults.run.shell`, no `SHELLOPTS`/`BASH_ENV`-style variables)
+  `shell:` or `defaults.run.shell`, no `SHELLOPTS`/`BASH_ENV`-style variables,
+  no job `container:`)
   and may read the variable only in
   `[[ -n|-z "${APP_PRIVATE_KEY//[[:space:]]/}" ]]` conditions;
 - the `secrets:` mapping of a job that calls `config-sync.yml`,

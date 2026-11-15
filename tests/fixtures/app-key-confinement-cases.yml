@@ -27,6 +27,45 @@
         steps:
           - run: "true"
 
+- name: allowlisted emptiness check runs in a job container with SHELLOPTS
+  as-workflow: .github/workflows/apm-sync.yml
+  expect: must not run in a job container
+  workflow:
+    jobs:
+      apm-sync:
+        runs-on: ubuntu-24.04
+        environment: production
+        container:
+          image: ubuntu:24.04
+          env:
+            SHELLOPTS: xtrace
+        steps:
+          - name: Resolve GitHub App credentials
+            env:
+              APP_PRIVATE_KEY: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
+            run: '[[ -n "${APP_PRIVATE_KEY//[[:space:]]/}" ]] && key_set=true'
+
+- name: key hidden behind a quoted closing delimiter in job env
+  expect: job-level env
+  workflow:
+    jobs:
+      build:
+        runs-on: ubuntu-24.04
+        environment: production
+        env:
+          KEY: ${{ '}}' && secrets.AUTOMATION_APP_PRIVATE_KEY }}
+        steps:
+          - run: "true"
+
+- name: toJSON(secrets) hidden behind a quoted closing delimiter
+  expect: exposes every secret
+  workflow:
+    jobs:
+      build:
+        runs-on: ubuntu-24.04
+        steps:
+          - run: echo '${{ '}}' && toJSON(secrets) }}'
+
 - name: key passed to another action via with (bracket syntax)
   expect: passed to some/action@0123456789abcdef0123456789abcdef01234567 via with
   workflow:
