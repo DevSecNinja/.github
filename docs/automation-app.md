@@ -150,8 +150,9 @@ workflow in `.github/workflows/` and `workflow-templates/` and fails when
   Its `run:` is pinned by SHA-256, so any edit fails the test until someone
   reviews it and updates the hash. It must run in plain bash (no tracing
   `shell:` or `defaults.run.shell`, no `SHELLOPTS`/`BASH_ENV`-style variables,
-  no job `container:`)
-  and may read the variable only in
+  no job `container:`), and only the pinned `harden-runner` action may run
+  before it in its job, since any other step could write `SHELLOPTS` to
+  `$GITHUB_ENV`. It may read the variable only in
   `[[ -n|-z "${APP_PRIVATE_KEY//[[:space:]]/}" ]]` conditions;
 - the `secrets:` mapping of a job that calls `config-sync.yml`,
   `release-please.yml` or `apm-sync.yml` of this repository (pinned by SHA),

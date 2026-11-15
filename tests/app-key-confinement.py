@@ -15,9 +15,10 @@ in one of these places:
   to a full commit SHA, in a job that declares `environment:`;
 - the `env:` of an allowlisted step that only tests the key for emptiness
   (EMPTINESS_CHECKS). Its `run:` is pinned by SHA-256 so any edit needs a
-  fresh review, runs in plain bash (no tracing via `shell:`, `defaults.run` or
-  SHELLOPTS-style variables), and reads the variable only inside
-  `[[ -n|-z "${VAR//[[:space:]]/}" ]]` conditions;
+  fresh review, runs in plain bash (no tracing via `shell:`, `defaults.run`,
+  job containers or SHELLOPTS-style variables), follows only the allowlisted
+  harden-runner step (anything else could write $GITHUB_ENV), and reads the
+  variable only inside `[[ -n|-z "${VAR//[[:space:]]/}" ]]` conditions;
 - the `secrets:` mapping of a job calling an App-key reusable workflow of this
   repository (pinned by SHA, or local), under AUTOMATION_APP_PRIVATE_KEY or
   app-private-key.
@@ -78,6 +79,9 @@ EXPECTED_TOKEN_STEPS = {
 }
 # Variables that make bash trace commands or run extra code before the script.
 SHELL_BEHAVIOUR_VARS = {"SHELLOPTS", "BASHOPTS", "BASH_ENV", "ENV", "PS4", "BASH_XTRACEFD"}
+# The only steps that may run before an emptiness check in its job. Any other
+# step could write SHELLOPTS or BASH_ENV to $GITHUB_ENV and trace the check.
+SAFE_PRECEDING_STEP = re.compile(r"^DevSecNinja/\.github/actions/harden-runner@[0-9a-f]{40}$")
 _condition = r'-[nz]\s+"\$\{\w+//\[\[:space:\]\]/\}"'
 EMPTINESS_LINE = re.compile(
     rf"^\s*(?:(?:el)?if\s+)?\[\[\s*{_condition}(?:\s*(?:\|\||&&)\s*{_condition})*\s*\]\]"
@@ -88,6 +92,9 @@ EMPTINESS_LINE = re.compile(
 def walk(node, path=()):
     if isinstance(node, dict):
         for key, value in node.items():
+            # Mapping keys can hold expressions too (e.g. computed env names).
+            if isinstance(key, str):
+                yield path + (key,), key
             yield from walk(value, path + (key,))
     elif isinstance(node, list):
         for index, value in enumerate(node):
@@ -166,7 +173,7 @@ def run_shell(doc: dict, job: dict, step: dict):
     return None
 
 
-def emptiness_problem(doc: dict, job: dict, step: dict, var: str, digest: str) -> str | None:
+def emptiness_problem(doc: dict, job: dict, step: dict, index: int, var: str, digest: str) -> str | None:
     if step.get("uses"):
         return "an allowlisted emptiness check must be a run step"
     shell = run_shell(doc, job, step)
@@ -175,9 +182,16 @@ def emptiness_problem(doc: dict, job: dict, step: dict, var: str, digest: str) -
     if job.get("container"):
         return "the allowlisted emptiness check must not run in a job container (its env and options reach the shell)"
     for scope in (doc, job, step):
-        risky = SHELL_BEHAVIOUR_VARS & set(scope.get("env") or {})
+        names = {str(name) for name in (scope.get("env") or {})}
+        risky = SHELL_BEHAVIOUR_VARS & names
         if risky:
             return f"the allowlisted emptiness check inherits shell-behaviour variable(s) {sorted(risky)}"
+        if any("${{" in name for name in names):
+            return "the allowlisted emptiness check inherits an env variable with a computed name"
+    for earlier in job["steps"][:index]:
+        if not SAFE_PRECEDING_STEP.match(str(earlier.get("uses") or "")) or set(earlier) - {"name", "uses", "with"}:
+            return (f"step {earlier.get('name') or earlier.get('uses') or 'run'!r} runs before the allowlisted "
+                    f"emptiness check and could change its shell through $GITHUB_ENV")
     run = step.get("run") or ""
     for line in run.splitlines():
         if re.search(rf"(?<!\w){re.escape(var)}(?!\w)", line) and not EMPTINESS_LINE.match(line):
@@ -224,7 +238,7 @@ def classify(doc: dict, rel: str, path: tuple, allowlist: dict, used: set) -> st
         if entry not in allowlist:
             return "step env outside the emptiness-check allowlist"
         used.add(entry)
-        return emptiness_problem(doc, job, step, path[5], allowlist[entry])
+        return emptiness_problem(doc, job, step, path[3], path[5], allowlist[entry])
     if part == "run":
         return "run script outside the emptiness-check allowlist"
     return f"step '{part}'"

@@ -66,6 +66,50 @@
         steps:
           - run: echo '${{ '}}' && toJSON(secrets) }}'
 
+- name: allowlisted emptiness check runs after a step that can write GITHUB_ENV
+  as-workflow: .github/workflows/release-please.yml
+  expect: could change its shell through $GITHUB_ENV
+  workflow:
+    jobs:
+      release-please:
+        runs-on: ubuntu-24.04
+        environment: production
+        steps:
+          - run: echo 'SHELLOPTS=xtrace' >> "$GITHUB_ENV"
+          - name: Validate GitHub App credentials
+            env:
+              APP_PRIVATE_KEY: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
+            run: '[[ -n "${APP_PRIVATE_KEY//[[:space:]]/}" ]] && key_set=true'
+
+- name: key read in a computed env name of the allowlisted check
+  as-workflow: .github/workflows/release-please.yml
+  expect: step env outside the emptiness-check allowlist
+  workflow:
+    jobs:
+      release-please:
+        runs-on: ubuntu-24.04
+        environment: production
+        steps:
+          - name: Validate GitHub App credentials
+            env:
+              ${{ secrets.AUTOMATION_APP_PRIVATE_KEY && 'SHELLOPTS' || 'UNUSED' }}: xtrace
+
+- name: allowlisted emptiness check inherits a computed env name from the job
+  as-workflow: .github/workflows/apm-sync.yml
+  expect: computed name
+  workflow:
+    jobs:
+      apm-sync:
+        runs-on: ubuntu-24.04
+        environment: production
+        env:
+          ${{ 'SHELL' }}OPTS: xtrace
+        steps:
+          - name: Resolve GitHub App credentials
+            env:
+              APP_PRIVATE_KEY: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
+            run: '[[ -n "${APP_PRIVATE_KEY//[[:space:]]/}" ]] && key_set=true'
+
 - name: key passed to another action via with (bracket syntax)
   expect: passed to some/action@0123456789abcdef0123456789abcdef01234567 via with
   workflow:
