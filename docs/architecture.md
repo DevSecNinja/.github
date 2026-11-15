@@ -836,7 +836,7 @@ the repo root.
 | `.github/instructions/untrusted-repositories.instructions.md`  | When agents may execute code (generated)              |
 | `.github/instructions/writing-style.instructions.md`           | Writing style for agent-written prose (generated)     |
 | `.github/labels-base.yaml`                                     | Base label set synced to all repos                    |
-| `.gitleaks.toml`                                               | Gitleaks allow-list                                   |
+| `.gitleaks.toml`                                               | Gitleaks default rules plus a global allow-list       |
 | `.markdownlint.yaml`                                           | Markdown lint rules                                   |
 | `.shellcheckrc`                                                | ShellCheck configuration                              |
 | `.yamlfmt.yaml`                                                | yamlfmt formatting rules                              |
