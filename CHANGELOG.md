@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.7.0](https://github.com/DevSecNinja/.github/compare/v3.6.0...v3.7.0) (2026-11-15)
+
+
+### 🚀 Features
+
+* **actions:** add ai-commits-badge composite action ([#492](https://github.com/DevSecNinja/.github/issues/492)) ([b7dcf98](https://github.com/DevSecNinja/.github/commit/b7dcf9898c1085901ba9a0dcbb21f824cb5272f7))
+
 ## [3.6.0](https://github.com/DevSecNinja/.github/compare/v3.5.0...v3.6.0) (2026-11-12)
 
 
