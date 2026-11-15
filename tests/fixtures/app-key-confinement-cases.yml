@@ -1,0 +1,201 @@
+---
+# Cases for tests/app-key-confinement.py. Each `workflow` is checked as if it
+# lived at `as-workflow` (default fixture.yml), so the real emptiness-check
+# allowlist applies. `expect` is a substring of the single violation the case
+# must produce; `expect: null` marks a case that must pass.
+
+- name: key in workflow-level env
+  expect: workflow-level env
+  workflow:
+    env:
+      KEY: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
+    jobs:
+      build:
+        runs-on: ubuntu-24.04
+        steps:
+          - run: "true"
+
+- name: legacy key name in job-level env
+  expect: job-level env
+  workflow:
+    jobs:
+      build:
+        runs-on: ubuntu-24.04
+        environment: production
+        env:
+          KEY: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
+        steps:
+          - run: "true"
+
+- name: key passed to another action via with (bracket syntax)
+  expect: passed to some/action@0123456789abcdef0123456789abcdef01234567 via with
+  workflow:
+    jobs:
+      build:
+        runs-on: ubuntu-24.04
+        environment: production
+        steps:
+          - uses: some/action@0123456789abcdef0123456789abcdef01234567
+            with:
+              key: ${{ secrets['app-private-key'] }}
+
+- name: key interpolated into a run script
+  expect: run script outside the emptiness-check allowlist
+  workflow:
+    jobs:
+      build:
+        runs-on: ubuntu-24.04
+        environment: production
+        steps:
+          - run: echo "${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}" > key.pem
+
+- name: key in the env of a step that is not allowlisted
+  expect: step env outside the emptiness-check allowlist
+  workflow:
+    jobs:
+      build:
+        runs-on: ubuntu-24.04
+        environment: production
+        steps:
+          - name: Check key
+            env:
+              KEY: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
+            run: '[[ -n "${KEY//[[:space:]]/}" ]]'
+
+- name: allowlisted emptiness check echoes the key
+  as-workflow: .github/workflows/release-please.yml
+  expect: for more than an emptiness test
+  workflow:
+    jobs:
+      release-please:
+        runs-on: ubuntu-24.04
+        environment: production
+        steps:
+          - name: Validate GitHub App credentials
+            env:
+              APP_PRIVATE_KEY: ${{ secrets.app-private-key || secrets.AUTOMATION_APP_PRIVATE_KEY }}
+            run: |-
+              [[ -n "${APP_PRIVATE_KEY//[[:space:]]/}" ]] || exit 1
+              echo "${APP_PRIVATE_KEY}" >> "${GITHUB_OUTPUT}"
+
+- name: allowlisted emptiness check dumps the environment
+  as-workflow: .github/workflows/config-sync.yml
+  expect: dumps the environment
+  workflow:
+    jobs:
+      sync:
+        runs-on: ubuntu-24.04
+        environment: production
+        steps:
+          - name: Resolve GitHub App credentials
+            env:
+              APP_PRIVATE_KEY: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
+            run: '[[ -n "${APP_PRIVATE_KEY//[[:space:]]/}" ]] && printenv'
+
+- name: token action pinned to a tag
+  expect: not pinned to a full commit SHA
+  workflow:
+    jobs:
+      build:
+        runs-on: ubuntu-24.04
+        environment: production
+        steps:
+          - uses: actions/create-github-app-token@v3
+            with:
+              client-id: ${{ vars.AUTOMATION_APP_ID }}
+              private-key: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
+
+- name: key in the env of the token step
+  expect: token step 'env'
+  workflow:
+    jobs:
+      build:
+        runs-on: ubuntu-24.04
+        environment: production
+        steps:
+          - uses: actions/create-github-app-token@0123456789abcdef0123456789abcdef01234567
+            env:
+              KEY: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
+            with:
+              client-id: ${{ vars.AUTOMATION_APP_ID }}
+
+- name: token step in a job without environment
+  expect: declares no environment
+  workflow:
+    jobs:
+      build:
+        runs-on: ubuntu-24.04
+        steps:
+          - uses: actions/create-github-app-token@0123456789abcdef0123456789abcdef01234567
+            with:
+              client-id: ${{ vars.AUTOMATION_APP_ID }}
+              private-key: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
+
+- name: toJSON(secrets) dump
+  expect: exposes every secret
+  workflow:
+    jobs:
+      build:
+        runs-on: ubuntu-24.04
+        steps:
+          - run: echo '${{ toJSON(secrets) }}'
+
+- name: secrets inherit to a foreign reusable workflow
+  expect: "secrets: inherit hands the App key"
+  workflow:
+    jobs:
+      call:
+        uses: someone/repo/.github/workflows/build.yml@0123456789abcdef0123456789abcdef01234567
+        secrets: inherit
+
+- name: secrets inherit to an App-key reusable workflow not pinned by SHA
+  expect: "secrets: inherit hands the App key"
+  workflow:
+    jobs:
+      call:
+        uses: DevSecNinja/.github/.github/workflows/config-sync.yml@main
+        secrets: inherit
+
+- name: key passed by name to a foreign reusable workflow
+  expect: not an allowlisted App-key reusable workflow
+  workflow:
+    jobs:
+      call:
+        uses: someone/repo/.github/workflows/build.yml@0123456789abcdef0123456789abcdef01234567
+        secrets:
+          AUTOMATION_APP_PRIVATE_KEY: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
+
+- name: key passed under another secret name
+  expect: use AUTOMATION_APP_PRIVATE_KEY or app-private-key
+  workflow:
+    jobs:
+      call:
+        uses: DevSecNinja/.github/.github/workflows/release-please.yml@0123456789abcdef0123456789abcdef01234567
+        secrets:
+          token: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
+
+- name: key passed to a reusable workflow as an input
+  expect: job-level 'with' of a reusable-workflow call
+  workflow:
+    jobs:
+      call:
+        uses: DevSecNinja/.github/.github/workflows/apm-sync.yml@0123456789abcdef0123456789abcdef01234567
+        with:
+          app-id: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
+
+- name: secrets inherit to a pinned App-key reusable workflow is allowed
+  expect: null
+  workflow:
+    jobs:
+      call:
+        uses: DevSecNinja/.github/.github/workflows/config-sync.yml@0123456789abcdef0123456789abcdef01234567
+        secrets: inherit
+
+- name: local App-key reusable call with the key by name is allowed
+  expect: null
+  workflow:
+    jobs:
+      call:
+        uses: ./.github/workflows/release-please.yml
+        secrets:
+          app-private-key: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
