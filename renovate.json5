@@ -11,4 +11,9 @@
     "github>DevSecNinja/.github//.renovate/packageRules.json5",
     "github>DevSecNinja/.github//.renovate/semanticCommits.json5",
   ],
+  // Inline script metadata (PEP 723) of the Python tests, e.g. the PyYAML pin
+  // of tests/app-key-confinement.py.
+  pep723: {
+    managerFilePatterns: ["/^tests/.+\\.py$/"],
+  },
 }
