@@ -218,6 +218,14 @@ class BadgeContract(unittest.TestCase):
             self.assertEqual(card.find("svg:text[@y='121']/svg:tspan", NS).text, "5%")
         self.assertIn("ai-percent=4.5\n", (self.work / "outputs").read_text())
 
+    def test_git_log_encoding_does_not_change_output_decoding(self):
+        self.commit("Jos\u00e9", "human@example.org", "Non-ASCII author")
+        self.git("config", "i18n.logOutputEncoding", "ISO-8859-1")
+        result = self.run_action()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.stats()["unattributed"], 3)
+        self.assertEqual(self.stats()["commits"], 5)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

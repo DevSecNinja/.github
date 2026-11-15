@@ -70,7 +70,7 @@ def collect(repo_dir, ref, since):
         )
     revision = git(repo_dir, "rev-parse", "--verify", "--end-of-options", ref + "^{commit}").strip()
     fmt = "%an <%ae>%x1f%(trailers:key=Co-authored-by,valueonly,separator=%x1e)%x00"
-    cmd = ["log", "--no-show-signature", "--no-merges", f"--format={fmt}"]
+    cmd = ["log", "--encoding=UTF-8", "--no-show-signature", "--no-merges", f"--format={fmt}"]
     if since:
         cmd.append(f"--since={since}")
     out = git(repo_dir, *cmd, revision, "--")
