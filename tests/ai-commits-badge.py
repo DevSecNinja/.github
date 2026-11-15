@@ -226,6 +226,24 @@ class BadgeContract(unittest.TestCase):
         self.assertEqual(self.stats()["unattributed"], 3)
         self.assertEqual(self.stats()["commits"], 5)
 
+    def test_long_repository_name_stays_in_header(self):
+        name = "owner/" + "W" * 100
+        result = self.run_action(themes="true", name=name)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for path in (self.work / "out").glob("ai-commits-card*.svg"):
+            card = ET.parse(path)
+            header = card.find("svg:text[@x='456'][@y='34']", NS)
+            clip = header.get("clip-path")
+            self.assertIsNotNone(clip)
+            rect = card.find(f"svg:clipPath[@id='{clip[5:-1]}']/svg:rect", NS)
+            self.assertIsNotNone(rect)
+            self.assertLessEqual(float(rect.get("width")), 200)
+            self.assertEqual(float(rect.get("x")) + float(rect.get("width")), float(header.get("x")))
+            self.assertIn(name, card.find("svg:title", NS).text)
+            self.assertIn(name, card.getroot().get("aria-label"))
+            self.assertIsNone(card.find(".//*[@textLength]"))
+            self.assertIsNone(card.find(".//*[@lengthAdjust]"))
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

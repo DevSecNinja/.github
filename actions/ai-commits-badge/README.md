@@ -27,6 +27,9 @@ existing 480px layout. Tooltips and accessible hover text retain the full
 **No recorded AI attribution** wording. The corresponding machine-readable
 key and action output are `unattributed`.
 
+Long repository names are clipped to the card's 200px header region without
+stretching the text. The full name remains in the tooltip and accessible text.
+
 ## Inputs
 
 | Input      | Default                    | Meaning                                                         |
