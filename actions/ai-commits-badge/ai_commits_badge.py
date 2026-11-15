@@ -14,17 +14,17 @@ from datetime import datetime, timezone
 from html import escape
 from pathlib import Path
 
-# Matched against "Name <email>" and each trailer; first match wins.
+# Complete name/email patterns; first matching tool wins for authors and trailers.
 AI_IDENTITIES = [
-    (r"198982749\+Copilot@|copilot-swe-agent", "Copilot coding agent"),
-    (r"223556219\+Copilot@", "Copilot CLI"),
-    (r"175728472\+Copilot@", "Copilot"),
-    (r"242468646\+Claude@|anthropic-code-agent", "Claude agent"),
-    (r"noreply@anthropic\.com", "Claude Code"),
-    (r"cursoragent@cursor\.com", "Cursor"),
-    (r"devin-ai-integration\[bot\]", "Devin"),
-    (r"google-labs-jules\[bot\]", "Jules"),
-    (r"noreply@aider\.chat", "Aider"),
+    (r"copilot-swe-agent(?:\[bot\])?", r"198982749\+Copilot@users\.noreply\.github\.com", "Copilot coding agent"),
+    (None, r"223556219\+Copilot@users\.noreply\.github\.com", "Copilot CLI"),
+    (None, r"175728472\+Copilot@users\.noreply\.github\.com", "Copilot"),
+    (r"anthropic-code-agent(?:\[bot\])?", r"242468646\+Claude@users\.noreply\.github\.com", "Claude agent"),
+    (None, r"noreply@anthropic\.com", "Claude Code"),
+    (None, r"cursoragent@cursor\.com", "Cursor"),
+    (r"devin-ai-integration\[bot\]", None, "Devin"),
+    (r"google-labs-jules\[bot\]", None, "Jules"),
+    (None, r"noreply@aider\.chat", "Aider"),
 ]
 NO_ATTRIBUTION = "No recorded AI attribution"
 SEGMENTS = [
@@ -43,9 +43,15 @@ def text_width(s):
 
 
 def ai_tool(identity):
-    for pattern, name in AI_IDENTITIES:
-        if re.search(pattern, identity, re.IGNORECASE):
-            return name
+    match = re.fullmatch(r"\s*(.*?)\s*<([^<>]+)>\s*", identity)
+    if not match:
+        return None
+    name, email = (part.strip() for part in match.groups())
+    for name_pattern, email_pattern, tool in AI_IDENTITIES:
+        if (name_pattern and re.fullmatch(name_pattern, name, re.IGNORECASE)) or (
+            email_pattern and re.fullmatch(email_pattern, email, re.IGNORECASE)
+        ):
+            return tool
     return None
 
 
@@ -100,7 +106,7 @@ def collect(repo_dir, ref, since):
 
 
 def message(st):
-    return "n/a" if st["ai_percent"] is None else f"{st['ai_percent']:.0f}%"
+    return "n/a" if not st["commits"] else f"{100 * st['ai_commits'] / st['commits']:.0f}%"
 
 
 def tooltip(st, name):

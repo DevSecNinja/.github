@@ -182,6 +182,42 @@ class BadgeContract(unittest.TestCase):
         self.assertEqual(self.stats()["commits"], 1)
         self.assertEqual(self.stats()["ai_percent"], 0.0)
 
+    def test_partial_identities_do_not_count_as_ai(self):
+        self.commit("Human", "noreply@anthropic.com.example.org", "Not Claude")
+        self.commit("Human", "alice+223556219+Copilot@example.org", "Not Copilot")
+        self.commit("not-copilot-swe-agent", "human@example.org", "Not the agent")
+        self.commit(
+            "Human", "human@example.org",
+            "Unrecognized trailers\n\n"
+            "Co-authored-by: Human <noreply@anthropic.com.example.org>\n"
+            "Co-authored-by: Human <alice+223556219+Copilot@example.org>",
+        )
+        result = self.run_action()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.stats()["agent"], 1)
+        self.assertEqual(self.stats()["coauthored"], 1)
+        self.assertEqual(self.stats()["unattributed"], 6)
+        self.assertEqual(self.stats()["ai_percent"], 25.0)
+
+    def test_display_percentage_avoids_double_rounding(self):
+        self.tip = None
+        self.commit("copilot-swe-agent[bot]", "agent@example.org", "Agent")
+        for i in range(21):
+            self.commit("Human", "human@example.org", f"Unattributed {i}")
+        result = self.run_action(themes="true")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.stats()["ai_percent"], 4.5)
+        out = self.work / "out"
+        endpoint = json.loads((out / "ai-commits.json").read_text(encoding="utf-8"))
+        self.assertEqual(endpoint["message"], "5%")
+        compact = ET.parse(out / "ai-commits.svg")
+        self.assertIn("5%", [text.text for text in compact.findall(".//svg:text", NS)])
+        for path in out.glob("ai-commits-card*.svg"):
+            card = ET.parse(path)
+            self.assertEqual(card.find("svg:text[@y='74']/svg:tspan", NS).text, "5%")
+            self.assertEqual(card.find("svg:text[@y='121']/svg:tspan", NS).text, "5%")
+        self.assertIn("ai-percent=4.5\n", (self.work / "outputs").read_text())
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

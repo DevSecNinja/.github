@@ -41,9 +41,10 @@ key and action output are `unattributed`.
 
 Identity rules are centralized and cannot be overridden per caller, so repos
 using the same action revision use comparable classification rules. Add new
-AI identities to the bundled list through a PR in this repository. Patterns
-are case-insensitive and match `Name <email>` for authors and individual
-trailers.
+AI identities to the bundled list through a PR in this repository. The same
+case-insensitive rules match complete recognized names or email addresses for
+authors and individual trailers. Email patterns include the expected domain;
+partial names and addresses do not establish AI attribution.
 
 ## Outputs and files
 
@@ -57,8 +58,10 @@ trailers.
 | `unattributed`        | No recorded AI attribution.                               |
 | `excluded-automation` | Excluded non-merge bot commits.                           |
 
-The badge displays a whole-number percentage; `ai-percent` and stats JSON
-retain one decimal. Empty history produces a grey `n/a` badge.
+The badge displays a whole-number percentage calculated directly from the
+commit counts; `ai-percent` and stats JSON retain one decimal. Display values
+are not rounded again from the statistics. Empty history produces a grey
+`n/a` badge.
 
 | File in `out`                                           | Purpose                                                           |
 | ------------------------------------------------------- | ----------------------------------------------------------------- |
