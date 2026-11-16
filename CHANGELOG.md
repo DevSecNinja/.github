@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.0.0](https://github.com/DevSecNinja/.github/compare/v3.7.1...v4.0.0) (2026-11-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* **renovate:** make renovate.json5 a create-only stub over a central default preset ([#518](https://github.com/DevSecNinja/.github/issues/518))
+
+### 🚀 Features
+
+* **config-sync:** add Python editorconfig section and widen CODEOWNERS requirements glob ([#522](https://github.com/DevSecNinja/.github/issues/522)) ([71b4f97](https://github.com/DevSecNinja/.github/commit/71b4f970437f2b17a3a20dfc5a993f11decee8da))
+* **config-sync:** exclude Spec Kit output and virtualenvs in dprint and yamlfmt ([#521](https://github.com/DevSecNinja/.github/issues/521)) ([f19ddb8](https://github.com/DevSecNinja/.github/commit/f19ddb8be1ff665db9bf33a5da89c75973a62819))
+* **lint:** annotate redacted gitleaks findings on the PR ([#505](https://github.com/DevSecNinja/.github/issues/505)) ([cabe072](https://github.com/DevSecNinja/.github/commit/cabe0728244f4e543074209f6d25e72fb10f2a71))
+* **open-pr:** add a commit-method that GitHub signs ([#517](https://github.com/DevSecNinja/.github/issues/517)) ([61a62d3](https://github.com/DevSecNinja/.github/commit/61a62d33290f69ac656dd431cbc3bf3fa3f58883))
+* **renovate:** add opt-in typescript-eslint preset capping TypeScript ([#523](https://github.com/DevSecNinja/.github/issues/523)) ([2748207](https://github.com/DevSecNinja/.github/commit/274820749cb68885cee5e4a939c4c2483273ad75))
+* **renovate:** make renovate.json5 a create-only stub over a central default preset ([#518](https://github.com/DevSecNinja/.github/issues/518)) ([611597b](https://github.com/DevSecNinja/.github/commit/611597b1f735e702f34deca8cceef971f3bce02f))
+* **renovate:** never pin npm engines ranges ([#519](https://github.com/DevSecNinja/.github/issues/519)) ([0ea9345](https://github.com/DevSecNinja/.github/commit/0ea93452765bcb1a1bf5be83dfe1e57178ae6c86))
+
+
+### 🐛 Bug Fixes
+
+* **config-sync:** make pr-labeler path rules layout-independent ([#515](https://github.com/DevSecNinja/.github/issues/515)) ([1da86b2](https://github.com/DevSecNinja/.github/commit/1da86b2a4a982688e83733c904474cc1098ab801))
+
 ## [3.7.1](https://github.com/DevSecNinja/.github/compare/v3.7.0...v3.7.1) (2026-11-16)
 
 
