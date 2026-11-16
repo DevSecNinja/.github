@@ -29,8 +29,9 @@ ROOT = Path(__file__).resolve().parent.parent
 CHECKER = ROOT / "scripts" / "lint-inline-scripts.py"
 CASES = ROOT / "tests" / "fixtures" / "lint-inline-scripts-cases.yml"
 SUMMARY = re.compile(r"; (\d+) to move into a script, (\d+) opted out\.$", re.MULTILINE)
-# A row of the opt-out table in the step summary: file, job and step.
-OPT_OUT = re.compile(r"^\| (\S+):\d+ \| job '([^']+)', step '([^']+)' \|", re.MULTILINE)
+# A row of the opt-out table in the step summary: file, job (empty for a
+# composite action) and step.
+OPT_OUT = re.compile(r"^\| (\S+):\d+ \| (?:job '([^']+)'|[Cc]omposite action), step '([^']+)' \|", re.MULTILINE)
 
 
 def key_preflights() -> set:
@@ -103,11 +104,16 @@ def main() -> int:
     with tempfile.TemporaryDirectory() as tmp:
         summary = Path(tmp) / "summary.md"
         result = run(["--blocking", str(ROOT)], ROOT, summary)
-        opt_outs = set(OPT_OUT.findall(summary.read_text(encoding="utf-8"))) if summary.is_file() else set()
-    if result.returncode != 0 or not SUMMARY.search(result.stdout):
+        rows = OPT_OUT.findall(summary.read_text(encoding="utf-8")) if summary.is_file() else []
+    counts = SUMMARY.search(result.stdout)
+    if result.returncode != 0 or not counts:
         failed += 1
         print(f"✗ this repository must have no inline scripts:\n{result.stdout}{result.stderr}")
+    opt_outs = set(rows)
     preflights = key_preflights()
+    if counts and int(counts.group(2)) != len(rows):
+        failed += 1
+        print(f"✗ {counts.group(2)} opt-out(s) reported, but {len(rows)} parsed from the step summary")
     if opt_outs != preflights:
         failed += 1
         print(f"✗ only the App-key preflights may opt out: unexpected {sorted(opt_outs - preflights)}, "
