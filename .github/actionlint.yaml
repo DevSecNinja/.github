@@ -1,8 +1,0 @@
----
-# actionlint configuration: https://github.com/rhysd/actionlint/blob/main/docs/config.md
-paths:
-  .github/workflows/secret-scan.yml:
-    ignore:
-      # actionlint (1.7.12) predates GitHub's `$/` self-repository syntax for
-      # reusable workflow calls (July 2026). Drop this once it supports it.
-      - 'reusable workflow call "\$/\.github/workflows/lint\.yml" at "uses" is not following the format'

@@ -400,6 +400,11 @@ lint_scenarios = [
      PER_LINTER - {"go", "trivy"}),
     ("public repo, config drift on", lint_context(config_drift=True), PER_LINTER | {"config-drift"}),
     ("invalid mode fails loudly in the single job", lint_context(mode="bogus"), SINGLE),
+    ("public repo, gitleaks only", lint_context(gitleaks_only=True, config_drift=True), {"gitleaks"}),
+    ("private repo, parallel, gitleaks only", lint_context(mode="parallel", private=True, gitleaks_only=True),
+     {"gitleaks"}),
+    ("private repo, gitleaks only (steps gated in the single job)", lint_context(private=True, gitleaks_only=True),
+     SINGLE),
 ]
 for name, context, expected in lint_scenarios:
     check("lint.yml", name, running_jobs(lint, context), expected)

@@ -53,6 +53,13 @@ on:
         required: false
         type: boolean
         default: true
+      lint-gitleaks-only:
+        description: >-
+          Run only gitleaks and skip every other linter, including linters added in later releases, whatever their
+          `lint-*` inputs say. For secret-scan callers; keep `lint-gitleaks` on.
+        required: false
+        type: boolean
+        default: false
       lint-go:
         description: "Run golangci-lint (Go linting)"
         required: false
@@ -125,8 +132,8 @@ defaults:
 jobs:
   dprint:
     name: dprint
-    if: ${{ inputs.lint-dprint && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
-      }}
+    if: ${{ inputs.lint-dprint && !inputs.lint-gitleaks-only && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode
+      == 'auto' && !github.event.repository.private)) }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -168,8 +175,8 @@ jobs:
 
   yamlfmt:
     name: yamlfmt
-    if: ${{ inputs.lint-yamlfmt && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
-      }}
+    if: ${{ inputs.lint-yamlfmt && !inputs.lint-gitleaks-only && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode
+      == 'auto' && !github.event.repository.private)) }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -210,8 +217,8 @@ jobs:
 
   yamllint:
     name: yamllint
-    if: ${{ inputs.lint-yamllint && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
-      }}
+    if: ${{ inputs.lint-yamllint && !inputs.lint-gitleaks-only && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode
+      == 'auto' && !github.event.repository.private)) }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -252,8 +259,8 @@ jobs:
 
   actionlint:
     name: actionlint
-    if: ${{ inputs.lint-actionlint && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
-      }}
+    if: ${{ inputs.lint-actionlint && !inputs.lint-gitleaks-only && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode
+      == 'auto' && !github.event.repository.private)) }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -486,8 +493,8 @@ jobs:
           category: gitleaks/history
   go:
     name: go
-    if: ${{ inputs.lint-go && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
-      }}
+    if: ${{ inputs.lint-go && !inputs.lint-gitleaks-only && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode ==
+      'auto' && !github.event.repository.private)) }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -531,8 +538,8 @@ jobs:
 
   shellcheck:
     name: shellcheck
-    if: ${{ inputs.lint-shellcheck && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
-      }}
+    if: ${{ inputs.lint-shellcheck && !inputs.lint-gitleaks-only && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode
+      == 'auto' && !github.event.repository.private)) }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -587,8 +594,8 @@ jobs:
 
   shfmt:
     name: shfmt
-    if: ${{ inputs.lint-shfmt && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
-      }}
+    if: ${{ inputs.lint-shfmt && !inputs.lint-gitleaks-only && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode
+      == 'auto' && !github.event.repository.private)) }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -627,8 +634,8 @@ jobs:
 
   checkov:
     name: checkov
-    if: ${{ inputs.lint-checkov && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
-      }}
+    if: ${{ inputs.lint-checkov && !inputs.lint-gitleaks-only && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode
+      == 'auto' && !github.event.repository.private)) }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -682,8 +689,8 @@ jobs:
 
   trivy:
     name: trivy
-    if: ${{ inputs.lint-trivy && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
-      }}
+    if: ${{ inputs.lint-trivy && !inputs.lint-gitleaks-only && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode
+      == 'auto' && !github.event.repository.private)) }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -744,8 +751,8 @@ jobs:
 
   zizmor:
     name: zizmor
-    if: ${{ inputs.lint-zizmor && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
-      }}
+    if: ${{ inputs.lint-zizmor && !inputs.lint-gitleaks-only && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode
+      == 'auto' && !github.event.repository.private)) }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -784,8 +791,8 @@ jobs:
 
   config-drift:
     name: config drift
-    if: ${{ inputs.lint-config-drift && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
-      }}
+    if: ${{ inputs.lint-config-drift && !inputs.lint-gitleaks-only && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode
+      == 'auto' && !github.event.repository.private)) }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -880,7 +887,7 @@ jobs:
 
       - name: Check formatting with dprint
         id: dprint
-        if: ${{ inputs.lint-dprint }}
+        if: ${{ inputs.lint-dprint && !inputs.lint-gitleaks-only }}
         continue-on-error: true
         env:
           CONFIG_DIR: ${{ inputs.lint-config-dir }}
@@ -907,7 +914,7 @@ jobs:
 
       - name: Check YAML formatting
         id: yamlfmt
-        if: ${{ inputs.lint-yamlfmt }}
+        if: ${{ inputs.lint-yamlfmt && !inputs.lint-gitleaks-only }}
         continue-on-error: true
         env:
           CONFIG_DIR: ${{ inputs.lint-config-dir }}
@@ -933,7 +940,7 @@ jobs:
 
       - name: Run yamllint
         id: yamllint
-        if: ${{ inputs.lint-yamllint }}
+        if: ${{ inputs.lint-yamllint && !inputs.lint-gitleaks-only }}
         continue-on-error: true
         env:
           CONFIG_DIR: ${{ inputs.lint-config-dir }}
@@ -959,7 +966,7 @@ jobs:
 
       - name: Run actionlint
         id: actionlint
-        if: ${{ inputs.lint-actionlint }}
+        if: ${{ inputs.lint-actionlint && !inputs.lint-gitleaks-only }}
         continue-on-error: true
         run: mise exec -- actionlint
 
@@ -1158,7 +1165,7 @@ jobs:
           category: gitleaks/history
       - name: Check for Go version file
         id: go-version-file
-        if: ${{ inputs.lint-go }}
+        if: ${{ inputs.lint-go && !inputs.lint-gitleaks-only }}
         env:
           GO_VERSION_FILE: ${{ inputs.go-version-file }}
         run: |-
@@ -1197,7 +1204,7 @@ jobs:
 
       - name: Run shellcheck
         id: shellcheck
-        if: ${{ inputs.lint-shellcheck }}
+        if: ${{ inputs.lint-shellcheck && !inputs.lint-gitleaks-only }}
         continue-on-error: true
         env:
           CONFIG_DIR: ${{ inputs.lint-config-dir }}
@@ -1237,7 +1244,7 @@ jobs:
 
       - name: Run shfmt
         id: shfmt
-        if: ${{ inputs.lint-shfmt }}
+        if: ${{ inputs.lint-shfmt && !inputs.lint-gitleaks-only }}
         continue-on-error: true
         env:
           EXCLUDE_PATTERN: ${{ inputs.lint-shfmt-exclude }}
@@ -1261,7 +1268,7 @@ jobs:
 
       - name: Run checkov
         id: checkov
-        if: ${{ inputs.lint-checkov }}
+        if: ${{ inputs.lint-checkov && !inputs.lint-gitleaks-only }}
         continue-on-error: true
         env:
           UPLOAD_SARIF: ${{ inputs.upload-sarif }}
@@ -1275,7 +1282,7 @@ jobs:
 
       - name: Filter skipped checks from SARIF
         id: checkov-sarif-filter
-        if: ${{ inputs.lint-checkov && inputs.upload-sarif }}
+        if: ${{ inputs.lint-checkov && !inputs.lint-gitleaks-only && inputs.upload-sarif }}
         continue-on-error: true
         run: |-
           sarif="${RUNNER_TEMP}/results_sarif.sarif"
@@ -1292,7 +1299,7 @@ jobs:
 
       - name: Upload checkov SARIF report
         id: checkov-sarif
-        if: ${{ inputs.lint-checkov && inputs.upload-sarif }}
+        if: ${{ inputs.lint-checkov && !inputs.lint-gitleaks-only && inputs.upload-sarif }}
         continue-on-error: true
         uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         with:
@@ -1301,7 +1308,7 @@ jobs:
 
       - name: Run trivy
         id: trivy
-        if: ${{ inputs.lint-trivy }}
+        if: ${{ inputs.lint-trivy && !inputs.lint-gitleaks-only }}
         continue-on-error: true
         env:
           CONFIG_DIR: ${{ inputs.lint-config-dir }}
@@ -1337,7 +1344,7 @@ jobs:
 
       - name: Upload trivy SARIF report
         id: trivy-sarif
-        if: ${{ inputs.lint-trivy && inputs.upload-sarif }}
+        if: ${{ inputs.lint-trivy && !inputs.lint-gitleaks-only && inputs.upload-sarif }}
         continue-on-error: true
         uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         with:
@@ -1346,7 +1353,7 @@ jobs:
 
       - name: Run zizmor
         id: zizmor
-        if: ${{ inputs.lint-zizmor }}
+        if: ${{ inputs.lint-zizmor && !inputs.lint-gitleaks-only }}
         continue-on-error: true
         env:
           UPLOAD_SARIF: ${{ inputs.upload-sarif }}
@@ -1360,7 +1367,7 @@ jobs:
 
       - name: Upload zizmor SARIF report
         id: zizmor-sarif
-        if: ${{ inputs.lint-zizmor && inputs.upload-sarif }}
+        if: ${{ inputs.lint-zizmor && !inputs.lint-gitleaks-only && inputs.upload-sarif }}
         continue-on-error: true
         uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         with:
@@ -1369,7 +1376,7 @@ jobs:
 
       - name: Check config drift against central repo
         id: config-drift
-        if: ${{ inputs.lint-config-drift }}
+        if: ${{ inputs.lint-config-drift && !inputs.lint-gitleaks-only }}
         continue-on-error: true
         run: |-
           BASE_URL="https://raw.githubusercontent.com/DevSecNinja/.github/main/config-sync/files"

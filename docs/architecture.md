@@ -114,8 +114,40 @@ on the event (v4.1.0+):
   Internal repositories, whose logs every enterprise member can read, and a
   failed visibility lookup count as public.
   Repositories whose Lint caller runs on pull requests only get the full-history
-  scan from a second caller of [`secret-scan.yml`](#secret-scan-secret-scanyml),
-  after each merge, weekly and on dispatch.
+  scan from a second caller, after each merge, weekly and on dispatch (this
+  repository's `secret-scan-caller.yml`). It sets `lint-gitleaks-only: true`
+  (v4.3.0+), which skips every other linter, including linters added to
+  `lint.yml` later, so the caller keeps no list of linters to turn off. A Lint
+  caller that also runs on push already scans the history there, so drop `push`
+  below.
+
+```yaml
+name: Secret scan
+on:
+  push:
+    branches: ["main"]
+  schedule:
+    - cron: "23 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    uses: DevSecNinja/.github/.github/workflows/lint.yml@<sha> # v4.3.0
+    permissions:
+      contents: read
+      security-events: write
+    with:
+      # renovate: datasource=github-releases depName=jdx/mise
+      mise-version: "2026.10.19"
+      # Findings only report; fail the run if the scan or upload fails.
+      lint-fail-on-error: true
+      # Run gitleaks and nothing else, now and after future linter additions.
+      lint-gitleaks-only: true
+      # upload-sarif: false # private repos without GitHub Advanced Security
+```
 
 | Input                   | Description                                                            |
 | ----------------------- | ---------------------------------------------------------------------- |
@@ -131,6 +163,7 @@ on the event (v4.1.0+):
 | `lint-yamllint`         | YAML linting (yamllint). Default: `true`.                              |
 | `lint-actionlint`       | GitHub Actions linting. Default: `true`.                               |
 | `lint-gitleaks`         | Secret scanning (gitleaks). Default: `true`.                           |
+| `lint-gitleaks-only`    | Run only gitleaks, skip all other linters. Default: `false`. v4.3.0+.  |
 | `lint-go`               | Go linting (golangci-lint). Default: `true`.                           |
 | `lint-shellcheck`       | Shell linting (shellcheck). Default: `true`.                           |
 | `lint-shfmt`            | Shell formatting (shfmt). Default: `true`.                             |
@@ -171,54 +204,6 @@ jobs:
       # lint-fail-on-error: true
       # lint-job-mode: auto # single | parallel
 ```
-
-### Secret scan (`secret-scan.yml`)
-
-Runs only the gitleaks job of `lint.yml` (v4.3.0+), for the full-history scan
-of repositories whose Lint caller runs on pull requests only. The wrapper turns
-every other linter off itself, so callers keep no list of linters to disable
-and a linter added to `lint.yml` later never starts running in them
-(`tests/secret-scan-wrapper.py` fails CI when the wrapper misses one). gitleaks
-behaves exactly as described under [Lint](#lint-lintyml): history findings of
-public repositories go to code scanning (category `gitleaks/history`) with a
-count-only log, private repositories get the job summary. The wrapper calls
-`lint.yml` with GitHub's `$/` self-repository syntax, so it always runs the
-`lint.yml` of the commit you pin. A Lint caller that also runs on push already
-scans the history there, so drop `push` below.
-
-```yaml
-name: Secret scan
-on:
-  push:
-    branches: ["main"]
-  schedule:
-    - cron: "23 5 * * 1"
-  workflow_dispatch:
-
-permissions:
-  contents: read
-
-jobs:
-  gitleaks:
-    uses: DevSecNinja/.github/.github/workflows/secret-scan.yml@<sha> # v4.3.0
-    permissions:
-      contents: read
-      # Public repositories upload history findings to code scanning.
-      security-events: write
-    with:
-      # renovate: datasource=github-releases depName=jdx/mise
-      mise-version: "2026.10.19"
-      # lint-config-dir: config-sync/files
-```
-
-| Input                | Description                                                                                   |
-| -------------------- | --------------------------------------------------------------------------------------------- |
-| `mise-version`       | **Required.** mise version to install.                                                        |
-| `lint-config-dir`    | Directory with an optional `.gitleaks.toml`. Default: `""`.                                   |
-| `lint-fail-on-error` | Fail when the scan or the code scanning upload fails (findings only report). Default: `true`. |
-
-Private repositories without GitHub Advanced Security need no extra input:
-their history findings go to the job summary, not to code scanning.
 
 ### Auto-fix formatting (`autofix.yml`)
 

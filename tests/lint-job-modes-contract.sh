@@ -131,11 +131,14 @@ grep -Fq 'default: auto' <<<"${mode_input}" || fail "lint-job-mode must default 
 grep -Fq 'required: false' <<<"${mode_input}" || fail "lint-job-mode must stay optional"
 
 # Exactly one mode runs: per-linter jobs carry the parallel guard, the
-# combined job its negation.
+# combined job its negation. Every linter except gitleaks also honours
+# lint-gitleaks-only (tests/lint-gitleaks-only.py checks the single-job steps).
 for job in "${linter_jobs[@]}"; do
     condition="$(job_if "${job}")"
-    [ "${condition}" = "\${{ inputs.lint-${job} && ${parallel_guard} }}" ] ||
-        fail "job ${job} must use: if: \${{ inputs.lint-${job} && ${parallel_guard} }} (found: ${condition})"
+    only=" && !inputs.lint-gitleaks-only"
+    [ "${job}" = gitleaks ] && only=""
+    [ "${condition}" = "\${{ inputs.lint-${job}${only} && ${parallel_guard} }}" ] ||
+        fail "job ${job} must use: if: \${{ inputs.lint-${job}${only} && ${parallel_guard} }} (found: ${condition})"
 done
 condition="$(job_if "${combined_job}")"
 [ "${condition}" = "\${{ !${parallel_guard} }}" ] ||
