@@ -1041,7 +1041,7 @@ CI), Renovate batches its work
   ("all non-major dependencies"). It overrides the specific groups (go, mise, vite,
   postgres, chezmoi) for non-major updates, which therefore still land
   together; those groups keep their own PR for major updates only.
-- **Not batched:** major updates (separate, manual), vulnerability fixes
+- **Not batched:** major updates (separate, manual), pins (separate, no soak), vulnerability fixes
   (separate, immediate), `docker-gated-` images (separate, so the
   [ADR 0005](design-decisions/0005-pr-age-cooldown-for-untrusted-timestamps.md)
   cooldown keeps working), and the dotfiles devcontainer image (branch
@@ -1119,6 +1119,11 @@ can still assign Code Owners if an automerge PR cannot merge cleanly.
   branch (`uses: owner/repo@<sha> # main`) are the other exception: a branch pin can
   only move by digest, so the digest disable would freeze it. Third-party branch pins
   need owner review.
+- **Pins skip the soak** — `pin` and `pinDigest` updates only record the version or
+  digest a repository already uses (`v4` → `v4.4.0`, `@main` → `@<sha> # main`),
+  so they get `minimumReleaseAge: "0"`, their own PR (`groupName: null`, outside
+  the weekly batch) and automerge. Non-Docker-Hub image pins still wait for the
+  `pr-cooldown` check (ADR 0005).
 - **Abandonment exemptions** — Renovate flags packages without a release for a
   year as abandoned. Known-stable packages that trip this (for example
   `@testing-library/user-event`) are exempted by name in

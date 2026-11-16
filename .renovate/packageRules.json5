@@ -201,5 +201,24 @@
       // versioning, which compares them correctly, with no per-image allowlist.
       matchCurrentValue: "/^version-/",
     },
+    {
+      // A pin only records the exact version or digest of what the repository
+      // already uses (`v4` -> `v4.4.0`, `^6.12.0` -> `6.12.0`, `@main` ->
+      // `@<sha> # main`), so there is no new code to soak. With the soak, a
+      // single young version held the whole pin PR on
+      // renovate/stability-days (DevSecNinja/funda-scorecard#67). Kept last so
+      // it wins over the per-datasource soak rules above. groupName null takes
+      // pins out of the weekly batch and Renovate's own "Pin Dependencies"
+      // group, so one slow pin cannot hold the others. Non-Docker-Hub images
+      // keep their docker-gated- branch and pr-cooldown check (ADR 0005).
+      description: "Pins (pin, pinDigest) fix the version already in use: no release-age soak, own PR, automerge",
+      matchUpdateTypes: ["pin", "pinDigest"],
+      minimumReleaseAge: "0",
+      groupName: null,
+      // Ungrouped, a pin is a group of one: undo minimumGroupSize from the
+      // specific groups (postgres sets 2), or a lone pin never gets a branch.
+      minimumGroupSize: 1,
+      automerge: true,
+    },
   ],
 }
