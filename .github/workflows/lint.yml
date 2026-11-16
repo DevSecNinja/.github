@@ -367,12 +367,14 @@ jobs:
             --report-format "${format}" --report-path "${report}" "${config_args[@]}" >"${log}" 2>&1 || status=$?
           if [ "${mode}" = history-private ]; then
             cat "${log}"
-          else
-            # gitleaks' own log is public here: keep only its totals and fatal errors.
-            grep -E 'commits scanned|scanned ~|leaks found|FTL' "${log}" || true
           fi
           rm -f "${log}"
           if [ "${status}" -ne 0 ] && [ "${status}" -ne 42 ]; then
+            if [ "${mode}" = history-public ]; then
+              # gitleaks' diagnostics can name findings (for example an invalid
+              # .gitleaksignore entry), and this log is public: withhold them.
+              echo "::error::gitleaks failed (exit ${status}). Its log is withheld because job logs of public repositories are public: run gitleaks on a private clone to see why."
+            fi
             exit "${status}"
           fi
           if [ "${mode}" = history-private ]; then
@@ -386,7 +388,10 @@ jobs:
                 .artifactLocation.uri |= (split("/") | map(@uri) | join("/"))
                 | if .region then .region |= with_entries(select(.value | type != "number" or . >= 1)) else . end
                 | if (.region.startLine // 0) < 1 then del(.region) else . end
-              )' "${report}" >"${report}.tmp"
+              )
+              # The upload also rejects repeated tags, which gitleaks copies from rules.
+              | walk(if type == "object" then (if (.tags | type) == "array" then .tags |= unique else . end) else . end)
+            ' "${report}" >"${report}.tmp"
             mv "${report}.tmp" "${report}"
             count="$(jq '[.runs[].results[]] | length' "${report}")"
             where="They are in code scanning (category gitleaks/history), visible only with write access."
@@ -1025,12 +1030,14 @@ jobs:
             --report-format "${format}" --report-path "${report}" "${config_args[@]}" >"${log}" 2>&1 || status=$?
           if [ "${mode}" = history-private ]; then
             cat "${log}"
-          else
-            # gitleaks' own log is public here: keep only its totals and fatal errors.
-            grep -E 'commits scanned|scanned ~|leaks found|FTL' "${log}" || true
           fi
           rm -f "${log}"
           if [ "${status}" -ne 0 ] && [ "${status}" -ne 42 ]; then
+            if [ "${mode}" = history-public ]; then
+              # gitleaks' diagnostics can name findings (for example an invalid
+              # .gitleaksignore entry), and this log is public: withhold them.
+              echo "::error::gitleaks failed (exit ${status}). Its log is withheld because job logs of public repositories are public: run gitleaks on a private clone to see why."
+            fi
             exit "${status}"
           fi
           if [ "${mode}" = history-private ]; then
@@ -1044,7 +1051,10 @@ jobs:
                 .artifactLocation.uri |= (split("/") | map(@uri) | join("/"))
                 | if .region then .region |= with_entries(select(.value | type != "number" or . >= 1)) else . end
                 | if (.region.startLine // 0) < 1 then del(.region) else . end
-              )' "${report}" >"${report}.tmp"
+              )
+              # The upload also rejects repeated tags, which gitleaks copies from rules.
+              | walk(if type == "object" then (if (.tags | type) == "array" then .tags |= unique else . end) else . end)
+            ' "${report}" >"${report}.tmp"
             mv "${report}.tmp" "${report}"
             count="$(jq '[.runs[].results[]] | length' "${report}")"
             where="They are in code scanning (category gitleaks/history), visible only with write access."
@@ -1126,7 +1136,10 @@ jobs:
           retention-days: 5
 
       - name: Upload gitleaks history to code scanning
+        id: gitleaks-sarif
         if: ${{ !cancelled() && inputs.upload-sarif && steps.gitleaks.outputs.sarif == 'true' }}
+        # Let the remaining linters run; the last step reports the failure.
+        continue-on-error: true
         uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         with:
           sarif_file: ${{ runner.temp }}/gitleaks-history.sarif

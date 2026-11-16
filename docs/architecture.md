@@ -102,9 +102,11 @@ on the event (v4.1.0+):
   This only reports, with a warning that gives the count. Job logs and
   artifacts of public repositories are public, so there the findings go only to
   code scanning (SARIF, category `gitleaks/history`), whose alerts need write
-  access. The log shows gitleaks' totals and the count only: no file, line,
-  commit, summary or artifact. The SARIF paths are percent-encoded so the
-  upload step never logs one, and runs with debug logging skip the upload,
+  access. The log shows the count only: gitleaks' own log is withheld, since its
+  diagnostics can name findings, and a failed scan prints a generic error. There
+  is no file, line, commit, summary or artifact. The SARIF paths are
+  percent-encoded and repeated tags removed, so the upload step never logs a path
+  or rejects the file, and runs with debug logging skip the upload,
   which then logs the paths it can't fingerprint. Keep `upload-sarif: true` on
   public repositories, or the findings aren't published anywhere. Private
   repositories get the full log, annotations, summary and artifact instead.
@@ -136,6 +138,8 @@ jobs:
     with:
       # renovate: datasource=github-releases depName=jdx/mise
       mise-version: "2026.10.19"
+      # Findings only report; fail the run if the scan or upload fails.
+      lint-fail-on-error: true
       # upload-sarif: false # private repos without GitHub Advanced Security
       lint-dprint: false
       lint-yamlfmt: false

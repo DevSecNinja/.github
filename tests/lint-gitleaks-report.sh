@@ -199,6 +199,8 @@ make_repo public
     echo not-a-key >id.fakekey
     git add -A
     git commit -qm odd
+    # gitleaks logs invalid ignore entries verbatim; this one names a file.
+    echo "withheld-ignore-entry.txt" >.gitleaksignore
 )
 CONFIG_DIR="${tmp_dir}/public-config"
 mkdir -p "${CONFIG_DIR}"
@@ -210,6 +212,7 @@ useDefault = true
 id = "fake-key-file"
 description = "Fake key file"
 path = '''\.fakekey$'''
+tags = ["dup", "dup"]
 EOF
 for visibility in public internal error; do
     FAKE_VISIBILITY="${visibility}" scan public
@@ -218,9 +221,9 @@ for visibility in public internal error; do
     grep -Fqx sarif=true <<<"${outputs}" || fail "expected sarif=true; got: ${outputs}"
     grep -Fqx '::warning::gitleaks found 4 finding(s) in the git history. They are in code scanning (category gitleaks/history), visible only with write access.' <<<"${out}" ||
         fail "expected a count-only warning; got: ${out}"
-    unexpected="$(grep -vE '(commits scanned|scanned ~|leaks found)|^::warning::gitleaks found 4 finding' <<<"${out}" || true)"
-    [ -z "${unexpected}" ] || fail "the public log may hold only gitleaks totals and the count; got: ${unexpected}"
-    for detail in old.txt fake,token github-pat gitleaks-history 'my dir' café id.fakekey "$(git -C "${tmp_dir}/public" rev-parse --short=7 HEAD)" '::error' 'file='; do
+    unexpected="$(grep -v '^::warning::gitleaks found 4 finding' <<<"${out}" || true)"
+    [ -z "${unexpected}" ] || fail "the public log may hold only the count; got: ${unexpected}"
+    for detail in old.txt fake,token github-pat gitleaks-history withheld-ignore-entry 'my dir' café id.fakekey "$(git -C "${tmp_dir}/public" rev-parse --short=7 HEAD)" '::error' 'file='; do
         if grep -Fq -- "${detail}" <<<"${out}"; then
             fail "the public log must show a count only, but it contains '${detail}': ${out}"
         fi
@@ -229,6 +232,8 @@ for visibility in public internal error; do
     [ ! -e "${tmp_dir}/public-runner-temp/gitleaks-findings.json" ] || fail "a public history scan must not upload findings"
     sarif="${tmp_dir}/public-runner-temp/gitleaks-history.sarif"
     [ "$(jq '[.runs[].results[]] | length' "${sarif}")" -eq 4 ] || fail "the SARIF report must hold all four findings"
+    jq -e '[.. | objects | .tags? | arrays | length == (unique | length)] | all' "${sarif}" >/dev/null ||
+        fail "the SARIF report must not repeat tags, which the upload rejects"
     # Valid URI references and 1-based regions, so the upload neither logs
     # a path nor rejects the file.
     jq -e '[.runs[].results[].locations[].physicalLocation]
@@ -239,7 +244,16 @@ for visibility in public internal error; do
 done
 UPLOAD_SARIF=false scan public
 grep -Fq 'upload-sarif is off, so they are not published' <<<"${out}" ||
-    fail "without SARIF uploads the warning must say the findings are not published; got: ${out}"# Debug logging makes the code scanning upload log paths: skip it.
+    fail "without SARIF uploads the warning must say the findings are not published; got: ${out}"
+# A failing public scan withholds gitleaks' log and explains why.
+saved_config="$(cat "${CONFIG_DIR}/.gitleaks.toml")"
+printf 'not = [valid toml\n' >"${CONFIG_DIR}/.gitleaks.toml"
+scan public
+[ "${status}" -ne 0 ] || fail "a broken config must fail the scan: ${out}"
+[ "${out}" = "::error::gitleaks failed (exit ${status}). Its log is withheld because job logs of public repositories are public: run gitleaks on a private clone to see why." ] ||
+    fail "a failing public scan may print only the generic error; got: ${out}"
+printf '%s\n' "${saved_config}" >"${CONFIG_DIR}/.gitleaks.toml"
+# Debug logging makes the code scanning upload log paths: skip it.
 RUNNER_DEBUG=1 scan public
 grep -Fqx sarif=true <<<"${outputs}" && fail "a debug run must skip the code scanning upload"
 grep -Fq 'Debug logging is on, so the code scanning upload is skipped' <<<"${out}" ||
