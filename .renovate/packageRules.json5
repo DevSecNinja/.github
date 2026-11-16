@@ -60,6 +60,28 @@
       matchCurrentAge: "> 1 year",
       addLabels: ["stale-dependency"],
     },
+    // Known-stable packages that Renovate's abandonment check (1 year without
+    // a release, from abandonments:recommended in config:recommended) flags as
+    // false positives. One central list instead of the same rule in every
+    // repository that uses the package. Same shape as Renovate's own
+    // community overrides; add a reason for every entry.
+    {
+      // Feature-complete and part of the Testing Library org; releases are
+      // rare because the API is stable (DevSecNinja/grip-visualizer).
+      description: "Known-stable npm package: not abandoned despite infrequent releases",
+      matchDatasources: ["npm"],
+      matchPackageNames: ["@testing-library/user-event"],
+      abandonmentThreshold: "5 years",
+    },
+    {
+      // The current, required timer-trigger extension of the Azure Functions
+      // isolated worker; Microsoft releases it infrequently
+      // (DevSecNinja/az-vm-start-stop).
+      description: "Known-stable NuGet package: not abandoned despite infrequent releases",
+      matchDatasources: ["nuget"],
+      matchPackageNames: ["Microsoft.Azure.Functions.Worker.Extensions.Timer"],
+      abandonmentThreshold: "10 years",
+    },
     {
       matchUpdateTypes: ["major"],
       minimumReleaseAge: "14 days",

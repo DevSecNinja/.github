@@ -27,6 +27,7 @@ run = [
   "bash ./tests/renovate-batching-contract.sh",
   "bash ./tests/renovate-engines-range.sh",
   "bash ./tests/renovate-branch-pin-digests.sh",
+  "bash ./tests/renovate-abandonment-exemptions.sh",
   "bash ./tests/release-please-auth-contract.sh",
   "bash ./tests/automation-app-contract.sh",
   "uv run --script ./tests/app-key-confinement.py",
