@@ -638,6 +638,13 @@ by `renovate[bot]` are skipped (v3.3.0+): Renovate rewrites its Dependency
 Dashboard on nearly every run, and each `issues: edited` event would otherwise
 bill a run.
 
+`github/issue-labeler` builds a JavaScript `RegExp` from each rule and ANDs the
+rules listed under a label. The synced `issue-labeler.yaml` therefore writes
+case-insensitive rules as `'/pattern/i'` (inline `(?i)` flags throw and abort
+the run) and keeps one alternation per label.
+`tests/issue-labeler-config.py` checks both and runs sample issues through the
+rules.
+
 **Example caller:**
 
 ```yaml
