@@ -119,21 +119,45 @@ run_sync "${local_config}" "" false
 [ "$(cat "${consumer}/renovate.json5")" = "${local_config}" ] || fail "an existing renovate.json5 must never be overwritten"
 ! warned || fail "a renovate.json5 that extends ${default_preset} must not warn"
 
-single_quoted="{ extends: ['${default_preset}'] }"
-run_sync "${single_quoted}" "" false
-! warned || fail "a single-quoted JSON5 extends entry must not warn"
-
 legacy="{ extends: [\"config:recommended\", \"${preset_prefix}base.json5\"] }"
 run_sync "${legacy}" "" false
 [ "$(cat "${consumer}/renovate.json5")" = "${legacy}" ] || fail "a legacy renovate.json5 must not be overwritten"
 warned || fail "a renovate.json5 without ${default_preset} must warn"
 
-commented="{
+# Only the top-level extends array counts; comments and other keys do not.
+extends_cases=(
+    "{ extends: ['${default_preset}'] }"
+    "{
+  \"extends\": [
+    // org defaults
+    \"${default_preset}\", /* local */ \"config:recommended\",
+  ],
+  description: \"not \\\"extends\\\": [x]\",
+}"
+)
+missing_cases=(
+    "{
   // extends: [\"${default_preset}\"],
   extends: [\"config:recommended\"],
 }"
-run_sync "${commented}" "" false
-warned || fail "a commented-out ${default_preset} must warn"
+    "{
+  extends: [
+    \"config:recommended\", // \"${default_preset}\"
+    /* \"${default_preset}\", */
+  ],
+}"
+    "{ extends: [\"config:recommended\"], ignorePresets: [\"${default_preset}\"] }"
+    "{ extends: [\"config:recommended\"], description: \"${default_preset}\" }"
+    "{ packageRules: [{ extends: [\"${default_preset}\"] }] }"
+)
+for config in "${extends_cases[@]}"; do
+    run_sync "${config}" "" false
+    ! warned || fail "a top-level extends entry for ${default_preset} must not warn: ${config}"
+done
+for config in "${missing_cases[@]}"; do
+    run_sync "${config}" "" false
+    warned || fail "a renovate.json5 that does not extend ${default_preset} at the top level must warn: ${config}"
+done
 
 run_sync "" "renovate.json5" false
 [ ! -e "${consumer}/renovate.json5" ] || fail "an ignored renovate.json5 must not be bootstrapped"
