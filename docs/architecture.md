@@ -82,14 +82,66 @@ installs that Python first. Callers without a configured Python get no Python
 download. Releases up to v2.0.x installed only `uv pipx:<tool>` and fail for
 callers that configure Python; v2.1.0+ fixes this.
 
-**gitleaks findings.** gitleaks runs with `--redact` and writes a JSON report.
-The next step annotates each finding on the PR (`::error` with the file, line,
-rule ID and short commit SHA) and adds a table of rule, file:line, commit and
-author date to the job summary. Only those fields leave the report, never the
-secret, match or matched line. The same fields plus each finding's
-`.gitleaksignore` fingerprint are uploaded as the
-`gitleaks-findings-<check run ID>` artifact, kept for five days. The exit code
-and the lint gate are unchanged.
+**gitleaks.** gitleaks always runs with `--redact`, and what it scans depends
+on the event (v3.8.0+):
+
+- **Pull requests and merge queues** scan only their own commits
+  (`--log-opts <base>..<head>`). A secret added in the PR fails it, and older
+  history never shows up on an unrelated PR. Each finding is annotated on the
+  PR (`::error` with the file, line, rule ID and short commit SHA), and the job
+  summary gets a table of rule, file:line, commit and author date. Only those
+  fields leave the report, never the secret, match or matched line. The same
+  fields plus each finding's `.gitleaksignore` fingerprint are uploaded as the
+  `gitleaks-findings-<check run ID>` artifact, kept for five days.
+- **Other events** (push, schedule, dispatch) scan the full history, so new
+  gitleaks rules re-check old commits. This only reports, with a warning that
+  gives the count. Job logs and artifacts of public repositories are public,
+  so there the findings go only to code scanning (SARIF, category
+  `gitleaks/history`), whose alerts need write access. The log shows a count,
+  with no file, line, commit, summary or artifact, and the SARIF paths are
+  percent-encoded so the upload step never logs one. Keep `upload-sarif: true` on
+  public repositories, or the findings aren't published anywhere. Private
+  repositories get the annotations, summary and artifact instead. When the
+  visibility lookup fails, the scan treats the repository as public.
+
+Repositories whose Lint caller runs on pull requests only get the full-history
+scan from a second caller, after each merge, weekly and on dispatch, with every
+other linter off (this repository's `secret-scan-caller.yml`). A Lint caller
+that also runs on push already scans the history there, so drop `push` below.
+
+```yaml
+name: Secret scan
+on:
+  push:
+    branches: ["main"]
+  schedule:
+    - cron: "23 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    uses: DevSecNinja/.github/.github/workflows/lint.yml@<sha> # v3.8.0
+    permissions:
+      contents: read
+      security-events: write
+    with:
+      # renovate: datasource=github-releases depName=jdx/mise
+      mise-version: "2026.10.19"
+      # upload-sarif: false # private repos without GitHub Advanced Security
+      lint-dprint: false
+      lint-yamlfmt: false
+      lint-yamllint: false
+      lint-actionlint: false
+      lint-go: false
+      lint-shellcheck: false
+      lint-shfmt: false
+      lint-checkov: false
+      lint-trivy: false
+      lint-zizmor: false
+```
 
 | Input                   | Description                                                            |
 | ----------------------- | ---------------------------------------------------------------------- |

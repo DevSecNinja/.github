@@ -35,7 +35,8 @@ post-merge-only work to do:
   `main` to keep the release PR up to date).
 - **Scheduled scans that also want a `main` snapshot** (e.g.
   `image-security.yml` runs weekly and on push to `main` so the latest
-  shipped image set is always represented).
+  shipped image set is always represented, and the secret-scan caller
+  re-scans the full git history with the current gitleaks rules).
 - **Label / repo config workflows** where the PR run validates and the
   `main` run applies (e.g. `label-sync.yml`).
 - **TODO-to-issue conversion** (`todo-to-issue.yml`) — only meaningful
