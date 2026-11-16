@@ -1022,6 +1022,10 @@ can still assign Code Owners if an automerge PR cannot merge cleanly.
 - **Digest updates disabled** — prevents merging potentially hijacked tags (except
   DevSecNinja-owned devcontainer images on `ghcr.io/devsecninja/`, which are trusted
   internal images and auto-merge immediately with no wait time).
+- **npm `engines` are never pinned** — `rangeStrategy: "pin"` applies to
+  dependencies, but `engines` declare the supported range (`node: "^24.0.0"`)
+  and use `rangeStrategy: "replace"`. The exact Node.js version for
+  development and CI is pinned in `.mise.toml`.
 
 ### Consuming the preset
 
