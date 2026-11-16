@@ -115,6 +115,10 @@ jobs:
       pr: ${{ steps.release-please.outputs.pr }}
     steps:
       - name: Validate GitHub App credentials
+        # This step reads the App key, so tests/app-key-confinement.py pins its
+        # `run:` by SHA-256 and lets no other step run before it. A script
+        # fetched by an earlier step would escape both checks (#537).
+        # lint: allow-inline-script reviewed App-key emptiness check, pinned by tests/app-key-confinement.py
         shell: bash
         env:
           APP_ID: ${{ inputs.app-id || vars.AUTOMATION_APP_ID }}
