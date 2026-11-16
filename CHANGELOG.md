@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.3.0](https://github.com/DevSecNinja/.github/compare/v4.2.1...v4.3.0) (2026-11-16)
+
+
+### 🚀 Features
+
+* **renovate:** let pins skip the release-age soak in their own PR ([#547](https://github.com/DevSecNinja/.github/issues/547)) ([2da949c](https://github.com/DevSecNinja/.github/commit/2da949c47cb154d6ff0ab76322fa10407ebc1067))
+
 ## [4.2.1](https://github.com/DevSecNinja/.github/compare/v4.2.0...v4.2.1) (2026-11-16)
 
 
