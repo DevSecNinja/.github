@@ -384,11 +384,17 @@ jobs:
             # Make the SARIF valid for code scanning, whose upload would
             # otherwise log invalid URIs (file paths) or reject path-only
             # findings (line 0): percent-encode paths, drop empty regions.
+            # Without a security-severity, code scanning files the findings as
+            # non-security warnings.
             jq '(.runs[].results[].locations[]?.physicalLocation) |= (
                 .artifactLocation.uri |= (split("/") | map(@uri) | join("/"))
                 | if .region then .region |= with_entries(select(.value | type != "number" or . >= 1)) else . end
                 | if (.region.startLine // 0) < 1 then del(.region) else . end
               )
+              # Leaked secrets are security alerts: high severity, error level.
+              | (.runs[].tool.driver.rules[]?.properties) |= ((. // {}) + {"security-severity": "8.0"}
+                  | .tags = ((.tags // []) + ["security", "secret"]))
+              | (.runs[].results[]?.level) = "error"
               # The upload also rejects repeated tags, which gitleaks copies from rules.
               | walk(if type == "object" then (if (.tags | type) == "array" then .tags |= unique else . end) else . end)
             ' "${report}" >"${report}.tmp"
@@ -1047,11 +1053,17 @@ jobs:
             # Make the SARIF valid for code scanning, whose upload would
             # otherwise log invalid URIs (file paths) or reject path-only
             # findings (line 0): percent-encode paths, drop empty regions.
+            # Without a security-severity, code scanning files the findings as
+            # non-security warnings.
             jq '(.runs[].results[].locations[]?.physicalLocation) |= (
                 .artifactLocation.uri |= (split("/") | map(@uri) | join("/"))
                 | if .region then .region |= with_entries(select(.value | type != "number" or . >= 1)) else . end
                 | if (.region.startLine // 0) < 1 then del(.region) else . end
               )
+              # Leaked secrets are security alerts: high severity, error level.
+              | (.runs[].tool.driver.rules[]?.properties) |= ((. // {}) + {"security-severity": "8.0"}
+                  | .tags = ((.tags // []) + ["security", "secret"]))
+              | (.runs[].results[]?.level) = "error"
               # The upload also rejects repeated tags, which gitleaks copies from rules.
               | walk(if type == "object" then (if (.tags | type) == "array" then .tags |= unique else . end) else . end)
             ' "${report}" >"${report}.tmp"
