@@ -1064,8 +1064,9 @@ can still assign Code Owners if an automerge PR cannot merge cleanly.
   `--package-lock-only` runs when a package in the tree declares
   `bundleDependencies` ([npm/cli#9800](https://github.com/npm/cli/issues/9800)),
   which breaks Renovate's lockfile updates in every Tailwind CSS 4 repository.
-  `base.json5` sets `allow-remote=all` for the npm manager only (merged with the
-  repository's `.npmrc`). Installs in CI and on developer machines keep npm 12's
+  `base.json5` sets `allow-remote=all` for Renovate's npm manager only (merged with
+  the repository's `.npmrc`). That manager also runs pnpm and Yarn lockfile
+  updates, which ignore the setting. Installs in CI and on developer machines keep npm 12's
   `allow-remote=none`. Remove it once Renovate's npm includes the fix.
 - **npm `engines` are never pinned** — `rangeStrategy: "pin"` applies to
   dependencies, but `engines` declare the supported range (`node: "^24.0.0"`)

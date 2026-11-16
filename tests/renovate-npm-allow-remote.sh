@@ -4,7 +4,9 @@
 # shared presets. The `npmrc` override must stay as narrow as possible:
 #
 # - only in the npm manager block, never at the top level or in packageRules,
-#   so pnpm, yarn and every other manager keep their own settings;
+#   so no other manager is affected. Renovate's npm manager also writes it for
+#   pnpm and Yarn lockfile updates; neither has an allow-remote setting, so for
+#   them the line is inert;
 # - only `allow-remote=all`: no allow-git, registry, script or auth settings;
 # - with npmrcMerge, so a repository's own .npmrc is kept and can override it.
 
@@ -27,7 +29,7 @@ for file in "${repo_root}"/.renovate/*.json5; do
         | map(select(. != "npm")) | join(", ")' <<<"${config}")"
     [ -z "${misplaced}" ] || fail "${name}: npmrc is only allowed in the npm manager block, found at: ${misplaced}"
     if jq -e 'has("npmrc")' <<<"${config}" >/dev/null; then
-        fail "${name}: a top-level npmrc would replace every repository's .npmrc for all npm-based managers"
+        fail "${name}: a top-level npmrc would reach every manager and, without npmrcMerge, replace repository .npmrc files"
     fi
     jq -e '.npm.npmrc' <<<"${config}" >/dev/null || continue
     found=$((found + 1))
