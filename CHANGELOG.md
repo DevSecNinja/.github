@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.7.1](https://github.com/DevSecNinja/.github/compare/v3.7.0...v3.7.1) (2026-11-16)
+
+
+### 🐛 Bug Fixes
+
+* **gitleaks:** extend the default rules in the synced config ([#499](https://github.com/DevSecNinja/.github/issues/499)) ([bdd742f](https://github.com/DevSecNinja/.github/commit/bdd742f38c6a10c7f35f788fc8d8682070aad770))
+
 ## [3.7.0](https://github.com/DevSecNinja/.github/compare/v3.6.0...v3.7.0) (2026-11-15)
 
 
