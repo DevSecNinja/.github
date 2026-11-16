@@ -201,7 +201,8 @@ count):
 Findings are annotated on the file and line of the `run:` key and listed in
 the job summary with the opt-outs. They are warnings by default; set
 `lint-inline-scripts-blocking: true` to report errors and fail the linter
-(a file that can't be parsed then fails it too). A
+(a file that can't be parsed then fails it too). This repository's own Lint
+runs it blocking. A
 later major release makes blocking the default. The checker runs with the
 runner's system Python, which ships PyYAML (`ubuntu-24.04`).
 
