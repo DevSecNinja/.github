@@ -115,6 +115,10 @@ jobs:
 
       - name: Resolve GitHub App credentials
         id: app
+        # This step reads the App key, so tests/app-key-confinement.py pins its
+        # `run:` by SHA-256 and lets no step but harden-runner run before it. A
+        # script fetched by an earlier step would escape both checks (#537).
+        # lint: allow-inline-script reviewed App-key emptiness check, pinned by tests/app-key-confinement.py
         env:
           APP_ID: ${{ inputs.app-id || vars.AUTOMATION_APP_ID }}
           APP_PRIVATE_KEY: ${{ secrets.app-private-key || secrets.AUTOMATION_APP_PRIVATE_KEY }}
@@ -142,6 +146,24 @@ jobs:
           fi
           echo "::warning title=APM Sync falls back to GITHUB_TOKEN::${reason} GITHUB_TOKEN can only open the PR when 'Allow GitHub Actions to create and approve pull requests' is enabled, and that PR does not trigger CI. See https://github.com/DevSecNinja/.github/blob/main/docs/automation-app.md"
 
+      - name: Checkout apm-sync scripts
+        # The apm-sync scripts ship with this reusable workflow: fetch them
+        # from the same commit of DevSecNinja/.github that the caller pinned.
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .devsecninja-apm-sync
+          sparse-checkout: |-
+            scripts/apm-sync/
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Move apm-sync scripts out of the workspace
+        # Outside the workspace the sync PR can't pick them up, and a code
+        # checkout doesn't delete them.
+        run: mv .devsecninja-apm-sync "${RUNNER_TEMP}/devsecninja-apm-sync"
+
       - name: Generate App token
         id: app-token
         if: steps.app.outputs.available == 'true'
@@ -165,13 +187,7 @@ jobs:
 
       - name: Check for apm.yml
         id: precheck
-        run: |
-          if [ ! -f apm.yml ]; then
-            echo "::notice::No apm.yml in this repo; nothing to sync."
-            echo "skip=true" >> "${GITHUB_OUTPUT}"
-          else
-            echo "skip=false" >> "${GITHUB_OUTPUT}"
-          fi
+        run: bash "${RUNNER_TEMP}/devsecninja-apm-sync/scripts/apm-sync/check-manifest.sh"
 
       - name: Install apm CLI
         if: steps.precheck.outputs.skip != 'true'
@@ -179,20 +195,13 @@ jobs:
           VERSION: ${{ inputs.apm-version }}
           APM_INSTALL_DIR: ${{ runner.temp }}/apm/bin
           APM_LIB_DIR: ${{ runner.temp }}/apm/lib/apm
-        run: |
-          set -euo pipefail
-          curl -sSL https://aka.ms/apm-unix | sh
-          echo "${APM_INSTALL_DIR}" >> "${GITHUB_PATH}"
+        run: bash "${RUNNER_TEMP}/devsecninja-apm-sync/scripts/apm-sync/install-apm.sh"
 
       - name: Refresh APM primitives
         if: steps.precheck.outputs.skip != 'true'
         env:
           PACKAGES: ${{ inputs.packages }}
-        run: |
-          set -euo pipefail
-          apm --version
-          # shellcheck disable=SC2086 # PACKAGES is an intentional arg list.
-          apm update --yes ${PACKAGES}
+        run: bash "${RUNNER_TEMP}/devsecninja-apm-sync/scripts/apm-sync/update.sh"
 
       - name: Open sync PR
         id: open-pr

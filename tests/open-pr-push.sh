@@ -107,17 +107,7 @@ grep -Fq "stale info" "${tmp_dir}/legacy.err" ||
 
 # The pre-fetch step that vendored-file-sync.yml runs before its pinned
 # (pre-fix) open-pr makes that legacy push succeed.
-prefetch="${tmp_dir}/prefetch.sh"
-awk '
-    $0 == "      - name: Fetch working branch" { in_step = 1; next }
-    in_step && $0 ~ /^        run: [|]/ { in_run = 1; next }
-    in_run {
-        if ($0 ~ /^      - name:/ || $0 ~ /^        [a-z-]+:/) exit
-        sub(/^          /, "")
-        print
-    }
-' "${repo_root}/.github/workflows/vendored-file-sync.yml" >"${prefetch}"
-[ -s "${prefetch}" ] || fail "could not extract the pre-fetch step from vendored-file-sync.yml"
+prefetch="${repo_root}/scripts/vendored-file-sync/fetch-working-branch.sh"
 workaround="${tmp_dir}/workaround"
 new_checkout "${workaround}"
 (cd "${workaround}" && BRANCH="${branch}" bash "${prefetch}") >/dev/null 2>&1

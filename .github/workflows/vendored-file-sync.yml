@@ -83,6 +83,25 @@ jobs:
       pr-number: ${{ steps.open-pr.outputs.pr-number }}
       pr-url: ${{ steps.open-pr.outputs.pr-url }}
     steps:
+      - name: Checkout vendored-file-sync scripts
+        # The vendored-file-sync scripts ship with this reusable workflow: fetch
+        # them from the same commit of DevSecNinja/.github that the caller
+        # pinned.
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .devsecninja-vendored-file-sync
+          sparse-checkout: |-
+            scripts/vendored-file-sync/
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Move vendored-file-sync scripts out of the workspace
+        # Outside the workspace the drift check doesn't see them, and a code
+        # checkout doesn't delete them.
+        run: mv .devsecninja-vendored-file-sync "${RUNNER_TEMP}/devsecninja-vendored-file-sync"
+
       - name: Checkout code
         # zizmor: ignore[artipacked]
         # Persisted credentials are required: the `actions/open-pr`
@@ -99,52 +118,19 @@ jobs:
       - name: Run vendored-file refresher
         env:
           REFRESH_COMMAND: ${{ inputs.refresh-command }}
-        run: |-
-          set -euo pipefail
-          bash -c "${REFRESH_COMMAND}"
+        run: bash -c "${REFRESH_COMMAND}"
 
       - name: Detect vendored-file drift
         id: detect
         env:
           PATHS: ${{ inputs.paths }}
-        run: |-
-          set -euo pipefail
-
-          pathspecs=()
-          while IFS= read -r line; do
-            trimmed="${line#"${line%%[![:space:]]*}"}"
-            trimmed="${trimmed%"${trimmed##*[![:space:]]}"}"
-            [ -n "${trimmed}" ] && pathspecs+=("${trimmed}")
-          done <<< "${PATHS}"
-
-          if [ "${#pathspecs[@]}" -eq 0 ]; then
-            echo "::error::At least one watched path is required." >&2
-            exit 1
-          fi
-
-          git status --short -- "${pathspecs[@]}"
-          if [ -n "$(git status --porcelain -- "${pathspecs[@]}")" ]; then
-            echo "changed=true" >> "${GITHUB_OUTPUT}"
-          else
-            echo "changed=false" >> "${GITHUB_OUTPUT}"
-          fi
+        run: bash "${RUNNER_TEMP}/devsecninja-vendored-file-sync/scripts/vendored-file-sync/detect-drift.sh"
 
       - name: Fail validation when vendored files drift
         if: ${{ !inputs.create-pr && steps.detect.outputs.changed == 'true' }}
         env:
           PATHS: ${{ inputs.paths }}
-        run: |-
-          set -euo pipefail
-
-          echo "::error::Vendored files are out of sync. Run the vendored-file refresher and commit the resulting changes."
-          while IFS= read -r line; do
-            trimmed="${line#"${line%%[![:space:]]*}"}"
-            trimmed="${trimmed%"${trimmed##*[![:space:]]}"}"
-            if [ -n "${trimmed}" ]; then
-              git diff -- "${trimmed}" || true
-            fi
-          done <<< "${PATHS}"
-          exit 1
+        run: bash "${RUNNER_TEMP}/devsecninja-vendored-file-sync/scripts/vendored-file-sync/report-drift.sh"
 
       - name: Fetch working branch
         # The pinned open-pr version pushes with a bare --force-with-lease,
@@ -155,12 +141,7 @@ jobs:
         if: ${{ inputs.create-pr && steps.detect.outputs.changed == 'true' }}
         env:
           BRANCH: ${{ inputs.branch }}
-        run: |-
-          depth=()
-          if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then
-            depth=(--depth=1)
-          fi
-          git fetch --no-tags "${depth[@]}" origin "+refs/heads/${BRANCH}:refs/remotes/origin/${BRANCH}" || true
+        run: bash "${RUNNER_TEMP}/devsecninja-vendored-file-sync/scripts/vendored-file-sync/fetch-working-branch.sh"
 
       - name: Open or update vendored-file sync PR
         id: open-pr
