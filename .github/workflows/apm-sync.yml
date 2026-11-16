@@ -155,17 +155,13 @@ jobs:
           permission-pull-requests: write
 
       - name: Checkout calling repository
-        # zizmor: ignore[artipacked]
-        # Persisted credentials are required: the `actions/open-pr` step below
-        # invokes `git push --force-with-lease`, which relies on the bearer
-        # token that `actions/checkout` writes into the remote URL. Setting
-        # `persist-credentials: false` here breaks PR creation without offering
-        # meaningful isolation — this job runs no untrusted code (it only
-        # installs the pinned apm CLI and runs `apm update` over the repo's own
-        # committed apm.yml/apm.lock.yaml).
+        # No persisted credentials: the `actions/open-pr` step below commits
+        # through the GitHub API with its github-token (commit-method: api),
+        # not `git push`.
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           token: ${{ steps.app-token.outputs.token || github.token }}
+          persist-credentials: false
 
       - name: Check for apm.yml
         id: precheck
@@ -202,7 +198,7 @@ jobs:
         id: open-pr
         if: steps.precheck.outputs.skip != 'true'
         # renovate: datasource=github-tags depName=DevSecNinja/.github
-        uses: DevSecNinja/.github/actions/open-pr@9c281b38f863550ddff25df04e6fda0b9b23d00c # v3.3.0
+        uses: DevSecNinja/.github/actions/open-pr@5cee546e22e862a82f74e8dda800d439b9af537c # v4.1.0
         with:
           branch: ${{ inputs.pr-branch }}
           base: ${{ inputs.target-branch }}
@@ -210,6 +206,7 @@ jobs:
           commit-message: "chore: sync APM primitives from upstream packages"
           labels: apm-sync
           github-token: ${{ steps.app-token.outputs.token || github.token }}
+          commit-method: api
           body: |-
             Automated PR — refreshed APM primitives via `apm update`.
 

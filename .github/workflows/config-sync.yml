@@ -142,17 +142,13 @@ jobs:
           permission-contents: write
           permission-pull-requests: write
       - name: Checkout calling repository
-        # zizmor: ignore[artipacked]
-        # Persisted credentials are required: the `actions/open-pr` step
-        # below invokes `git push` which relies on the bearer token that
-        # `actions/checkout` writes into the remote URL. Setting
-        # `persist-credentials: false` here breaks PR creation without
-        # offering meaningful isolation, since this job never executes
-        # content fetched from the central repo (it only reads files
-        # from `.config-sync-source/` to copy them).
+        # No persisted credentials: the `actions/open-pr` step below commits
+        # through the GitHub API with its github-token (commit-method: api),
+        # not `git push`.
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           token: ${{ steps.app-token.outputs.token || github.token }}
+          persist-credentials: false
       - name: Checkout central config source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -401,13 +397,14 @@ jobs:
           fi
       - name: Create PR if configs changed
         if: steps.pull.outputs.updated == '1'
-        uses: DevSecNinja/.github/actions/open-pr@9c281b38f863550ddff25df04e6fda0b9b23d00c # v3.3.0
+        uses: DevSecNinja/.github/actions/open-pr@5cee546e22e862a82f74e8dda800d439b9af537c # v4.1.0
         with:
           branch: chore/config-sync
           title: 'chore: sync config files from central repo'
           commit-message: 'chore: sync config files from DevSecNinja/.github'
           labels: config-sync
           github-token: ${{ steps.app-token.outputs.token || github.token }}
+          commit-method: api
           body: |-
             Automated PR — config files pulled from
             [DevSecNinja/.github](https://github.com/DevSecNinja/.github/tree/main/config-sync)
