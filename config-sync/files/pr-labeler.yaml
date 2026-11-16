@@ -1,26 +1,52 @@
 ---
+# Rules for actions/labeler v7 (see .github/workflows/labeler.yml).
+#
+# config-sync overwrites this file in every repository, so no rule may assume
+# one repository layout. Globs run with `dot: true`. Items under one
+# `changed-files` key are alternatives (any of them labels the PR).
+#
+# Tests: tests/pr-labeler-config.py
+
+# Application code, wherever it lives (src/, services/, apps/, crates/,
+# backend/, ...): a changed file that is not a root-level file, in a hidden
+# directory, documentation, a script or test directory, or Markdown.
 area/apps:
   - changed-files:
-      - any-glob-to-any-file:
-          - services/**/*
+      - all-globs-to-any-file:
+          - '!*'
+          - '!.*/**'
+          - '!{doc,docs}/**'
+          - '!{script,scripts}/**'
+          - '!{test,tests,e2e}/**'
+          - '!specs/**'
+          - '!**/*.{md,mdx}'
 
 area/docs:
   - changed-files:
       - any-glob-to-any-file:
-          - docs/**/*
+          - '{doc,docs}/**'
+      - all-globs-to-any-file:
+          - '**/*.{md,mdx}'
+          - '!**/CHANGELOG.md'
 
 area/github:
   - changed-files:
       - any-glob-to-any-file:
-          - .github/**/*
+          - .github/**
 
 area/renovate:
   - changed-files:
       - any-glob-to-any-file:
           - renovate.json
           - renovate.json5
+          - .github/renovate.json
+          - .github/renovate.json5
+          - .renovaterc
+          - .renovaterc.json
+          - .renovaterc.json5
 
 area/scripts:
   - changed-files:
       - any-glob-to-any-file:
-          - scripts/**/*
+          - '{script,scripts}/**'
+          - '**/*.{sh,bash,ps1,psm1}'

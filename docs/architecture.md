@@ -641,6 +641,13 @@ jobs:
       issues: write
 ```
 
+config-sync overwrites the synced `pr-labeler.yaml` in every repository, so
+its path rules don't assume a layout. `area/apps` matches any changed file
+outside root-level files, hidden directories, docs, scripts, tests, specs and
+Markdown, so it works whether the code lives under `src/`, `services/`,
+`apps/` or elsewhere. `tests/pr-labeler-config.py` runs changed-file lists
+from the fleet's layouts through the rules.
+
 ### TODO to Issue (`todo-to-issue.yml`)
 
 Converts `TODO` comments in code to GitHub Issues on push to the default
