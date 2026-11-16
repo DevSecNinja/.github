@@ -8,9 +8,10 @@ as one commit on top of the checked-out commit to a stable working
 branch, and opens a PR via the preinstalled `gh` CLI. Repeat runs reuse
 the same PR rather than spamming new ones.
 
-By default the commit is made through the GitHub API, so **GitHub signs
-it** and the PR can merge into a branch that requires signed commits
-(see [Signed commits](#signed-commits-commit-method-api)).
+Set `commit-method: api` to commit through the GitHub API instead: then
+**GitHub signs the commit** and the PR can merge into a branch that requires
+signed commits (see [Signed commits](#signed-commits-commit-method-api)).
+The default, `commit-method: git`, pushes an unsigned commit.
 
 Designed for jobs that should land via PR review instead of pushing
 directly to a protected branch — auto-formatting, artifact signing,
@@ -40,7 +41,7 @@ on GitHub-hosted runners.
 | `labels`         | no       | `""`                                                    | Newline-delimited labels to apply on PR creation.                                                                                                                                                                                                                                      |
 | `draft`          | no       | `false`                                                 | Open as draft.                                                                                                                                                                                                                                                                         |
 | `signoff`        | no       | `false`                                                 | Add a `Signed-off-by` trailer with `git-user-name` and `git-user-email`.                                                                                                                                                                                                               |
-| `commit-method`  | no       | `api`                                                   | `api`: commit through GraphQL `createCommitOnBranch`, signed by GitHub and authored as the token's identity. `git`: local commit and leased force-push, authored as `git-user-name` and **unsigned**.                                                                                  |
+| `commit-method`  | no       | `git`                                                   | `git`: local commit and leased force-push, authored as `git-user-name` and **unsigned**. `api`: commit through GraphQL `createCommitOnBranch`, signed by GitHub and authored as the token's identity.                                                                                  |
 | `if-no-changes`  | no       | `skip`                                                  | Behaviour when there's nothing to commit: `skip` (exit 0) or `fail` (exit non-zero).                                                                                                                                                                                                   |
 | `git-user-name`  | no       | `github-actions[bot]`                                   | Author name for `commit-method: git`, and the `signoff` name.                                                                                                                                                                                                                          |
 | `git-user-email` | no       | `41898282+github-actions[bot]@users.noreply.github.com` | Author email for `commit-method: git`, and the `signoff` email.                                                                                                                                                                                                                        |
@@ -69,13 +70,22 @@ on GitHub-hosted runners.
 
 ## Signed commits (`commit-method: api`)
 
-The default method stages the changes locally, then sends them with the
+This method stages the changes locally, then sends them with the
 GraphQL [`createCommitOnBranch`](https://docs.github.com/en/graphql/reference/mutations#createcommitonbranch)
 mutation. GitHub signs commits made this way, whichever token makes them
 (a GitHub App token, `GITHUB_TOKEN` or a PAT), so the PR passes a
 "require signed commits" ruleset without an admin bypass. The commit is
 authored as the token's identity: the App's bot with an App token,
 `github-actions[bot]` with `GITHUB_TOKEN`.
+
+```yaml
+- uses: DevSecNinja/.github/actions/open-pr@<sha>
+  with:
+    branch: chore/config-sync
+    title: 'chore: sync config files'
+    commit-method: api
+    github-token: ${{ steps.app-token.outputs.token }}
+```
 
 How a run commits:
 
@@ -96,7 +106,7 @@ close it. A push to the working branch during the run fails the run
 instead of being overwritten, and the temporary branch is deleted on any
 failure.
 
-Limits of the API method; use `commit-method: git` (unsigned) when one
+Limits of the API method; keep `commit-method: git` (unsigned) when one
 applies:
 
 - New executable files are committed as regular files (a warning is

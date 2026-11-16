@@ -711,12 +711,12 @@ formatting, generated-content updates.
 
 Key properties:
 
-- Commits through the GraphQL `createCommitOnBranch` API by default
-  (`commit-method: api`), so GitHub signs the commit and the PR passes a
-  "require signed commits" ruleset. `commit-method: git` keeps the old
-  unsigned local commit and force-push. See the action README for the
-  API method's limits (no new executable bits, symlinks or very large
-  changes).
+- With `commit-method: api`, commits through the GraphQL
+  `createCommitOnBranch` API, so GitHub signs the commit and the PR passes
+  a "require signed commits" ruleset. The default, `commit-method: git`,
+  keeps the unsigned local commit and force-push. See the action README
+  for the API method's limits (no new executable bits, symlinks or very
+  large changes).
 - Uses only the preinstalled `git`, `jq` and `gh`; no third-party action.
 - Default `GITHUB_TOKEN` does not retrigger workflows on the bot's
   commit, so it is safe inside loops like sign-on-push.
@@ -742,7 +742,7 @@ Key properties:
 | `labels`         | no       | `""`                        | Newline-delimited labels.                                            |
 | `draft`          | no       | `false`                     | Open as draft.                                                       |
 | `signoff`        | no       | `false`                     | Add `Signed-off-by` trailer.                                         |
-| `commit-method`  | no       | `api`                       | `api` = signed API commit; `git` = unsigned local commit and push.   |
+| `commit-method`  | no       | `git`                       | `git` = unsigned local commit and push; `api` = signed API commit.   |
 | `if-no-changes`  | no       | `skip`                      | `skip` = exit 0; `fail` = error when nothing to commit.              |
 | `git-user-name`  | no       | `github-actions[bot]`       | Author name for `commit-method: git`, and the sign-off.              |
 | `git-user-email` | no       | github-actions[bot] noreply | Author email for `commit-method: git`, and the sign-off.             |

@@ -2,7 +2,7 @@
 #
 # Stage the caller's changes and commit them to ${BRANCH} for actions/open-pr.
 #
-# COMMIT_METHOD=api (default) creates the commit with the GraphQL
+# COMMIT_METHOD=api creates the commit with the GraphQL
 # `createCommitOnBranch` mutation. GitHub signs those commits, so the PR passes
 # a "require signed commits" rule. The mutation can only append to an existing
 # branch, and resetting an open PR's branch to its base could close the PR,
@@ -11,8 +11,9 @@
 # throwaway branch. That call is leased on the tip read before the commit, so a
 # concurrent push to ${BRANCH} is never overwritten.
 #
-# COMMIT_METHOD=git keeps the original behaviour: a local commit authored as
-# ${GIT_USER_NAME} and a leased force-push. Those commits are unsigned.
+# COMMIT_METHOD=git (default) keeps the original behaviour: a local commit
+# authored as ${GIT_USER_NAME} and a leased force-push. Those commits are
+# unsigned.
 #
 # Inputs (environment): BRANCH, BASE, TITLE, COMMIT_MESSAGE, PATHS, SIGNOFF,
 # IF_NO_CHANGES, COMMIT_METHOD, GIT_USER_NAME, GIT_USER_EMAIL, GH_TOKEN and
@@ -20,7 +21,7 @@
 
 set -euo pipefail
 
-method="${COMMIT_METHOD:-api}"
+method="${COMMIT_METHOD:-git}"
 case "${method}" in
 api | git) ;;
 *)
@@ -78,7 +79,7 @@ fi
 msg="${COMMIT_MESSAGE:-${TITLE}}"
 
 commit_with_git() {
-    echo "::warning title=open-pr commit is unsigned::commit-method=git pushes an unsigned commit as ${GIT_USER_NAME}, so a base branch that requires signed commits blocks this PR. Use commit-method: api (the default) to get a commit GitHub signs."
+    echo "::warning title=open-pr commit is unsigned::commit-method=git pushes an unsigned commit as ${GIT_USER_NAME}, so a base branch that requires signed commits blocks this PR. Use commit-method: api to get a commit GitHub signs."
 
     local commit_args=(-m "${msg}")
     if [ "${SIGNOFF:-false}" = "true" ]; then

@@ -10,10 +10,10 @@ description: |
   hasn't been merged yet), the branch is replaced with the new commit and
   the existing PR is reused.
 
-  By default (`commit-method: api`) the commit is created through the
-  GitHub GraphQL API, so GitHub signs it and the PR passes a "require
-  signed commits" rule. `commit-method: git` keeps the original local
-  commit and force-push, which is unsigned.
+  With `commit-method: api` the commit is created through the GitHub
+  GraphQL API, so GitHub signs it and the PR passes a "require signed
+  commits" rule. The default, `commit-method: git`, keeps the original
+  local commit and force-push, which is unsigned.
 
   This is a composite action so it can act on the caller's working tree
   (a reusable workflow runs in its own job and would not see those
@@ -84,16 +84,17 @@ inputs:
   commit-method:
     description: |
       How the commit is made:
-        - `api` (default): GraphQL `createCommitOnBranch` with
-          `github-token`. GitHub signs the commit and authors it as the
-          token's identity (the GitHub App bot, or github-actions[bot] for
-          GITHUB_TOKEN). The executable bit can't be set on new files, and
-          symlinks and submodules can't be committed.
-        - `git`: local commit authored as `git-user-name` and a leased
-          force-push. The commit is unsigned, so a base branch that
-          requires signed commits blocks the PR.
+        - `git` (default): local commit authored as `git-user-name` and
+          a leased force-push. The commit is unsigned, so a base branch
+          that requires signed commits blocks the PR.
+        - `api`: GraphQL `createCommitOnBranch` with `github-token`.
+          GitHub signs the commit and authors it as the token's identity
+          (the GitHub App bot, or github-actions[bot] for GITHUB_TOKEN).
+          The executable bit can't be set on new files, symlinks and
+          submodules can't be committed, and the checked-out commit must
+          be on GitHub.
     required: false
-    default: api
+    default: git
   if-no-changes:
     description: |
       What to do when there is nothing to commit:

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Functional test for actions/open-pr with commit-method: api (the default).
+# Functional test for actions/open-pr with commit-method: api.
 #
 # Runs the action's commit script with a fake `gh` that serves the GraphQL and
 # REST calls it makes from a local bare repository, mimicking GitHub:
@@ -32,8 +32,8 @@ grep -Fq 'run: bash "${GITHUB_ACTION_PATH}/commit.sh"' "${action}" ||
 # shellcheck disable=SC2016 # Literal text in action.yml.
 grep -Fq 'COMMIT_METHOD: ${{ inputs.commit-method }}' "${action}" ||
     fail "${action} does not pass commit-method to commit.sh"
-awk '/^  commit-method:/ { found = 1 } found && /^    default:/ { print $2; exit }' "${action}" | grep -Fxq api ||
-    fail "commit-method must default to api"
+awk '/^  commit-method:/ { found = 1 } found && /^    default:/ { print $2; exit }' "${action}" | grep -Fxq git ||
+    fail "commit-method must keep defaulting to git; changing it is a breaking change"
 
 export GIT_CONFIG_GLOBAL="${tmp_dir}/gitconfig"
 export GIT_CONFIG_NOSYSTEM=1
@@ -271,6 +271,7 @@ run_action() {
             PATHS="." \
             SIGNOFF="true" \
             IF_NO_CHANGES="skip" \
+            COMMIT_METHOD="api" \
             GH_TOKEN="fake" \
             "$@" bash "${script}"
     )
