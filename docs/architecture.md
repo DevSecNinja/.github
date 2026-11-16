@@ -82,6 +82,14 @@ installs that Python first. Callers without a configured Python get no Python
 download. Releases up to v2.0.x installed only `uv pipx:<tool>` and fail for
 callers that configure Python; v2.1.0+ fixes this.
 
+**gitleaks findings.** gitleaks runs with `--redact` and writes a JSON report.
+The next step annotates each finding on the PR (`::error` with the file, line,
+rule ID and short commit SHA) and adds a table of rule, file:line, commit and
+author date to the job summary. Only those fields leave the report, never the
+secret, match or matched line. The same fields plus each finding's
+`.gitleaksignore` fingerprint are uploaded as the `gitleaks-findings` artifact,
+kept for five days. The exit code and the lint gate are unchanged.
+
 | Input                   | Description                                                            |
 | ----------------------- | ---------------------------------------------------------------------- |
 | `mise-version`          | **Required.** mise version to install.                                 |
