@@ -91,8 +91,10 @@ How a run commits:
 
 1. Stage `paths` and read the changes from the index, including deletions
    and binary files (sent base64-encoded).
-2. Read the working branch's tip. When it is already one commit on the
-   same base with the same files, nothing is written (see below).
+2. Read the working branch's tip. When it is already one **signed** commit
+   on the same base with the same files, nothing is written (see below). An
+   unsigned tip, such as one pushed earlier with `commit-method: git`, is
+   replaced, so switching a caller to `api` unblocks its open PR.
 3. Create a temporary `open-pr-tmp/<run>` branch at the checked-out
    commit and commit the changes on it, with that commit as
    `expectedHeadOid`.

@@ -229,7 +229,10 @@ commit_with_api() {
             nameWithOwner
             base: object(oid: $parent) { oid }
             ref(qualifiedName: $ref) {
-              target { oid ... on Commit { tree { oid } parents(first: 2) { nodes { oid } } } }
+              target {
+                oid
+                ... on Commit { tree { oid } parents(first: 2) { nodes { oid } } signature { isValid } }
+              }
             }
           }
         }')"
@@ -240,15 +243,21 @@ commit_with_api() {
         exit 1
     fi
 
-    local tip tip_tree tip_parents
+    local tip tip_tree tip_parents tip_signed
     tip="$(jq -r '.data.repository.ref.target.oid // empty' <<<"${state}")"
     if [ -n "${tip}" ]; then
         tip_tree="$(jq -r '.data.repository.ref.target.tree.oid' <<<"${state}")"
         tip_parents="$(jq -r '[.data.repository.ref.target.parents.nodes[].oid] | join(" ")' <<<"${state}")"
-        # Leave an identical branch alone, so the PR's CI does not re-run.
+        tip_signed="$(jq -r '.data.repository.ref.target.signature.isValid // false' <<<"${state}")"
+        # Leave an identical, signed branch alone, so the PR's CI does not
+        # re-run. An unsigned one (e.g. pushed by commit-method: git) is
+        # replaced, so switching a caller to the API unblocks its open PR.
         if [ "${tip_parents}" = "${parent}" ] && { [ "${tip_tree}" = "${tree}" ] || same_blobs "${tip_tree}"; }; then
-            echo "${BRANCH} already has these changes on the same base; skipping commit."
-            return
+            if [ "${tip_signed}" = "true" ]; then
+                echo "${BRANCH} already has these changes on the same base; skipping commit."
+                return
+            fi
+            echo "${BRANCH} already has these changes, but its commit is not signed; replacing it."
         fi
     fi
 

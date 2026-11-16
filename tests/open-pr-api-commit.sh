@@ -100,6 +100,8 @@ create_commit() {
     commit="$(printf '%s' "${message}" | GIT_AUTHOR_NAME=app GIT_AUTHOR_EMAIL=app@example.com \
         GIT_COMMITTER_NAME=GitHub GIT_COMMITTER_EMAIL=noreply@github.com g commit-tree "${tree}" -p "${tip}")"
     g update-ref "${ref}" "${commit}" "${tip}"
+    # GitHub signs every commit this mutation makes.
+    echo "${commit}" >>"${FAKE_REMOTE}/signed-commits"
     rm -rf "${index}" "${empty}"
     unset GIT_INDEX_FILE GIT_WORK_TREE
     # Someone pushes to the working branch while the run is committing.
@@ -139,15 +141,19 @@ update_refs() {
 }
 
 state_query() {
-    local ref="$1" parent="$2" base=null ref_json=null tip parents
+    local ref="$1" parent="$2" base=null ref_json=null tip parents signature=null
     if g cat-file -e "${parent}^{commit}" 2>/dev/null; then
         base="$(jq -cn --arg oid "${parent}" '{oid: $oid}')"
     fi
     tip="$(oid_of "${ref}")"
     if [ -n "${tip}" ]; then
         parents="$(g rev-list --parents -n 1 "${tip}" | cut -s -d ' ' -f 2- | jq -cR 'split(" ") | map({oid: .})')"
+        if grep -Fxq "${tip}" "${FAKE_REMOTE}/signed-commits" 2>/dev/null; then
+            signature='{"isValid":true}'
+        fi
         ref_json="$(jq -cn --arg oid "${tip}" --arg tree "$(g rev-parse "${tip}^{tree}")" --argjson parents "${parents:-[]}" \
-            '{target: {oid: $oid, tree: {oid: $tree}, parents: {nodes: $parents}}}')"
+            --argjson signature "${signature}" \
+            '{target: {oid: $oid, tree: {oid: $tree}, parents: {nodes: $parents}, signature: $signature}}')"
     fi
     jq -n --argjson base "${base}" --argjson ref "${ref_json}" \
         '{data: {repository: {id: "R_fake", nameWithOwner: "owner/repo", base: $base, ref: $ref}}}'
@@ -334,6 +340,28 @@ grep -Fq "skipping commit" "${tmp_dir}/run-2.log" || fail "identical re-run shou
 [ "$(remote_tip "${branch}")" = "${tip}" ] || fail "identical re-run must not rewrite the branch"
 [ "$(calls '--input')" = "${before}" ] || fail "identical re-run must not call a mutation"
 grep -Fxq "changed=true" "${tmp_dir}/output-2" || fail "identical re-run must still report changed=true so the PR is reused"
+
+# 2b. Switching a caller from commit-method: git to api replaces its unsigned
+# commit even when the files and base are unchanged, so the open PR stops
+# being blocked by required signatures.
+switch="${tmp_dir}/switch"
+new_checkout "${switch}"
+run_action "${switch}" "${tmp_dir}/output-2b-git" COMMIT_METHOD=git >/dev/null 2>&1 ||
+    fail "seeding an unsigned commit with commit-method: git failed"
+unsigned="$(remote_tip "${branch}")"
+grep -Fxq "${unsigned}" "${origin}/signed-commits" && fail "the git method's commit must count as unsigned"
+switched="${tmp_dir}/switched"
+new_checkout "${switched}"
+run_action "${switched}" "${tmp_dir}/output-2b" >"${tmp_dir}/run-2b.log" 2>&1 || {
+    cat "${tmp_dir}/run-2b.log" >&2
+    fail "replacing an unsigned commit failed"
+}
+tip="$(remote_tip "${branch}")"
+[ "${tip}" != "${unsigned}" ] || fail "an identical but unsigned commit must be replaced"
+grep -Fxq "${tip}" "${origin}/signed-commits" || fail "the replacement commit must be signed"
+[ "$(git -C "${origin}" rev-parse "${tip}^")" = "$(remote_tip main)" ] || fail "the replacement must sit directly on main"
+grep -Fq "not signed; replacing it" "${tmp_dir}/run-2b.log" || fail "no message about replacing the unsigned commit"
+no_tmp_refs "switch"
 
 # 3. New content replaces the commit in one leased step; the branch (and an
 # open PR on it) never points at main in between.
