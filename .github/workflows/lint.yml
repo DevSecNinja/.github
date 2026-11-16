@@ -279,6 +279,10 @@ jobs:
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    permissions:
+      contents: read
+      # Full-history findings of public repos go to code scanning.
+      security-events: write
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -296,6 +300,11 @@ jobs:
         id: gitleaks
         env:
           CONFIG_DIR: ${{ inputs.lint-config-dir }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+          BASE_REF: ${{ github.base_ref || github.event.merge_group.base_ref }}
+          UPLOAD_SARIF: ${{ inputs.upload-sarif }}
+          GH_TOKEN: ${{ github.token }}
         run: |-
           # Lint tool versions are owned by the consuming repo: pinned and
           # Renovate-managed in its mise config. Fail early with guidance when
@@ -308,43 +317,135 @@ jobs:
             echo "::error::'gitleaks' is not pinned in this repository's mise config. Add it (Renovate-managed), e.g. 'mise use gitleaks@<version>', so this lint job can run it."
             exit 1
           fi
-          # The report feeds the "Report gitleaks findings" step; --redact keeps
-          # the secret out of it.
-          report="${RUNNER_TEMP}/gitleaks-report.json"
+          config_args=()
           if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/.gitleaks.toml" ]; then
-            mise exec -- gitleaks detect --redact --report-format json --report-path "${report}" \
-              --config "${CONFIG_DIR}/.gitleaks.toml"
+            config_args=(--config "${CONFIG_DIR}/.gitleaks.toml")
+          fi
+          # --redact keeps the secret out of every report.
+          report="${RUNNER_TEMP}/gitleaks-report.json"
+
+          # Pull requests (and merge queues) scan only their own commits, so
+          # old history never shows up on an unrelated PR, and a secret added
+          # in the PR fails it. The next step annotates those findings.
+          if [ -n "${BASE_SHA}" ] && [ -n "${HEAD_SHA}" ]; then
+            echo "mode=pr" >>"${GITHUB_OUTPUT}"
+            for sha in "${BASE_SHA}" "${HEAD_SHA}"; do
+              if ! git cat-file -e "${sha}^{commit}" 2>/dev/null; then
+                echo "::error::Commit ${sha} of this pull request isn't checked out (pull_request_target?), so its commits can't be scanned."
+                exit 1
+              fi
+            done
+            # Also skip commits already on the base branch's current tip: the
+            # event's base SHA can be older when the PR merged newer commits.
+            range="${HEAD_SHA} --not ${BASE_SHA}"
+            if base_tip="$(git rev-parse --verify -q "refs/remotes/origin/${BASE_REF#refs/heads/}^{commit}")"; then
+              range="${range} ${base_tip}"
+            fi
+            mise exec -- gitleaks detect --redact --log-opts="${range}" \
+              --report-format json --report-path "${report}" "${config_args[@]}"
+            exit 0
+          fi
+
+          # Other events (push, schedule, dispatch) scan the full history, so
+          # new gitleaks rules re-check old commits. This only reports, so the
+          # findings are triaged as alerts. Job logs of public repositories are
+          # public: there the findings go only to code scanning, and the log
+          # shows a count. Internal repositories (logs visible enterprise-wide)
+          # and a failed visibility lookup count as public.
+          if [ "$(gh api "repos/${GITHUB_REPOSITORY}" --jq .visibility 2>/dev/null)" = private ]; then
+            mode=history-private
+            format=json
           else
-            mise exec -- gitleaks detect --redact --report-format json --report-path "${report}"
+            mode=history-public
+            format=sarif
+            report="${RUNNER_TEMP}/gitleaks-history.sarif"
+          fi
+          echo "mode=${mode}" >>"${GITHUB_OUTPUT}"
+          status=0
+          log="${RUNNER_TEMP}/gitleaks-history.log"
+          mise exec -- gitleaks detect --redact --exit-code 42 \
+            --report-format "${format}" --report-path "${report}" "${config_args[@]}" >"${log}" 2>&1 || status=$?
+          if [ "${mode}" = history-private ]; then
+            cat "${log}"
+          fi
+          rm -f "${log}"
+          if [ "${status}" -ne 0 ] && [ "${status}" -ne 42 ]; then
+            if [ "${mode}" = history-public ]; then
+              # gitleaks' diagnostics can name findings (for example an invalid
+              # .gitleaksignore entry), and this log is public: withhold them.
+              echo "::error::gitleaks failed (exit ${status}). Its log is withheld because job logs of public repositories are public: run gitleaks on a private clone to see why."
+            fi
+            exit "${status}"
+          fi
+          if [ "${mode}" = history-private ]; then
+            count="$(jq length "${report}")"
+            where="See the job summary."
+          else
+            # Make the SARIF valid for code scanning, whose upload would
+            # otherwise log invalid URIs (file paths) or reject path-only
+            # findings (line 0): percent-encode paths, drop empty regions.
+            jq '(.runs[].results[].locations[]?.physicalLocation) |= (
+                .artifactLocation.uri |= (split("/") | map(@uri) | join("/"))
+                | if .region then .region |= with_entries(select(.value | type != "number" or . >= 1)) else . end
+                | if (.region.startLine // 0) < 1 then del(.region) else . end
+              )
+              # The upload also rejects repeated tags, which gitleaks copies from rules.
+              | walk(if type == "object" then (if (.tags | type) == "array" then .tags |= unique else . end) else . end)
+            ' "${report}" >"${report}.tmp"
+            mv "${report}.tmp" "${report}"
+            count="$(jq '[.runs[].results[]] | length' "${report}")"
+            where="They are in code scanning (category gitleaks/history), visible only with write access."
+            if [ "${UPLOAD_SARIF}" != true ]; then
+              where="upload-sarif is off, so they are not published: run gitleaks on a private clone."
+            elif [ "${RUNNER_DEBUG:-}" = 1 ]; then
+              # With debug logging the upload logs file paths it can't fingerprint.
+              where="Debug logging is on, so the code scanning upload is skipped: re-run without it."
+            else
+              echo "sarif=true" >>"${GITHUB_OUTPUT}"
+            fi
+          fi
+          if [ "${count}" -gt 0 ]; then
+            echo "::warning::gitleaks found ${count} finding(s) in the git history. ${where}"
           fi
 
       - name: Report gitleaks findings
         if: ${{ !cancelled() }}
         env:
+          SCAN_MODE: ${{ steps.gitleaks.outputs.mode }}
           FINDINGS_ARTIFACT: gitleaks-findings-${{ job.check_run_id }}
         run: |-
-          # Turns the gitleaks report into one PR annotation per finding and a
+          # Turns the gitleaks report into one annotation per finding and a
           # step-summary table. Only the rule, location, commit and date leave
-          # the report: never the secret, the match or the matched line.
+          # the report: never the secret, the match or the matched line. On
+          # public repositories only PR findings get here: full-history
+          # findings go to code scanning, never to the public log.
+          case "${SCAN_MODE}" in
+            pr) level=error scope="this pull request's commits" ;;
+            history-private) level=warning scope="the git history" ;;
+            *) exit 0 ;;
+          esac
           report="${RUNNER_TEMP}/gitleaks-report.json"
           findings="${RUNNER_TEMP}/gitleaks-findings.json"
           [ -s "${report}" ] || exit 0
           jq '[.[] | {RuleID, Description, File, StartLine, EndLine, Commit, Date, Fingerprint}]' \
             "${report}" >"${findings}"
           count="$(jq length "${findings}")"
-          [ "${count}" -gt 0 ] || exit 0
+          if [ "${count}" -eq 0 ]; then
+            rm -f "${findings}"
+            exit 0
+          fi
 
-          jq -r '
+          jq -r --arg level "${level}" '
             def msg: tostring | gsub("%"; "%25") | gsub("\r"; "%0D") | gsub("\n"; "%0A");
             def prop: msg | gsub(":"; "%3A") | gsub(","; "%2C");
             # Path-only rules report StartLine 0; annotate those at file level.
-            .[] | "::error file=\(.File | prop)\(if .StartLine > 0 then ",line=\(.StartLine)" else "" end)"
+            .[] | "::\($level) file=\(.File | prop)\(if .StartLine > 0 then ",line=\(.StartLine)" else "" end)"
               + ",title=gitleaks \(.RuleID | prop)::"
               + "\(.RuleID | msg) in commit \((.Commit // "")[0:7] | msg) (secret redacted)"
           ' "${findings}"
 
           {
-            echo "### gitleaks: ${count} finding(s)"
+            echo "### gitleaks: ${count} finding(s) in ${scope}"
             echo ""
             echo "Secrets are redacted. To accept a false positive, add its fingerprint (in the"
             echo "\`${FINDINGS_ARTIFACT}\` artifact) to \`.gitleaksignore\`; rotate any real secret."
@@ -359,7 +460,8 @@ jobs:
           } >>"${GITHUB_STEP_SUMMARY}"
 
       - name: Upload gitleaks findings
-        if: ${{ !cancelled() && steps.gitleaks.outcome == 'failure' }}
+        # The findings file exists only for PR and private history scans.
+        if: ${{ !cancelled() && steps.gitleaks.outputs.mode != 'history-public' }}
         # Best effort: a failed upload must not change the lint gate.
         continue-on-error: true
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -370,6 +472,12 @@ jobs:
           if-no-files-found: ignore
           retention-days: 5
 
+      - name: Upload gitleaks history to code scanning
+        if: ${{ !cancelled() && inputs.upload-sarif && steps.gitleaks.outputs.sarif == 'true' }}
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: ${{ runner.temp }}/gitleaks-history.sarif
+          category: gitleaks/history
   go:
     name: go
     if: ${{ inputs.lint-go && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
@@ -855,6 +963,11 @@ jobs:
         continue-on-error: true
         env:
           CONFIG_DIR: ${{ inputs.lint-config-dir }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+          BASE_REF: ${{ github.base_ref || github.event.merge_group.base_ref }}
+          UPLOAD_SARIF: ${{ inputs.upload-sarif }}
+          GH_TOKEN: ${{ github.token }}
         run: |-
           # Lint tool versions are owned by the consuming repo: pinned and
           # Renovate-managed in its mise config. Fail early with guidance when
@@ -867,43 +980,135 @@ jobs:
             echo "::error::'gitleaks' is not pinned in this repository's mise config. Add it (Renovate-managed), e.g. 'mise use gitleaks@<version>', so this lint job can run it."
             exit 1
           fi
-          # The report feeds the "Report gitleaks findings" step; --redact keeps
-          # the secret out of it.
-          report="${RUNNER_TEMP}/gitleaks-report.json"
+          config_args=()
           if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/.gitleaks.toml" ]; then
-            mise exec -- gitleaks detect --redact --report-format json --report-path "${report}" \
-              --config "${CONFIG_DIR}/.gitleaks.toml"
+            config_args=(--config "${CONFIG_DIR}/.gitleaks.toml")
+          fi
+          # --redact keeps the secret out of every report.
+          report="${RUNNER_TEMP}/gitleaks-report.json"
+
+          # Pull requests (and merge queues) scan only their own commits, so
+          # old history never shows up on an unrelated PR, and a secret added
+          # in the PR fails it. The next step annotates those findings.
+          if [ -n "${BASE_SHA}" ] && [ -n "${HEAD_SHA}" ]; then
+            echo "mode=pr" >>"${GITHUB_OUTPUT}"
+            for sha in "${BASE_SHA}" "${HEAD_SHA}"; do
+              if ! git cat-file -e "${sha}^{commit}" 2>/dev/null; then
+                echo "::error::Commit ${sha} of this pull request isn't checked out (pull_request_target?), so its commits can't be scanned."
+                exit 1
+              fi
+            done
+            # Also skip commits already on the base branch's current tip: the
+            # event's base SHA can be older when the PR merged newer commits.
+            range="${HEAD_SHA} --not ${BASE_SHA}"
+            if base_tip="$(git rev-parse --verify -q "refs/remotes/origin/${BASE_REF#refs/heads/}^{commit}")"; then
+              range="${range} ${base_tip}"
+            fi
+            mise exec -- gitleaks detect --redact --log-opts="${range}" \
+              --report-format json --report-path "${report}" "${config_args[@]}"
+            exit 0
+          fi
+
+          # Other events (push, schedule, dispatch) scan the full history, so
+          # new gitleaks rules re-check old commits. This only reports, so the
+          # findings are triaged as alerts. Job logs of public repositories are
+          # public: there the findings go only to code scanning, and the log
+          # shows a count. Internal repositories (logs visible enterprise-wide)
+          # and a failed visibility lookup count as public.
+          if [ "$(gh api "repos/${GITHUB_REPOSITORY}" --jq .visibility 2>/dev/null)" = private ]; then
+            mode=history-private
+            format=json
           else
-            mise exec -- gitleaks detect --redact --report-format json --report-path "${report}"
+            mode=history-public
+            format=sarif
+            report="${RUNNER_TEMP}/gitleaks-history.sarif"
+          fi
+          echo "mode=${mode}" >>"${GITHUB_OUTPUT}"
+          status=0
+          log="${RUNNER_TEMP}/gitleaks-history.log"
+          mise exec -- gitleaks detect --redact --exit-code 42 \
+            --report-format "${format}" --report-path "${report}" "${config_args[@]}" >"${log}" 2>&1 || status=$?
+          if [ "${mode}" = history-private ]; then
+            cat "${log}"
+          fi
+          rm -f "${log}"
+          if [ "${status}" -ne 0 ] && [ "${status}" -ne 42 ]; then
+            if [ "${mode}" = history-public ]; then
+              # gitleaks' diagnostics can name findings (for example an invalid
+              # .gitleaksignore entry), and this log is public: withhold them.
+              echo "::error::gitleaks failed (exit ${status}). Its log is withheld because job logs of public repositories are public: run gitleaks on a private clone to see why."
+            fi
+            exit "${status}"
+          fi
+          if [ "${mode}" = history-private ]; then
+            count="$(jq length "${report}")"
+            where="See the job summary."
+          else
+            # Make the SARIF valid for code scanning, whose upload would
+            # otherwise log invalid URIs (file paths) or reject path-only
+            # findings (line 0): percent-encode paths, drop empty regions.
+            jq '(.runs[].results[].locations[]?.physicalLocation) |= (
+                .artifactLocation.uri |= (split("/") | map(@uri) | join("/"))
+                | if .region then .region |= with_entries(select(.value | type != "number" or . >= 1)) else . end
+                | if (.region.startLine // 0) < 1 then del(.region) else . end
+              )
+              # The upload also rejects repeated tags, which gitleaks copies from rules.
+              | walk(if type == "object" then (if (.tags | type) == "array" then .tags |= unique else . end) else . end)
+            ' "${report}" >"${report}.tmp"
+            mv "${report}.tmp" "${report}"
+            count="$(jq '[.runs[].results[]] | length' "${report}")"
+            where="They are in code scanning (category gitleaks/history), visible only with write access."
+            if [ "${UPLOAD_SARIF}" != true ]; then
+              where="upload-sarif is off, so they are not published: run gitleaks on a private clone."
+            elif [ "${RUNNER_DEBUG:-}" = 1 ]; then
+              # With debug logging the upload logs file paths it can't fingerprint.
+              where="Debug logging is on, so the code scanning upload is skipped: re-run without it."
+            else
+              echo "sarif=true" >>"${GITHUB_OUTPUT}"
+            fi
+          fi
+          if [ "${count}" -gt 0 ]; then
+            echo "::warning::gitleaks found ${count} finding(s) in the git history. ${where}"
           fi
 
       - name: Report gitleaks findings
         if: ${{ !cancelled() && inputs.lint-gitleaks }}
         env:
+          SCAN_MODE: ${{ steps.gitleaks.outputs.mode }}
           FINDINGS_ARTIFACT: gitleaks-findings-${{ job.check_run_id }}
         run: |-
-          # Turns the gitleaks report into one PR annotation per finding and a
+          # Turns the gitleaks report into one annotation per finding and a
           # step-summary table. Only the rule, location, commit and date leave
-          # the report: never the secret, the match or the matched line.
+          # the report: never the secret, the match or the matched line. On
+          # public repositories only PR findings get here: full-history
+          # findings go to code scanning, never to the public log.
+          case "${SCAN_MODE}" in
+            pr) level=error scope="this pull request's commits" ;;
+            history-private) level=warning scope="the git history" ;;
+            *) exit 0 ;;
+          esac
           report="${RUNNER_TEMP}/gitleaks-report.json"
           findings="${RUNNER_TEMP}/gitleaks-findings.json"
           [ -s "${report}" ] || exit 0
           jq '[.[] | {RuleID, Description, File, StartLine, EndLine, Commit, Date, Fingerprint}]' \
             "${report}" >"${findings}"
           count="$(jq length "${findings}")"
-          [ "${count}" -gt 0 ] || exit 0
+          if [ "${count}" -eq 0 ]; then
+            rm -f "${findings}"
+            exit 0
+          fi
 
-          jq -r '
+          jq -r --arg level "${level}" '
             def msg: tostring | gsub("%"; "%25") | gsub("\r"; "%0D") | gsub("\n"; "%0A");
             def prop: msg | gsub(":"; "%3A") | gsub(","; "%2C");
             # Path-only rules report StartLine 0; annotate those at file level.
-            .[] | "::error file=\(.File | prop)\(if .StartLine > 0 then ",line=\(.StartLine)" else "" end)"
+            .[] | "::\($level) file=\(.File | prop)\(if .StartLine > 0 then ",line=\(.StartLine)" else "" end)"
               + ",title=gitleaks \(.RuleID | prop)::"
               + "\(.RuleID | msg) in commit \((.Commit // "")[0:7] | msg) (secret redacted)"
           ' "${findings}"
 
           {
-            echo "### gitleaks: ${count} finding(s)"
+            echo "### gitleaks: ${count} finding(s) in ${scope}"
             echo ""
             echo "Secrets are redacted. To accept a false positive, add its fingerprint (in the"
             echo "\`${FINDINGS_ARTIFACT}\` artifact) to \`.gitleaksignore\`; rotate any real secret."
@@ -918,7 +1123,8 @@ jobs:
           } >>"${GITHUB_STEP_SUMMARY}"
 
       - name: Upload gitleaks findings
-        if: ${{ !cancelled() && steps.gitleaks.outcome == 'failure' }}
+        # The findings file exists only for PR and private history scans.
+        if: ${{ !cancelled() && steps.gitleaks.outputs.mode != 'history-public' }}
         # Best effort: a failed upload must not change the lint gate.
         continue-on-error: true
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -929,6 +1135,15 @@ jobs:
           if-no-files-found: ignore
           retention-days: 5
 
+      - name: Upload gitleaks history to code scanning
+        id: gitleaks-sarif
+        if: ${{ !cancelled() && inputs.upload-sarif && steps.gitleaks.outputs.sarif == 'true' }}
+        # Let the remaining linters run; the last step reports the failure.
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: ${{ runner.temp }}/gitleaks-history.sarif
+          category: gitleaks/history
       - name: Check for Go version file
         id: go-version-file
         if: ${{ inputs.lint-go }}

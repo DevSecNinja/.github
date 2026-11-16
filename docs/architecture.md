@@ -82,14 +82,76 @@ installs that Python first. Callers without a configured Python get no Python
 download. Releases up to v2.0.x installed only `uv pipx:<tool>` and fail for
 callers that configure Python; v2.1.0+ fixes this.
 
-**gitleaks findings.** gitleaks runs with `--redact` and writes a JSON report.
-The next step annotates each finding on the PR (`::error` with the file, line,
-rule ID and short commit SHA) and adds a table of rule, file:line, commit and
-author date to the job summary. Only those fields leave the report, never the
-secret, match or matched line. The same fields plus each finding's
-`.gitleaksignore` fingerprint are uploaded as the
-`gitleaks-findings-<check run ID>` artifact, kept for five days. The exit code
-and the lint gate are unchanged.
+**gitleaks.** gitleaks always runs with `--redact`, and what it scans depends
+on the event (v4.1.0+):
+
+- **Pull requests and merge queues** scan only their own commits: those
+  reachable from the head but not from the base SHA or the base branch's
+  current tip, so base-branch commits merged into the PR are skipped. A secret
+  added in the PR fails it, and older history never shows up on an unrelated
+  PR. Each finding is annotated on the PR (`::error` with the file, line, rule
+  ID and short commit SHA), and the job summary gets a table of rule,
+  file:line, commit and author date. Only those fields leave the report, never
+  the secret, match or matched line. The same fields plus each finding's
+  `.gitleaksignore` fingerprint are uploaded as the
+  `gitleaks-findings-<check run ID>` artifact, kept for five days. Under
+  `pull_request_target` the PR's commits aren't checked out, so the step fails
+  with an explanation instead of scanning.
+- **Other events** (push, schedule, dispatch, including dispatch on a PR
+  branch) scan the full history, so new gitleaks rules re-check old commits.
+  This only reports, with a warning that gives the count. Job logs and
+  artifacts of public repositories are public, so there the findings go only to
+  code scanning (SARIF, category `gitleaks/history`), whose alerts need write
+  access. The log shows the count only: gitleaks' own log is withheld, since its
+  diagnostics can name findings, and a failed scan prints a generic error. There
+  is no file, line, commit, summary or artifact. The SARIF paths are
+  percent-encoded and repeated tags removed, so the upload step never logs a path
+  or rejects the file, and runs with debug logging skip the upload,
+  which then logs the paths it can't fingerprint. Keep `upload-sarif: true` on
+  public repositories, or the findings aren't published anywhere. Private
+  repositories get the full log, annotations, summary and artifact instead.
+  Internal repositories, whose logs every enterprise member can read, and a
+  failed visibility lookup count as public.
+  Repositories whose Lint caller runs on pull requests only get the full-history
+  scan from a second caller, after each merge, weekly and on dispatch, with every
+  other linter off (this repository's `secret-scan-caller.yml`). A Lint caller
+  that also runs on push already scans the history there, so drop `push` below.
+
+```yaml
+name: Secret scan
+on:
+  push:
+    branches: ["main"]
+  schedule:
+    - cron: "23 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    uses: DevSecNinja/.github/.github/workflows/lint.yml@<sha> # v4.1.0
+    permissions:
+      contents: read
+      security-events: write
+    with:
+      # renovate: datasource=github-releases depName=jdx/mise
+      mise-version: "2026.10.19"
+      # Findings only report; fail the run if the scan or upload fails.
+      lint-fail-on-error: true
+      # upload-sarif: false # private repos without GitHub Advanced Security
+      lint-dprint: false
+      lint-yamlfmt: false
+      lint-yamllint: false
+      lint-actionlint: false
+      lint-go: false
+      lint-shellcheck: false
+      lint-shfmt: false
+      lint-checkov: false
+      lint-trivy: false
+      lint-zizmor: false
+```
 
 | Input                   | Description                                                            |
 | ----------------------- | ---------------------------------------------------------------------- |
