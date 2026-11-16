@@ -52,7 +52,6 @@ runs:
       id: generate
       shell: bash
       env:
-        ACTION_PATH: ${{ github.action_path }}
         BADGE_REF: ${{ inputs.ref }}
         BADGE_SINCE: ${{ inputs.since }}
         BADGE_NAME: ${{ inputs.name }}
@@ -60,23 +59,4 @@ runs:
         BADGE_OUT: ${{ inputs.out }}
         BADGE_THEMES: ${{ inputs.themes }}
         BADGE_REPO_DIR: ${{ inputs.repo-dir }}
-      run: |-
-        set -euo pipefail
-        args=(
-            "--repo-dir=${BADGE_REPO_DIR}"
-            "--ref=${BADGE_REF}"
-            "--since=${BADGE_SINCE}"
-            "--name=${BADGE_NAME}"
-            "--label=${BADGE_LABEL}"
-            "--out=${BADGE_OUT}"
-            "--github-output=${GITHUB_OUTPUT}"
-        )
-        case "${BADGE_THEMES}" in
-            true) args+=(--themes) ;;
-            false) ;;
-            *)
-                echo "::error::themes must be true or false." >&2
-                exit 1
-                ;;
-        esac
-        python3 "${ACTION_PATH}/ai_commits_badge.py" "${args[@]}"
+      run: bash "${GITHUB_ACTION_PATH}/generate.sh"
