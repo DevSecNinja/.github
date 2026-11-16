@@ -9,6 +9,8 @@ template="${repo_root}/workflow-templates/pages.yml"
 architecture="${repo_root}/docs/architecture.md"
 adr="${repo_root}/docs/design-decisions/0009-pages-managed-dns-cutover.md"
 fixtures="${repo_root}/tests/fixtures/cloudflare-pages-domains"
+validation_script="${repo_root}/scripts/pages/validate-inputs.sh"
+registration_script="${repo_root}/scripts/pages/register-cloudflare-domain.sh"
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "${tmp_dir}"' EXIT
 
@@ -31,29 +33,6 @@ assert_not_contains() {
     fi
 }
 
-extract_run_step() {
-    local step_name="$1"
-    local output_file="$2"
-    awk -v target="${step_name}" '
-        $0 == "      - name: " target {
-            in_step = 1
-            next
-        }
-        in_step && $0 == "        run: |-" {
-            in_run = 1
-            next
-        }
-        in_run {
-            if ($0 ~ /^      - name:/ || $0 ~ /^  [[:alnum:]_-]+:/) {
-                exit
-            }
-            sub(/^          /, "")
-            print
-        }
-    ' "${workflow}" >"${output_file}"
-    [ -s "${output_file}" ] || fail "could not extract run block for ${step_name}"
-}
-
 input_contract="$(
     sed -n '/^      cloudflare-custom-domain:/,/^      cloudflare-acceptance:/p' "${workflow}"
 )"
@@ -66,31 +45,26 @@ grep -A6 -F 'cloudflare-dns-zone:' <<<"${input_contract}" | grep -Fq 'default: "
 grep -A6 -F 'cloudflare-dns-proxied:' <<<"${input_contract}" | grep -Fq 'default: true' ||
     fail "cloudflare-dns-proxied must default to true"
 
-assert_contains "${workflow}" "cloudflare-manage-dns requires cloudflare-production: true."
-assert_contains "${workflow}" "cloudflare-manage-dns requires cloudflare-custom-domain."
-assert_contains "${workflow}" "cloudflare-manage-dns requires cloudflare-dns-zone."
-assert_contains "${workflow}" "cloudflare-custom-domain must equal cloudflare-dns-zone or be its subdomain."
+assert_contains "${validation_script}" "cloudflare-manage-dns requires cloudflare-production: true."
+assert_contains "${validation_script}" "cloudflare-manage-dns requires cloudflare-custom-domain."
+assert_contains "${validation_script}" "cloudflare-manage-dns requires cloudflare-dns-zone."
+assert_contains "${validation_script}" "cloudflare-custom-domain must equal cloudflare-dns-zone or be its subdomain."
 assert_contains "${workflow}" "needs.detect-cloudflare.outputs.deploy-production == 'true'"
 assert_contains "${workflow}" "needs.deploy-cloudflare.result"
 assert_contains "${workflow}" "== 'success'"
 assert_contains "${workflow}" 'cloudflare-pages-domain-${{ needs.detect-cloudflare.outputs.project-name }}-${{ inputs.cloudflare-custom-domain }}'
 assert_contains "${workflow}" 'PROJECT_NAME: ${{ needs.detect-cloudflare.outputs.project-name }}'
 assert_contains "${workflow}" 'cloudflare-custom-domain-dns-action:'
-assert_contains "${workflow}" 'dns_action="unmanaged"'
-assert_contains "${workflow}" "A conflicting DNS record already exists"
-assert_contains "${workflow}" '--header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"'
-assert_not_contains "${workflow}" "curl --verbose"
-assert_not_contains "${workflow}" "curl -v"
+assert_contains "${registration_script}" 'dns_action="unmanaged"'
+assert_contains "${registration_script}" "A conflicting DNS record already exists"
+assert_contains "${registration_script}" '--header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"'
+assert_not_contains "${registration_script}" "curl --verbose"
+assert_not_contains "${registration_script}" "curl -v"
 
 assert_contains "${template}" '# cloudflare-manage-dns: true'
 assert_contains "${architecture}" "net-worth-calculator-xn8.pages.dev"
 assert_contains "${architecture}" "Zone Read"
 assert_contains "${adr}" "Wrangler"
-
-validation_script="${tmp_dir}/validate.sh"
-registration_script="${tmp_dir}/register.sh"
-extract_run_step "Validate tool versions" "${validation_script}"
-extract_run_step "Register Cloudflare Pages custom domain" "${registration_script}"
 
 run_validation() {
     local domain="${1:-}"
