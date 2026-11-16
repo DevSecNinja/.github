@@ -14,9 +14,11 @@ lint.yml, so new ones are checked without editing this test:
   `!inputs.lint-gitleaks-only` as a top-level `&&` term of its `if:`;
 - in `all-linters` (which also hosts gitleaks), every step with an `id:` or
   whose `if:` reads a linter input must be a gitleaks step (top-level
-  `inputs.lint-gitleaks`), honour the flag the same way, or depend through a
-  top-level `steps.<id>` term on a step that does. Shared setup steps are
-  listed in SHARED_STEPS.
+  `inputs.lint-gitleaks`), honour the flag the same way, or have a top-level
+  term that is false whenever an allowed predecessor step was skipped
+  (`steps.<id>.outputs.<name> == '<non-empty>'` or
+  `steps.<id>.outcome == 'success'`). Shared setup steps are listed in
+  SHARED_STEPS.
 
 Broken copies of lint.yml are checked too, to prove the test bites.
 """
@@ -42,7 +44,9 @@ SHARED_STEPS = {"Install mise"}
 # Boolean `lint-*` inputs that are options rather than linters.
 NOT_LINTERS = {"lint-fail-on-error", FLAG}
 TOKEN = re.compile(r"'(?:[^']|'')*'|&&|\|\||[()]|[^'()&|]+|.")
-STEP_REF = re.compile(r"\bsteps\.([A-Za-z_][\w-]*)")
+# A whole `&&` term that is false whenever step <id> was skipped: one of its
+# outputs equals a non-empty literal, or it succeeded.
+SKIPS_WITH = re.compile(r"^steps\.([A-Za-z_][\w-]*)\.(?:outputs\.[\w-]+=='(?:[^']|'')+'|(?:outcome|conclusion)=='success')$")
 
 
 def call_inputs(workflow: dict) -> dict:
@@ -100,7 +104,7 @@ def check(lint: dict) -> list[str]:
             continue
         step_terms = terms(condition)
         ok = (HONOURS in step_terms or GITLEAKS in step_terms
-              or any(ref in allowed for term in step_terms for ref in STEP_REF.findall(term)))
+              or any((m := SKIPS_WITH.match(term)) and m.group(1) in allowed for term in step_terms))
         if ok:
             allowed.add(step_id)
         else:
@@ -133,6 +137,15 @@ def broken_copies(lint: dict):
                  lambda j: step(j, "trivy-sarif").update({"if": "${{ inputs.lint-trivy && inputs.upload-sarif }}"}))
     yield mutate("a new single-job step without any if",
                  lambda j: j["all-linters"]["steps"].insert(-1, {"name": "Run newtool", "id": "newtool", "run": "x"}))
+    for description, condition in (
+        ("a step running when its predecessor was skipped", "${{ steps.setup-go.outcome == 'skipped' }}"),
+        ("a step on a negative output comparison", "${{ steps.go-version-file.outputs.exists != 'false' }}"),
+        ("a step on an empty-output comparison", "${{ steps.go-version-file.outputs.exists == '' }}"),
+        ("a predecessor reference inside ||", "${{ steps.setup-go.outcome == 'success' || inputs.lint-go }}"),
+        ("a predecessor reference inside a parenthesised ||",
+         "${{ (steps.setup-go.outcome == 'success' || always()) && inputs.golangci-lint-version != '' }}"),
+    ):
+        yield mutate(description, lambda j, c=condition: step(j, "go").update({"if": c}))
 
 
 def main() -> int:
