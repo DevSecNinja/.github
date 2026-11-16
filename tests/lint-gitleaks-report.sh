@@ -234,6 +234,13 @@ for visibility in public internal error; do
     [ "$(jq '[.runs[].results[]] | length' "${sarif}")" -eq 4 ] || fail "the SARIF report must hold all four findings"
     jq -e '[.. | objects | .tags? | arrays | length == (unique | length)] | all' "${sarif}" >/dev/null ||
         fail "the SARIF report must not repeat tags, which the upload rejects"
+    # Leaked secrets must land as high-severity security alerts, not warnings.
+    jq -e '[.runs[].tool.driver.rules[]] as $rules
+        | ($rules | length) > 0
+        and ($rules | all(.properties["security-severity"] == "8.0"
+            and (.properties.tags | index("security") and index("secret"))))
+        and ([.runs[].results[].level] | all(. == "error"))' "${sarif}" >/dev/null ||
+        fail "the SARIF report must mark findings as high-severity security errors"
     # Valid URI references and 1-based regions, so the upload neither logs
     # a path nor rejects the file.
     jq -e '[.runs[].results[].locations[].physicalLocation]
