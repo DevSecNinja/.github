@@ -98,6 +98,12 @@
       rangeStrategy: "replace",
     },
     {
+      description: "Annotated python-version values in workflows (custom manager in customManagers.json5) declare a minor such as 3.14; replace it on a new release instead of pinning a patch",
+      matchManagers: ["custom.regex"],
+      matchDatasources: ["python-version"],
+      rangeStrategy: "replace",
+    },
+    {
       description: "The node-version datasource returns versions with a leading \"v\" (e.g. v24.17.0), but mise expects them without it (24.17.0). Strip the prefix so pinning .mise.toml produces valid versions.",
       matchManagers: ["mise"],
       matchDepNames: ["node"],

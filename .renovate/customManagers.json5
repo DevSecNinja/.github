@@ -18,9 +18,17 @@
         "/workflow-templates/.+\\.ya?ml$/",
       ],
       matchStrings: [
-        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\n\\s+[\\w-]*version: \"?(?<currentValue>[^\\s\"]+)\"?",
+        "# renovate: datasource=(?<datasource>\\S+)(?: depName=(?<depName>\\S+))?\\n\\s+[\\w-]*version: \\[?\"?(?<currentValue>[^\\s\"\\[\\],]+)\"?\\]?[ \\t]*(?:#[^\\n]*)?(?:\\r?\\n|$)",
       ],
       datasourceTemplate: "{{{datasource}}}",
+      // `depName=` may be omitted for the runtime datasources, e.g.
+      //   # renovate: datasource=python-version
+      //   python-version: [3.14]
+      // A single-element matrix list is tracked like a scalar; a list with
+      // more entries is not tracked at all (the match must end the line;
+      // Renovate's RE2 engine has no lookahead, so the line end is consumed). Without
+      // depName, the name is the datasource minus `-version` (python, node).
+      depNameTemplate: "{{#if depName}}{{{depName}}}{{else}}{{{replace '-version$' '' datasource}}}{{/if}}",
     },
     {
       // Container images pinned by digest in GitHub Actions workflows. Annotate
@@ -56,9 +64,14 @@
         "/ansible/inventory/.+\\.ya?ml$/",
       ],
       matchStrings: [
-        "# renovate: datasource=github-releases depName=(?<depName>\\S+)\\n\\s*[\\w-]*version:\\s*\"?(?<currentValue>[^\\s\"]+)\"?",
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)(?: registryUrl=(?<registryUrl>\\S+))?[ \\t]*\\n\\s*[\\w-]+:\\s*\"?(?<currentValue>[^\\s\"]+)\"?",
       ],
-      datasourceTemplate: "github-releases",
+      // Any datasource, with an optional registryUrl, and any key on the next
+      // line: the annotation marks the value. For example, Debian packages
+      // pinned per suite and architecture (deb defaults to deb versioning):
+      //   # renovate: datasource=deb depName=docker-ce registryUrl=https://download.docker.com/linux/debian?suite=trixie&components=stable&binaryArch=amd64
+      //   docker_ce: "5:29.6.2-1~debian.13~trixie"
+      datasourceTemplate: "{{{datasource}}}",
     },
     {
       customType: "regex",
