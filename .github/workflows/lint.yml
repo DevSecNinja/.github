@@ -366,11 +366,15 @@ jobs:
                 | if (.region.startLine // 0) < 1 then del(.region) else . end
               )' "${report}" >"${report}.tmp"
             mv "${report}.tmp" "${report}"
-            echo "sarif=true" >>"${GITHUB_OUTPUT}"
             count="$(jq '[.runs[].results[]] | length' "${report}")"
             where="They are in code scanning (category gitleaks/history), visible only with write access."
             if [ "${UPLOAD_SARIF}" != true ]; then
               where="upload-sarif is off, so they are not published: run gitleaks on a private clone."
+            elif [ "${RUNNER_DEBUG:-}" = 1 ]; then
+              # With debug logging the upload logs file paths it can't fingerprint.
+              where="Debug logging is on, so the code scanning upload is skipped: re-run without it."
+            else
+              echo "sarif=true" >>"${GITHUB_OUTPUT}"
             fi
           fi
           if [ "${count}" -gt 0 ]; then
@@ -998,11 +1002,15 @@ jobs:
                 | if (.region.startLine // 0) < 1 then del(.region) else . end
               )' "${report}" >"${report}.tmp"
             mv "${report}.tmp" "${report}"
-            echo "sarif=true" >>"${GITHUB_OUTPUT}"
             count="$(jq '[.runs[].results[]] | length' "${report}")"
             where="They are in code scanning (category gitleaks/history), visible only with write access."
             if [ "${UPLOAD_SARIF}" != true ]; then
               where="upload-sarif is off, so they are not published: run gitleaks on a private clone."
+            elif [ "${RUNNER_DEBUG:-}" = 1 ]; then
+              # With debug logging the upload logs file paths it can't fingerprint.
+              where="Debug logging is on, so the code scanning upload is skipped: re-run without it."
+            else
+              echo "sarif=true" >>"${GITHUB_OUTPUT}"
             fi
           fi
           if [ "${count}" -gt 0 ]; then

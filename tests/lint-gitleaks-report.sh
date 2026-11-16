@@ -124,7 +124,7 @@ assert_redacted() {
     done < <(find "${tmp_dir}" -maxdepth 2 \( -path "${tmp_dir}/$1.out" -o -path "${tmp_dir}/$1-*" \) -type f -print0)
 }
 
-export UPLOAD_SARIF=true CONFIG_DIR="" FAKE_PRIVATE=false BASE_SHA="" HEAD_SHA=""
+export UPLOAD_SARIF=true CONFIG_DIR="" FAKE_PRIVATE=false BASE_SHA="" HEAD_SHA="" RUNNER_DEBUG=""
 
 # PR mode: only the PR's own commit is scanned and annotated.
 make_repo pr
@@ -213,7 +213,11 @@ for visibility in false error; do
 done
 UPLOAD_SARIF=false scan public
 grep -Fq 'upload-sarif is off, so they are not published' <<<"${out}" ||
-    fail "without SARIF uploads the warning must say the findings are not published; got: ${out}"
+    fail "without SARIF uploads the warning must say the findings are not published; got: ${out}"# Debug logging makes the code scanning upload log paths: skip it.
+RUNNER_DEBUG=1 scan public
+grep -Fqx sarif=true <<<"${outputs}" && fail "a debug run must skip the code scanning upload"
+grep -Fq 'Debug logging is on, so the code scanning upload is skipped' <<<"${out}" ||
+    fail "a debug run must say the upload is skipped; got: ${out}"
 CONFIG_DIR=""
 
 # A path-only rule reports StartLine 0; annotate the file without a line.

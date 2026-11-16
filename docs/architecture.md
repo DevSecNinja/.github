@@ -99,7 +99,9 @@ on the event (v3.8.0+):
   so there the findings go only to code scanning (SARIF, category
   `gitleaks/history`), whose alerts need write access. The log shows a count,
   with no file, line, commit, summary or artifact, and the SARIF paths are
-  percent-encoded so the upload step never logs one. Keep `upload-sarif: true` on
+  percent-encoded so the upload step never logs one. Runs with debug logging
+  skip the upload, which then logs the paths it can't fingerprint. Keep
+  `upload-sarif: true` on
   public repositories, or the findings aren't published anywhere. Private
   repositories get the annotations, summary and artifact instead. When the
   visibility lookup fails, the scan treats the repository as public.
