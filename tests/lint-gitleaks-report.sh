@@ -63,8 +63,10 @@ chars="$(head -c 4096 /dev/urandom | LC_ALL=C tr -dc 'A-Za-z0-9')"
 fake_token="ghp_${chars:0:36}"
 
 # Runs both steps in a fresh repository named $1 whose single commit holds
-# fixture.txt with content $2 (when given). Sets status (the gitleaks step's
+# file $2 with content $3 (when given), scanned with the .gitleaks.toml in
+# $config_dir (the default rules when empty). Sets status (the gitleaks step's
 # exit code), out (both steps' combined output) and summary.
+config_dir=""
 scan() {
     local repo="${tmp_dir}/$1" temp="${tmp_dir}/$1-runner-temp"
     mkdir -p "${repo}" "${temp}"
@@ -76,12 +78,12 @@ scan() {
         git config user.email test@example.invalid
         git config commit.gpgsign false
         touch mise.toml
-        [ -z "${2:-}" ] || printf 'token = "%s"\n' "$2" >"fake,token.txt"
+        [ -z "${2:-}" ] || printf '%s\n' "$3" >"$2"
         git add -A
         git commit -qm fixture
     )
     status=0
-    (cd "${repo}" && PATH="${tmp_dir}/bin:${PATH}" RUNNER_TEMP="${temp}" CONFIG_DIR="" \
+    (cd "${repo}" && PATH="${tmp_dir}/bin:${PATH}" RUNNER_TEMP="${temp}" CONFIG_DIR="${config_dir}" \
         bash -eo pipefail -c "${run_script}") >"${tmp_dir}/$1.out" 2>&1 || status=$?
     (cd "${repo}" && RUNNER_TEMP="${temp}" GITHUB_STEP_SUMMARY="${tmp_dir}/$1-summary.md" \
         FINDINGS_ARTIFACT=gitleaks-findings-42 bash -eo pipefail -c "${report_script}") >>"${tmp_dir}/$1.out" 2>&1 ||
@@ -90,7 +92,7 @@ scan() {
     summary="$(cat "${tmp_dir}/$1-summary.md")"
 }
 
-scan leak "${fake_token}"
+scan leak "fake,token.txt" "token = \"${fake_token}\""
 [ "${status}" -eq 1 ] || fail "gitleaks must still exit 1 on a leak (got ${status}): ${out}"
 commit="$(git -C "${tmp_dir}/leak" rev-parse --short=7 HEAD)"
 annotation="::error file=fake%2Ctoken.txt,line=1,title=gitleaks github-pat::github-pat in commit ${commit} (secret redacted)"
@@ -115,6 +117,25 @@ for artifact in "${tmp_dir}/leak.out" "${tmp_dir}/leak-summary.md" \
         fail "the raw secret leaked into ${artifact##*/}"
     fi
 done
+
+# A path-only rule reports StartLine 0; annotate the file without a line.
+config_dir="${tmp_dir}/path-rule-config"
+mkdir -p "${config_dir}"
+cat >"${config_dir}/.gitleaks.toml" <<'EOF'
+[[rules]]
+id = "fake-key-file"
+description = "Fake key file"
+path = '''\.fakekey$'''
+EOF
+scan pathonly "id.fakekey" "not a real key"
+config_dir=""
+[ "${status}" -eq 1 ] || fail "gitleaks must exit 1 on a path-only finding (got ${status}): ${out}"
+commit="$(git -C "${tmp_dir}/pathonly" rev-parse --short=7 HEAD)"
+annotation="::error file=id.fakekey,title=gitleaks fake-key-file::fake-key-file in commit ${commit} (secret redacted)"
+grep -Fqx -- "${annotation}" <<<"${out}" ||
+    fail "expected file-level annotation '${annotation}'; got: ${out}"
+grep -Eq "^\| fake-key-file \| id\.fakekey \| ${commit} \| " <<<"${summary}" ||
+    fail "a path-only finding must list the file without a line; got: ${summary}"
 
 scan clean
 [ "${status}" -eq 0 ] || fail "gitleaks must pass a clean repository (got ${status}): ${out}"

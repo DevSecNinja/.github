@@ -337,7 +337,9 @@ jobs:
           jq -r '
             def msg: tostring | gsub("%"; "%25") | gsub("\r"; "%0D") | gsub("\n"; "%0A");
             def prop: msg | gsub(":"; "%3A") | gsub(","; "%2C");
-            .[] | "::error file=\(.File | prop),line=\(.StartLine),title=gitleaks \(.RuleID | prop)::"
+            # Path-only rules report StartLine 0; annotate those at file level.
+            .[] | "::error file=\(.File | prop)\(if .StartLine > 0 then ",line=\(.StartLine)" else "" end)"
+              + ",title=gitleaks \(.RuleID | prop)::"
               + "\(.RuleID | msg) in commit \((.Commit // "")[0:7] | msg) (secret redacted)"
           ' "${findings}"
 
@@ -351,7 +353,8 @@ jobs:
             echo "| ---- | --------- | ------ | ----------- |"
             jq -r '
               def cell: tostring | gsub("\\|"; "\\|") | gsub("[\r\n]"; " ");
-              .[] | "| \(.RuleID | cell) | \(.File | cell):\(.StartLine) | \((.Commit // "")[0:7]) | \(.Date | cell) |"
+              .[] | "| \(.RuleID | cell) | \(.File | cell)\(if .StartLine > 0 then ":\(.StartLine)" else "" end)"
+                + " | \((.Commit // "")[0:7]) | \(.Date | cell) |"
             ' "${findings}"
           } >>"${GITHUB_STEP_SUMMARY}"
 
@@ -893,7 +896,9 @@ jobs:
           jq -r '
             def msg: tostring | gsub("%"; "%25") | gsub("\r"; "%0D") | gsub("\n"; "%0A");
             def prop: msg | gsub(":"; "%3A") | gsub(","; "%2C");
-            .[] | "::error file=\(.File | prop),line=\(.StartLine),title=gitleaks \(.RuleID | prop)::"
+            # Path-only rules report StartLine 0; annotate those at file level.
+            .[] | "::error file=\(.File | prop)\(if .StartLine > 0 then ",line=\(.StartLine)" else "" end)"
+              + ",title=gitleaks \(.RuleID | prop)::"
               + "\(.RuleID | msg) in commit \((.Commit // "")[0:7] | msg) (secret redacted)"
           ' "${findings}"
 
@@ -907,7 +912,8 @@ jobs:
             echo "| ---- | --------- | ------ | ----------- |"
             jq -r '
               def cell: tostring | gsub("\\|"; "\\|") | gsub("[\r\n]"; " ");
-              .[] | "| \(.RuleID | cell) | \(.File | cell):\(.StartLine) | \((.Commit // "")[0:7]) | \(.Date | cell) |"
+              .[] | "| \(.RuleID | cell) | \(.File | cell)\(if .StartLine > 0 then ":\(.StartLine)" else "" end)"
+                + " | \((.Commit // "")[0:7]) | \(.Date | cell) |"
             ' "${findings}"
           } >>"${GITHUB_STEP_SUMMARY}"
 
