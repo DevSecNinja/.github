@@ -492,7 +492,7 @@ one. See [Org-wide AI instructions](#org-wide-ai-instructions-ai-toolkit).
 
 | Input / secret               | Description                                                                         |
 | ---------------------------- | ----------------------------------------------------------------------------------- |
-| `sync-templates`             | Also bootstrap files from `config-sync/templates/`. Default: `false`.               |
+| `sync-templates`             | Also bootstrap the other `config-sync/templates/` files. Default: `false`.          |
 | `central-ref`                | Git ref of `DevSecNinja/.github` to sync from. Default: `main`.                     |
 | `AUTOMATION_APP_PRIVATE_KEY` | Secret. App private key; pass it by name (v3.4.0+). The App ID is read from `vars`. |
 | `app-id`                     | Explicit App ID; overrides the `AUTOMATION_APP_ID` variable. Default: empty.        |
@@ -869,7 +869,6 @@ the repo root.
 | `dprint.json`                                                  | dprint Markdown formatter config                      |
 | `issue-labeler.yaml`                                           | Issue auto-label rules                                |
 | `pr-labeler.yaml`                                              | PR auto-label rules                                   |
-| `renovate.json5`                                               | Renovate base config reference                        |
 
 ### Org-wide AI instructions (ai-toolkit)
 
@@ -925,8 +924,11 @@ manual step:
 
 ### Templates (`config-sync/templates/`)
 
-These are **starting-point** files. Copy them into a new repository and adapt
-as needed — they are not auto-synced. See
+These are **starting-point** files. Config-sync copies them only when the
+caller sets `sync-templates: true` and the file does not exist yet; it never
+overwrites them. `renovate.json5` is always bootstrapped: it is a stub that
+extends [`.renovate/default.json5`](#consuming-the-preset) and holds the
+repository's own Renovate rules. See
 [`config-sync/templates/README.md`](../config-sync/templates/README.md) for
 details.
 
@@ -939,6 +941,7 @@ by individual repositories via their `renovate.json5`.
 
 | Preset                  | Purpose                                                       |
 | ----------------------- | ------------------------------------------------------------- |
+| `default.json5`         | Org defaults: `config:recommended` plus every preset below    |
 | `base.json5`            | Core scheduling, rebase and PR settings                       |
 | `autoMerge.json5`       | Auto-merge rules for non-major updates                        |
 | `groups.json5`          | Dependency grouping, including the weekly all-non-major batch |
@@ -1037,25 +1040,23 @@ can still assign Code Owners if an automerge PR cannot merge cleanly.
 
 ### Consuming the preset
 
-Repositories import the shared fragments in their `renovate.json5`:
+Repositories extend `default.json5`, which pulls in `config:recommended` and
+the shared fragments. Config-sync bootstraps this `renovate.json5` stub from
+[`config-sync/templates/`](../config-sync/templates/README.md#renovatejson5)
+when a repository has none, and never overwrites it afterwards:
 
 ```json5
 {
-  extends: [
-    "config:recommended",
-    "helpers:pinGitHubActionDigests",
-    ":dependencyDashboard",
-    ":semanticCommits",
-    "github>DevSecNinja/.github//.renovate/autoMerge.json5",
-    "github>DevSecNinja/.github//.renovate/base.json5",
-    "github>DevSecNinja/.github//.renovate/customManagers.json5",
-    "github>DevSecNinja/.github//.renovate/groups.json5",
-    "github>DevSecNinja/.github//.renovate/labels.json5",
-    "github>DevSecNinja/.github//.renovate/packageRules.json5",
-    "github>DevSecNinja/.github//.renovate/semanticCommits.json5",
-  ],
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: ["github>DevSecNinja/.github//.renovate/default.json5"],
+  // Repository-specific settings go below.
 }
 ```
+
+Repository-specific `packageRules`, `customManagers` and opt-in presets go
+below the `extends` entry in the same file; Renovate reads only one config
+file per repository. Each config-sync run warns when `renovate.json5` no longer
+extends `default.json5`.
 
 ---
 

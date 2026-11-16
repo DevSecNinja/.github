@@ -9,7 +9,11 @@ name: Reusable — Config Sync
 # `config-sync/files/` in the central repo is synced (overwriting) to
 # the same relative path in the calling repo. Anything under
 # `config-sync/templates/` is bootstrapped (only if the target file
-# does not yet exist) when `sync-templates: true`.
+# does not yet exist) when `sync-templates: true`. The `renovate.json5`
+# template is always bootstrapped: it is a stub that extends the central
+# `.renovate/default.json5` preset and holds the repo's own Renovate
+# rules, so it is never overwritten. The sync warns when an existing
+# `renovate.json5` does not extend that preset.
 #
 # Per-repo opt-out: list paths (one per line, relative to repo root)
 # in `.github/.config-sync-ignore` to skip them during sync. Blank
@@ -48,7 +52,7 @@ on:
     inputs:
       sync-templates:
         description: "Also sync template files (only copies if file does not exist locally — will not overwrite customized
-          files)"
+          files). renovate.json5 is bootstrapped regardless."
         required: false
         type: boolean
         default: false
@@ -244,6 +248,7 @@ jobs:
 
           sync_tree() {
               local kind="$1"   # "files" or "templates"
+              local only="${2:-}"   # optional: sync just this path
               local src_root="${SOURCE_DIR}/${kind}"
 
               if [ ! -d "${src_root}" ]; then
@@ -261,6 +266,10 @@ jobs:
                   local rel="${src#"${src_root}/"}"
                   local dest="${rel}"
                   local reason
+
+                  if [ -n "${only}" ] && [ "${dest}" != "${only}" ]; then
+                      continue
+                  fi
 
                   if is_ignored "${dest}"; then
                       echo "  ⊘ ${dest} (ignored via ${IGNORE_FILE})"
@@ -301,6 +310,78 @@ jobs:
               echo ""
               echo "=== Syncing template files (new files only) ==="
               sync_tree templates
+          else
+              # The Renovate stub carries the org defaults, so every repo
+              # gets one even without sync-templates.
+              echo ""
+              echo "=== Bootstrapping renovate.json5 (new file only) ==="
+              sync_tree templates renovate.json5
+          fi
+
+          # renovate.json5 is repo-owned; only check that its top-level
+          # `extends` still pulls in the org defaults. The runner has no JSON5
+          # parser, so this tokenizes the file (strings, comments, brackets)
+          # with the Python standard library. Exit 0: preset extended.
+          extends_preset() {
+              python3 - "$1" <<'PY'
+          import sys
+
+          text = open("renovate.json5", encoding="utf-8").read()
+          tokens, i, n = [], 0, len(text)
+          while i < n:
+              c = text[i]
+              if text.startswith("//", i):
+                  i = text.find("\n", i)
+                  i = n if i < 0 else i
+              elif text.startswith("/*", i):
+                  i = text.find("*/", i + 2)
+                  if i < 0:
+                      sys.exit(2)
+                  i += 2
+              elif c in "\"'":
+                  j, value = i + 1, []
+                  while j < n and text[j] != c:
+                      if text[j] == "\\":
+                          j += 1
+                      value.append(text[j:j + 1])
+                      j += 1
+                  tokens.append(("str", "".join(value)))
+                  i = j + 1
+              elif c in "{}[]:,":
+                  tokens.append((c, c))
+                  i += 1
+              elif c.isspace():
+                  i += 1
+              else:
+                  j = i + 1
+                  while j < n and not text[j].isspace() and text[j] not in "{}[]:,\"'/":
+                      j += 1
+                  tokens.append(("word", text[i:j]))
+                  i = j
+
+          depth, extends = 0, None
+          for k, (kind, value) in enumerate(tokens):
+              if kind in ("{", "["):
+                  depth += 1
+              elif kind in ("}", "]"):
+                  depth -= 1
+              elif depth == 1 and value == "extends" and [t[0] for t in tokens[k + 1:k + 3]] == [":", "["]:
+                  extends, nested = [], 0
+                  for kind2, value2 in tokens[k + 3:]:
+                      if kind2 in ("{", "["):
+                          nested += 1
+                      elif kind2 in ("}", "]"):
+                          if nested == 0:
+                              break
+                          nested -= 1
+                      elif kind2 == "str" and nested == 0:
+                          extends.append(value2)
+          sys.exit(0 if extends and sys.argv[1] in extends else 1)
+          PY
+          }
+          renovate_preset="github>DevSecNinja/.github//.renovate/default.json5"
+          if [ -f renovate.json5 ] && ! extends_preset "${renovate_preset}"; then
+              echo "::warning file=renovate.json5,title=renovate.json5 does not extend the org preset::Add \"${renovate_preset}\" to extends and keep repo-specific rules below it. Without it the repo misses central Renovate changes. See https://github.com/DevSecNinja/.github/blob/main/config-sync/templates/README.md#renovatejson5"
           fi
 
           # Clean up the source checkout so it never lands in a PR.

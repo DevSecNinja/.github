@@ -1,5 +1,6 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  description: "DevSecNinja default Renovate config; repositories extend this from their renovate.json5 stub.",
   extends: [
     "config:recommended",
     "helpers:pinGitHubActionDigests",

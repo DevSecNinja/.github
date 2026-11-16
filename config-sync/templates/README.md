@@ -10,7 +10,7 @@ Files here are **always** synced (overwriting any local changes) so
 that `DevSecNinja/.github` is the single source of truth. Examples:
 
 - `dprint.json` → `<repo>/dprint.json`
-- `renovate.json5` → `<repo>/renovate.json5`
+- `.editorconfig` → `<repo>/.editorconfig`
 - `.github/CODEOWNERS` → `<repo>/.github/CODEOWNERS`
 - `.github/labels-base.yaml` → `<repo>/.github/labels-base.yaml`
 
@@ -44,7 +44,42 @@ ai-toolkit; see
 These files are **starting points** for repos that need them.
 They are only copied when `sync-templates: true` is set on the caller,
 and only if the target path does not already exist — local edits are
-never overwritten.
+never overwritten. `renovate.json5` is the exception to the first rule:
+it is bootstrapped even without `sync-templates`.
+
+## renovate.json5
+
+A stub that extends the org defaults in
+[`.renovate/default.json5`](../../.renovate/default.json5)
+(`config:recommended` plus the DevSecNinja presets). Config-sync creates it
+when the repo has no `renovate.json5` and never overwrites it, so the repo's
+own Renovate settings live in the same file, below the `extends` entry:
+
+```json5
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: [
+    "github>DevSecNinja/.github//.renovate/default.json5",
+    // Opt-in presets, e.g. "github>DevSecNinja/.github//.renovate/<name>.json5".
+  ],
+  packageRules: [
+    {
+      description: "Repo-specific rule",
+      matchPackageNames: ["example"],
+      enabled: false,
+    },
+  ],
+}
+```
+
+Rules in this file are applied after the presets, so they can override the
+org defaults. Changes to the default extends list land in
+`.renovate/default.json5` and reach every repo without a sync PR.
+
+Each sync run warns when `renovate.json5` does not extend
+`github>DevSecNinja/.github//.renovate/default.json5`. Renovate reads only
+the first config file it finds, so keep all Renovate config in this one file;
+a `.github/.config-sync-ignore` entry for it is no longer needed.
 
 ## .mise.toml
 
