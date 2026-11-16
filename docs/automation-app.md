@@ -14,6 +14,11 @@ opens a pull request:
 See [ADR 0011](design-decisions/0011-single-automation-github-app.md) for the
 decision.
 
+The three PR workflows commit through the GitHub API (`open-pr` with
+`commit-method: api`), so GitHub signs their commits and the PRs pass a
+"require signed commits" ruleset without an admin bypass. That holds for the
+`GITHUB_TOKEN` fallback too.
+
 ## Why an App instead of `GITHUB_TOKEN`
 
 - **Pull requests and tags made with `GITHUB_TOKEN` do not trigger
