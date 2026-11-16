@@ -33,6 +33,7 @@ run = [
   "bash ./tests/open-pr-push.sh",
   "bash ./tests/open-pr-labels.sh",
   "bash ./tests/config-sync-ai-toolkit-instructions.sh",
+  "bash ./tests/config-sync-lint-excludes.sh",
   "bash ./tests/gitleaks-config.sh",
   "bash ./tests/lint-gitleaks-report.sh",
   "python3 ./tests/workflow-job-conditions.py",
