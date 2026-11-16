@@ -60,7 +60,8 @@ own Renovate settings live in the same file, below the `extends` entry:
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
   extends: [
     "github>DevSecNinja/.github//.renovate/default.json5",
-    // Opt-in presets, e.g. "github>DevSecNinja/.github//.renovate/<name>.json5".
+    // Opt-in presets, e.g. for repos that use typescript-eslint:
+    "github>DevSecNinja/.github//.renovate/typescript-eslint.json5",
   ],
   packageRules: [
     {
