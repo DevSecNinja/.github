@@ -92,4 +92,22 @@
     "gradleWrapper",
     "mise",
   ],
+  // Temp until npm/cli#9800 is fixed (https://github.com/npm/cli/issues/9800):
+  // npm 12 (default allow-remote=none) misclassifies registry tarballs as
+  // "remote" under `--package-lock-only` when a package in the tree declares
+  // bundleDependencies. Every Tailwind CSS 4 repository has one
+  // (@tailwindcss/oxide-wasm32-wasi), so Renovate's lockfile updates fail with
+  // EALLOWREMOTE. npm's allow-remote only takes none, root or all, and `root`
+  // does not cover transitive dependencies, so `all` is the only value that
+  // works. It is scoped to Renovate's own npm lockfile updates: Renovate runs
+  // them with --ignore-scripts, and real installs in CI and on developer
+  // machines keep npm 12's allow-remote=none, so a URL dependency that slips
+  // into a lockfile still fails there. allow-git stays at npm 12's `none`.
+  // npmrcMerge keeps a repository's own .npmrc; its lines come after this
+  // one, so a repository can still set allow-remote itself. Remove this block
+  // once Renovate ships an npm release with the fix.
+  npm: {
+    npmrc: "allow-remote=all\n",
+    npmrcMerge: true,
+  },
 }
