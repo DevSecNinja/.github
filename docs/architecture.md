@@ -158,10 +158,13 @@ simple command, such as `./scripts/build.sh`, `bash .github/scripts/x.sh`,
 than one line; a pipe, `&&`, `||`, `;` or `&`; `$(…)`, backticks or `<(…)`; a
 heredoc or here-string; `if`/`for`/`while`/`case`; a `${{ }}` expression (pass
 it through `env:`, which also prevents template injection); or any code under a
-non-bash `shell:` (python, pwsh, cmd, …). Move such code into a script under
+non-bash `shell:` (python, pwsh, cmd, …, including the implicit pwsh of a
+Windows `runs-on`). Move such code into a script under
 `scripts/` or `.github/scripts/` (or the composite action's own directory),
 where shellcheck, shfmt and tests reach it. A step that must stay inline opts
-out with a comment that gives a reason, directly above the step or inside it:
+out with a comment that gives a reason, directly above the step or inside it
+(a YAML comment, or a shell comment in the script; text in strings doesn't
+count):
 
 ```yaml
 # lint: allow-inline-script bootstraps the runner before checkout
@@ -172,7 +175,8 @@ out with a comment that gives a reason, directly above the step or inside it:
 
 Findings are annotated on the file and line of the `run:` key and listed in
 the job summary with the opt-outs. They are warnings by default; set
-`lint-inline-scripts-blocking: true` to report errors and fail the linter. A
+`lint-inline-scripts-blocking: true` to report errors and fail the linter
+(a file that can't be parsed then fails it too). A
 later major release makes blocking the default. The linter fetches the checker
 from the DevSecNinja/.github commit the caller pinned and runs it with the
 runner's system Python, which ships PyYAML (`ubuntu-24.04`).

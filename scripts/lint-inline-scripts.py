@@ -18,17 +18,18 @@ contains any of:
 - shell control flow (`if`, `for`, `while`, `case`, ...);
 - a `${{ }}` expression (pass the value through `env:` instead, which also
   prevents template injection);
-- any code under a non-bash `shell:` (python, pwsh, ...).
+- any code under a non-bash `shell:` (python, pwsh, ...), whether set on the
+  step, by `defaults.run.shell`, or implied by a Windows `runs-on` (pwsh).
 
-A step opts out with a comment `# lint: allow-inline-script <reason>`, either
-in the comment lines directly above the step or anywhere inside it (for
-example as the first line of the script). The reason is required.
+A step opts out with a comment `# lint: allow-inline-script <reason>`: a YAML
+comment directly above the step or inside it, or a shell comment in its script.
+Text inside strings does not count. The reason is required.
 
 Findings are GitHub annotations: warnings by default, errors with `--blocking`
 (or LINT_INLINE_SCRIPTS_BLOCKING=true), in which case the exit code is 1 when
-anything is found. Without arguments the current directory is checked; pass
-directories to check those repositories, or files to check single workflows or
-actions.
+anything is found or a file can't be parsed. Without arguments the current
+directory is checked; pass directories to check those repositories, or files to
+check single workflows or actions.
 """
 
 from __future__ import annotations
@@ -71,8 +72,9 @@ GUIDANCE = (
 )
 
 
-def scan_line(line: str) -> set[str]:
-    """Shell constructs on one line that make it more than a simple command."""
+def scan_line(line: str) -> tuple[set[str], str]:
+    """Shell constructs on one line that make it more than a simple command,
+    and the line's trailing shell comment (empty when there is none)."""
     found: set[str] = set()
     words = line.split()
     if words and (words[0] in CONTROL_WORDS or words[0][0] in "({"):
@@ -97,7 +99,7 @@ def scan_line(line: str) -> set[str]:
             i += 1
             continue
         if c == "#" and (i == 0 or line[i - 1].isspace()):
-            break
+            return found, line[i:]
         if c in "'\"":
             quote = c
         elif c == "`" or line.startswith(("$(", "<(", ">("), i):
@@ -111,7 +113,9 @@ def scan_line(line: str) -> set[str]:
             i += 2
             continue
         elif c == "|":
-            found.add(PIPE)
+            # >| is a clobbering redirection, not a pipe.
+            if not (i and line[i - 1] == ">"):
+                found.add(PIPE)
         elif c == ";":
             found.add(CHAIN)
         elif c == "&":
@@ -121,7 +125,7 @@ def scan_line(line: str) -> set[str]:
             if before not in "<>" and after != ">":
                 found.add(CHAIN)
         i += 1
-    return found
+    return found, ""
 
 
 def run_problems(script: str, shell: str | None) -> list[str]:
@@ -131,7 +135,7 @@ def run_problems(script: str, shell: str | None) -> list[str]:
     if len(lines) > 1:
         problems.add(MULTILINE)
     for line in lines:
-        problems |= scan_line(line)
+        problems |= scan_line(line)[0]
     if "${{" in script:
         problems.add(EXPRESSION)
     ordered = [reason for reason in REASON_ORDER if reason in problems]
@@ -139,7 +143,7 @@ def run_problems(script: str, shell: str | None) -> list[str]:
     # A shell given by an expression can't be resolved statically.
     if words and "${{" not in shell:
         if words[0].rsplit("/", 1)[-1] not in BASH_SHELLS:
-            ordered.append(f"inline code for shell '{shell}'")
+            ordered.append(f"inline code for shell '{words[0]}'")
     return ordered
 
 
@@ -170,21 +174,55 @@ def indent(line: str) -> int:
     return len(line) - len(line.lstrip(" "))
 
 
-def step_lines(lines: list[str], step: yaml.MappingNode) -> list[str]:
-    """The comment lines directly above a step, and every line of the step."""
+def scalar_spans(node: yaml.Node) -> list[tuple[tuple[int, int], tuple[int, int]]]:
+    """(start, end) positions of every scalar under a node, end exclusive."""
+    if isinstance(node, yaml.ScalarNode):
+        start = (node.start_mark.line, node.start_mark.column)
+        if node.style in ("|", ">"):
+            # The header line of a block scalar may end with a YAML comment.
+            start = (node.start_mark.line + 1, 0)
+        return [(start, (node.end_mark.line, node.end_mark.column))]
+    if isinstance(node, yaml.MappingNode):
+        return [span for pair in node.value for item in pair for span in scalar_spans(item)]
+    if isinstance(node, yaml.SequenceNode):
+        return [span for item in node.value for span in scalar_spans(item)]
+    return []
+
+
+def step_comments(lines: list[str], step: yaml.MappingNode, script: str) -> list[str]:
+    """The YAML comments directly above and inside a step, and the shell
+    comments of its script. Quoted or other string data never counts."""
     start = step.start_mark.line
     base = indent(lines[start])
-    above = []
+    comments = []
     k = start - 1
     while k >= 0 and lines[k].lstrip().startswith("#") and indent(lines[k]) <= base:
-        above.append(lines[k])
+        comments.append(lines[k].lstrip())
         k -= 1
-    body = [lines[start]]
-    for line in lines[start + 1 :]:
-        if line.strip() and indent(line) <= base:
-            break
-        body.append(line)
-    return above + body
+    spans = scalar_spans(step)
+    k = start
+    while k < len(lines) and (k == start or not lines[k].strip() or indent(lines[k]) > base):
+        line = lines[k]
+        for col, c in enumerate(line):
+            if c == "#" and (col == 0 or line[col - 1] in " \t"):
+                if not any(begin <= (k, col) < end for begin, end in spans):
+                    comments.append(line[col:])
+                    break
+        k += 1
+    return comments + [scan_line(line)[1] for line in script.splitlines()]
+
+
+def implicit_shell(job: yaml.Node) -> str | None:
+    """The default shell of a job without defaults.run.shell: pwsh on runners
+    that are statically Windows, bash (None) otherwise or when unknown."""
+    runs_on = child(job, "runs-on")
+    if isinstance(runs_on, yaml.MappingNode):
+        runs_on = child(runs_on, "labels")
+    nodes = runs_on.value if isinstance(runs_on, yaml.SequenceNode) else [runs_on]
+    labels = [label for label in map(scalar, nodes) if label]
+    if any("${{" in label for label in labels):
+        return None
+    return "pwsh" if any(label.lower().startswith("windows") for label in labels) else None
 
 
 def msg(value: str) -> str:
@@ -207,6 +245,7 @@ class Checker:
         self.opt_outs: list[tuple[str, int, str, str]] = []
         self.steps = 0
         self.files = 0
+        self.unreadable = 0
 
     def check_file(self, path: Path, display: str, is_action: bool) -> None:
         try:
@@ -214,7 +253,8 @@ class Checker:
             root = yaml.compose(text, Loader=yaml.SafeLoader)
         except (OSError, UnicodeDecodeError, yaml.YAMLError) as error:
             first = (str(error).splitlines() or [type(error).__name__])[0]
-            print(f"::warning file={prop(display)},title=Inline scripts::Could not parse: {msg(first)}")
+            print(f"::{self.level} file={prop(display)},title=Inline scripts::Could not parse: {msg(first)}")
+            self.unreadable += 1
             return
         self.files += 1
         lines = text.splitlines()
@@ -228,7 +268,7 @@ class Checker:
             return
         workflow_shell = defaults_shell(root)
         for job_key, job in jobs.value:
-            job_shell = defaults_shell(job) or workflow_shell
+            job_shell = defaults_shell(job) or workflow_shell or implicit_shell(job)
             self.check_steps(child(job, "steps"), lines, display, f"job '{job_key.value}'", job_shell)
 
     def check_steps(
@@ -250,7 +290,7 @@ class Checker:
             where = f"{owner}, step '{label}'"
             line = run_line(step)
             problems = run_problems(script, scalar(child(step, "shell")) or default_shell)
-            opt_out = next(filter(None, map(OPT_OUT.search, step_lines(lines, step))), None)
+            opt_out = next(filter(None, map(OPT_OUT.search, step_comments(lines, step, script))), None)
             if opt_out:
                 reason = opt_out.group("reason").lstrip(" :-").strip()
                 if reason:
@@ -283,6 +323,8 @@ class Checker:
             out.append("")
         if self.findings:
             out += [GUIDANCE, ""]
+        if self.unreadable:
+            out += [f"Inline scripts: {self.unreadable} file(s) could not be parsed, so they were not checked.", ""]
         if out:
             with open(summary, "a", encoding="utf-8") as handle:
                 handle.write("\n".join(out) + "\n")
@@ -334,7 +376,9 @@ def main(argv: list[str]) -> int:
         f"Inline scripts: checked {checker.steps} run step(s) in {checker.files} file(s); "
         f"{len(checker.findings)} to move into a script, {len(checker.opt_outs)} opted out."
     )
-    return 1 if args.blocking and checker.findings else 0
+    if checker.unreadable:
+        print(f"Inline scripts: {checker.unreadable} file(s) could not be parsed, so they were not checked.")
+    return 1 if args.blocking and (checker.findings or checker.unreadable) else 0
 
 
 if __name__ == "__main__":

@@ -17,6 +17,7 @@
             - run: ./scripts/build.sh
             - run: bash .github/scripts/x.sh --flag "a | b; c && d"
             - run: python scripts/x.py 2>&1 >out.log
+            - run: ./scripts/build.sh >|build.log
             - run: pwsh -File scripts/x.ps1 &>/dev/null
             - run: npm ci # a trailing comment is fine
             - run: echo 'no $(substitution) in single quotes'
@@ -155,6 +156,39 @@
             - shell: ${{ matrix.shell }}
               run: ./x
 
+- name: Windows runners default to pwsh unless a shell is set
+  expect:
+    - "Job 'windows', step '#1': inline code for shell 'pwsh'."
+    - "Job 'labels', step '#1': inline code for shell 'pwsh'."
+    - "Job 'group', step '#1': inline code for shell 'pwsh'."
+  files:
+    .github/workflows/x.yml: |-
+      jobs:
+        windows:
+          runs-on: windows-2025
+          steps:
+            - run: Write-Output 'hello'
+            - shell: bash
+              run: pwsh -File scripts/x.ps1
+        labels:
+          runs-on: [self-hosted, Windows, x64]
+          steps:
+            - run: ./x.ps1
+        group:
+          runs-on:
+            group: runners
+            labels: windows-latest
+          steps:
+            - run: ./x.ps1
+        matrix:
+          runs-on: ${{ matrix.os }}
+          steps:
+            - run: ./x
+        linux:
+          runs-on: ubuntu-24.04
+          steps:
+            - run: ./x.sh
+
 - name: composite actions are checked, other actions and node_modules are not
   expect:
     - "file=.github/workflows/x.yml,line=5,title=Inline script::Job 'build', step '#1': a pipe"
@@ -248,6 +282,32 @@
                 ./a.sh
                 ./b.sh
 
+- name: opt-out text inside strings does not count
+  expect:
+    - "step 'In a string': multiple lines."
+    - "step '# lint: allow-inline-script in the name': multiple lines."
+    - "step 'In an env value': multiple lines."
+  files:
+    .github/workflows/x.yml: |-
+      jobs:
+        build:
+          runs-on: ubuntu-24.04
+          steps:
+            - name: In a string
+              run: |
+                echo '# lint: allow-inline-script example' >notes.txt
+                ./b.sh
+            - name: "# lint: allow-inline-script in the name"
+              run: |
+                ./a.sh
+                ./b.sh
+            - name: In an env value
+              env:
+                NOTE: "# lint: allow-inline-script not a comment"
+              run: |
+                ./a.sh
+                ./b.sh
+
 - name: blocking mode reports errors and fails
   blocking: true
   expect:
@@ -259,3 +319,11 @@
           runs-on: ubuntu-24.04
           steps:
             - run: ./a.sh && ./b.sh
+
+- name: a file that can't be parsed fails blocking mode
+  blocking: true
+  expect:
+    - "::error file=.github/workflows/bad.yml,title=Inline scripts::Could not parse"
+  files:
+    .github/workflows/bad.yml: |-
+      jobs: [unclosed
