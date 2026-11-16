@@ -3,7 +3,7 @@
 # Input: the packageRules of the .renovate presets, concatenated in the order
 # .renovate/default.json5 extends them. Arguments:
 #   $dep   the update: {manager, datasource, updateType, packageName,
-#          currentValue, depType}
+#          currentValue, depType, depName (defaults to packageName)}
 #   $base  starting settings (e.g. minimumReleaseAge from base.json5)
 #
 # Only the matchers the shared rules use for these decisions are modelled. A
@@ -26,7 +26,7 @@ def names_match($value):
            | ($pos | length) == 0 or any($pos[]; pattern_match($value)))
           and ([$patterns[] | select(startswith("!")) | ltrimstr("!")] | all(.[]; pattern_match($value) | not)));
 
-def known: ["matchManagers", "matchUpdateTypes", "matchDatasources", "matchCurrentValue", "matchPackageNames", "matchDepTypes"];
+def known: ["matchManagers", "matchUpdateTypes", "matchDatasources", "matchCurrentValue", "matchPackageNames", "matchDepTypes", "matchDepNames"];
 
 def matches:
     ([keys[] | select(startswith("match"))] - known | length) == 0
@@ -35,9 +35,11 @@ def matches:
     and in_list("matchDatasources"; $dep.datasource)
     and in_list("matchDepTypes"; $dep.depType)
     and ((.matchCurrentValue // null) as $v | $v == null or ($v | pattern_match($dep.currentValue)))
-    and names_match($dep.packageName);
+    and names_match($dep.packageName)
+    and ((.matchDepNames // null) as $names | $names == null
+        or any($names[]; pattern_match($dep.depName // $dep.packageName)));
 
 reduce (.[] | select(matches)) as $r ({enabled: true, labels: []} + $base;
-    . + ($r | with_entries(select(.key | IN("enabled", "automerge", "groupName", "minimumReleaseAge",
+    . + ($r | with_entries(select(.key | IN("enabled", "automerge", "groupName", "minimumGroupSize", "minimumReleaseAge",
         "minimumReleaseAgeBehaviour", "additionalBranchPrefix"))))
     | .labels += ($r.addLabels // []))

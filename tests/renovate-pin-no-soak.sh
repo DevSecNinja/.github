@@ -45,13 +45,15 @@ dep() {
     printf '{"manager":"%s","datasource":"%s","updateType":"%s","packageName":"%s","currentValue":"%s"}' "$@"
 }
 
-pinned='.enabled == true and .automerge == true and .minimumReleaseAge == "0" and has("groupName") and .groupName == null
+pinned='.enabled == true and .automerge == true and .minimumReleaseAge == "0" and has("groupName") and .groupName == null and .minimumGroupSize == 1
     and ((.labels | index("merge: manual")) | not)'
 check "action pin (v4 -> v4.4.0)" "$(dep github-actions github-tags pin actions/checkout v4)" "${pinned}"
 check "npm pin (^6.12.0 -> 6.12.0)" "$(dep npm npm pin maplibre-gl ^6.12.0)" "${pinned}"
 check "action digest pin" "$(dep github-actions github-tags pinDigest actions/checkout v6.1.0)" "${pinned}"
 check "third-party branch pin (@main -> @sha # main)" "$(dep github-actions github-tags pinDigest hacs/action main)" "${pinned}"
 check "Docker Hub image digest pin" "$(dep docker-compose docker pinDigest docker.io/library/redis 7)" "${pinned}"
+# A lone pin must not inherit minimumGroupSize 2 from the postgres group.
+check "postgres image digest pin" "$(dep docker-compose docker pinDigest docker.io/library/postgres 17)" "${pinned}"
 # Images without a trusted timestamp keep the pr-cooldown branch (ADR 0005).
 check "ghcr.io image digest pin" "$(dep docker-compose docker pinDigest ghcr.io/home-assistant/home-assistant 2026.11.1)" \
     "${pinned} and .additionalBranchPrefix == \"docker-gated-\""

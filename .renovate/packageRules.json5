@@ -215,6 +215,9 @@
       matchUpdateTypes: ["pin", "pinDigest"],
       minimumReleaseAge: "0",
       groupName: null,
+      // Ungrouped, a pin is a group of one: undo minimumGroupSize from the
+      // specific groups (postgres sets 2), or a lone pin never gets a branch.
+      minimumGroupSize: 1,
       automerge: true,
     },
   ],
