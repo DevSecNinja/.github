@@ -49,6 +49,8 @@ CASES = [
     ("Feature request: dark mode", "", {"feat"}),
     ("Pull request template is outdated", "", set()),
     ("fix!: handle empty input", "", {"fix"}),
+    ("Build failed on main", "", {"fix"}),
+    ("feat: add failover support", "", {"feat"}),
     ("App crashes on start", "", {"fix", "area/apps"}),
     ("Login page", "What happened?\nThe button is broken.", {"fix"}),
     ("Debug logging is noisy", "", set()),
