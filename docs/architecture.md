@@ -704,41 +704,49 @@ for attribution caveats, inputs and docs-site or standalone Pages examples.
 
 ### Open PR (`actions/open-pr/`)
 
-Opens (or force-updates) a pull request from the current working tree.
+Opens (or updates) a pull request from the current working tree.
 Use it whenever a job has produced changes that should land via PR
 review rather than a direct push to a protected branch — signing,
 formatting, generated-content updates.
 
 Key properties:
 
-- Uses only the preinstalled `gh` CLI; no third-party action.
+- Commits through the GraphQL `createCommitOnBranch` API by default
+  (`commit-method: api`), so GitHub signs the commit and the PR passes a
+  "require signed commits" ruleset. `commit-method: git` keeps the old
+  unsigned local commit and force-push. See the action README for the
+  API method's limits (no new executable bits, symlinks or very large
+  changes).
+- Uses only the preinstalled `git`, `jq` and `gh`; no third-party action.
 - Default `GITHUB_TOKEN` does not retrigger workflows on the bot's
-  push, so it is safe inside loops like sign-on-push.
-- Reuses the existing PR (force-pushes its branch) when one already
-  exists for the same `branch -> base` pair, so repeat runs do not
-  spam duplicate PRs.
-- Leases the force-push against the branch tip it reads with
-  `git ls-remote`, so an existing working branch (an open PR, or a branch
-  left behind after merge) is updated instead of rejected as "stale info"
-  (fixed in v3.3.0). When the branch already holds the same changes on the
-  same base, the push is skipped so the PR's CI does not re-run.
+  commit, so it is safe inside loops like sign-on-push.
+- Reuses the existing PR (replaces its branch with the new commit) when
+  one already exists for the same `branch -> base` pair, so repeat runs
+  do not spam duplicate PRs.
+- Leases every branch update against the tip it read, so a concurrent
+  push is never overwritten and an existing working branch (an open PR,
+  or a branch left behind after merge) is updated instead of rejected as
+  "stale info" (fixed in v3.3.0). When the branch already holds the same
+  changes on the same base, nothing is written so the PR's CI does not
+  re-run.
 - Branch protection on the base branch stays fully enforced.
 
-| Input            | Required | Default                     | Description                                                              |
-| ---------------- | -------- | --------------------------- | ------------------------------------------------------------------------ |
-| `branch`         | yes      | —                           | Working branch to create or force-push to.                               |
-| `title`          | yes      | —                           | PR title (also default commit message). Conventional Commit subject.     |
-| `base`           | no       | `main`                      | Branch to merge into.                                                    |
-| `body`           | no       | `""`                        | PR body (Markdown).                                                      |
-| `commit-message` | no       | `title`                     | Override the commit message.                                             |
-| `paths`          | no       | `.`                         | Newline-delimited pathspecs to `git add`.                                |
-| `labels`         | no       | `""`                        | Newline-delimited labels.                                                |
-| `draft`          | no       | `false`                     | Open as draft.                                                           |
-| `signoff`        | no       | `false`                     | Add `Signed-off-by` trailer.                                             |
-| `if-no-changes`  | no       | `skip`                      | `skip` = exit 0; `fail` = error when nothing to commit.                  |
-| `git-user-name`  | no       | `github-actions[bot]`       | Commit author name.                                                      |
-| `git-user-email` | no       | github-actions[bot] noreply | Commit author email.                                                     |
-| `github-token`   | no       | `${{ github.token }}`       | Token for `git push` and `gh`. Override with PAT/App for cross-repo PRs. |
+| Input            | Required | Default                     | Description                                                          |
+| ---------------- | -------- | --------------------------- | -------------------------------------------------------------------- |
+| `branch`         | yes      | —                           | Working branch to create or replace.                                 |
+| `title`          | yes      | —                           | PR title (also default commit message). Conventional Commit subject. |
+| `base`           | no       | `main`                      | Branch to merge into.                                                |
+| `body`           | no       | `""`                        | PR body (Markdown).                                                  |
+| `commit-message` | no       | `title`                     | Override the commit message.                                         |
+| `paths`          | no       | `.`                         | Newline-delimited pathspecs to `git add`.                            |
+| `labels`         | no       | `""`                        | Newline-delimited labels.                                            |
+| `draft`          | no       | `false`                     | Open as draft.                                                       |
+| `signoff`        | no       | `false`                     | Add `Signed-off-by` trailer.                                         |
+| `commit-method`  | no       | `api`                       | `api` = signed API commit; `git` = unsigned local commit and push.   |
+| `if-no-changes`  | no       | `skip`                      | `skip` = exit 0; `fail` = error when nothing to commit.              |
+| `git-user-name`  | no       | `github-actions[bot]`       | Author name for `commit-method: git`, and the sign-off.              |
+| `git-user-email` | no       | github-actions[bot] noreply | Author email for `commit-method: git`, and the sign-off.             |
+| `github-token`   | no       | `${{ github.token }}`       | Token for the commit and `gh`. Use an App token to retrigger CI.     |
 
 Outputs: `changed`, `created`, `pr-number`, `pr-url`.
 
