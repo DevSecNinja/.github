@@ -181,10 +181,16 @@ commit_with_api() {
             exit 1
             ;;
         esac
+        # GitHub keeps an existing file's mode, so a mode or type change
+        # (e.g. chmod, or a symlink becoming a file) would be silently lost.
+        if [ "${status}" != "A" ] && [ "${old_mode}" != "${new_mode}" ]; then
+            echo "::error::${path} changes mode from ${old_mode} to ${new_mode}, which createCommitOnBranch can't commit. Use commit-method: git for this change." >&2
+            exit 1
+        fi
         case "${new_mode}" in
         100644) ;;
         100755)
-            if [ "${old_mode}" != "100755" ]; then
+            if [ "${status}" = "A" ]; then
                 echo "::warning::${path} is executable, but createCommitOnBranch can't set the executable bit; it is committed as a regular file. Use commit-method: git if the bit matters."
             fi
             ;;

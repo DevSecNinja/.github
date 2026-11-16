@@ -450,6 +450,17 @@ grep -Fq "model.bin is a Git LFS pointer" "${tmp_dir}/run-7b.log" || fail "no cl
 [ "$(remote_tip "${branch}")" = "${before}" ] || fail "a failed run must not touch the branch"
 no_tmp_refs "lfs"
 
+# 7c. A mode change on an existing file fails instead of being dropped.
+chmod_dir="${tmp_dir}/chmod"
+new_checkout "${chmod_dir}"
+git -C "${chmod_dir}" update-index --chmod=-x tool.sh
+chmod -x "${chmod_dir}/tool.sh"
+if run_action "${chmod_dir}" "${tmp_dir}/output-7c" >"${tmp_dir}/run-7c.log" 2>&1; then
+    fail "a mode change must fail with commit-method: api"
+fi
+grep -Fq "tool.sh changes mode from 100755 to 100644" "${tmp_dir}/run-7c.log" || fail "no clear error for a mode change"
+[ "$(remote_tip "${branch}")" = "${before}" ] || fail "a failed run must not touch the branch"
+
 # 8. A local commit that was never pushed can't be the parent.
 local_commit="${tmp_dir}/local-commit"
 new_checkout "${local_commit}"

@@ -112,7 +112,9 @@ Limits of the API method; keep `commit-method: git` (unsigned) when one
 applies:
 
 - New executable files are committed as regular files (a warning is
-  printed). Modified files keep their mode.
+  printed). Modified files keep their mode, and a mode or type change on
+  an existing file (for example `chmod`, or a symlink becoming a file)
+  fails the run.
 - Symlinks and submodules can't be committed (the run fails).
 - Changed Git LFS files can't be committed, because the API can't upload
   their objects (the run fails).

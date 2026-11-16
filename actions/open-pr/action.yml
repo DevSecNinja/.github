@@ -90,9 +90,9 @@ inputs:
         - `api`: GraphQL `createCommitOnBranch` with `github-token`.
           GitHub signs the commit and authors it as the token's identity
           (the GitHub App bot, or github-actions[bot] for GITHUB_TOKEN).
-          The executable bit can't be set on new files, symlinks and
-          submodules can't be committed, and the checked-out commit must
-          be on GitHub.
+          The executable bit can't be set on new files; mode changes,
+          symlinks, submodules and Git LFS files can't be committed; and
+          the checked-out commit must be on GitHub.
     required: false
     default: git
   if-no-changes:
