@@ -1015,6 +1015,7 @@ can still assign Code Owners if an automerge PR cannot merge cleanly.
 | pip                               | All                                         | Current version ≥ 1.0           |
 | Go modules                        | All                                         | Current version ≥ 1.0           |
 | DevSecNinja devcontainer (digest) | `ghcr.io/devsecninja/*`                     | Always (no wait time)           |
+| Actions pinned to a branch        | `DevSecNinja/*` with `# main`/`# master`    | Digest, weekly non-major batch  |
 | Dotfiles devcontainer image       | `ghcr.io/devsecninja/dotfiles-devcontainer` | Always (branch merge, no tests) |
 | Lock file maintenance             | All                                         | Monthly (branch merge, no PR)   |
 
@@ -1023,7 +1024,8 @@ can still assign Code Owners if an automerge PR cannot merge cleanly.
 - Major version updates (all ecosystems)
 - Pre-1.0 packages (`0.x` — semver minor can introduce breaking changes)
 - GitHub Actions from untrusted organisations
-- Digest-only updates (disabled entirely for supply-chain safety, except DevSecNinja devcontainer images)
+- Digest-only updates (disabled for supply-chain safety, except DevSecNinja devcontainer images and actions pinned to a branch)
+- Third-party actions pinned to a branch (`# main`): digest updates get their own PR labelled `merge: manual`
 
 ### Safety nets
 
@@ -1042,7 +1044,10 @@ can still assign Code Owners if an automerge PR cannot merge cleanly.
   land at any time.
 - **Digest updates disabled** — prevents merging potentially hijacked tags (except
   DevSecNinja-owned devcontainer images on `ghcr.io/devsecninja/`, which are trusted
-  internal images and auto-merge immediately with no wait time).
+  internal images and auto-merge immediately with no wait time). Actions pinned to a
+  branch (`uses: owner/repo@<sha> # main`) are the other exception: a branch pin can
+  only move by digest, so the digest disable would freeze it. Third-party branch pins
+  need owner review.
 - **npm `engines` are never pinned** — `rangeStrategy: "pin"` applies to
   dependencies, but `engines` declare the supported range (`node: "^24.0.0"`)
   and use `rangeStrategy: "replace"`. The exact Node.js version for
