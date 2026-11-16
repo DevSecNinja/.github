@@ -65,6 +65,11 @@ CASES = [
     (["src/build.sh"], {"area/apps", "area/scripts"}),
     (["tests/test_parser.py", "specs/001-feature/spec.md"], {"area/docs"}),
     ([".mise.toml", "pr-labeler.yaml", "LICENSE"], set()),
+    # Excluded areas count at any depth
+    (["crates/core/tests/parser.rs"], set()),
+    (["apps/web/docs/flow.svg"], {"area/docs"}),
+    (["src/.cache/index.json"], set()),
+    (["src/scripts/seed.py"], {"area/scripts"}),
 ]
 
 

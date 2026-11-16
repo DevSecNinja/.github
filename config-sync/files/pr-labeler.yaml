@@ -8,23 +8,23 @@
 # Tests: tests/pr-labeler-config.py
 
 # Application code, wherever it lives (src/, services/, apps/, crates/,
-# backend/, ...): a changed file that is not a root-level file, in a hidden
-# directory, documentation, a script or test directory, or Markdown.
+# backend/, ...): a changed file that is not a root-level file, Markdown, or
+# in a hidden, docs, scripts, tests or specs directory at any depth.
 area/apps:
   - changed-files:
       - all-globs-to-any-file:
           - '!*'
-          - '!.*/**'
-          - '!{doc,docs}/**'
-          - '!{script,scripts}/**'
-          - '!{test,tests,e2e}/**'
-          - '!specs/**'
+          - '!**/.*/**'
+          - '!**/{doc,docs}/**'
+          - '!**/{script,scripts}/**'
+          - '!**/{test,tests,e2e}/**'
+          - '!**/specs/**'
           - '!**/*.{md,mdx}'
 
 area/docs:
   - changed-files:
       - any-glob-to-any-file:
-          - '{doc,docs}/**'
+          - '**/{doc,docs}/**'
       - all-globs-to-any-file:
           - '**/*.{md,mdx}'
           - '!**/CHANGELOG.md'
@@ -48,5 +48,5 @@ area/renovate:
 area/scripts:
   - changed-files:
       - any-glob-to-any-file:
-          - '{script,scripts}/**'
+          - '**/{script,scripts}/**'
           - '**/*.{sh,bash,ps1,psm1}'
