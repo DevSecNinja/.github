@@ -40,4 +40,5 @@ run = [
   "bash ./tests/lint-gitleaks-report.sh",
   "python3 ./tests/workflow-job-conditions.py",
   "python3 ./tests/ai-commits-badge.py",
+  "uv run --script ./tests/pr-labeler-config.py",
 ]
