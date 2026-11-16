@@ -17,7 +17,7 @@ template="${repo_root}/config-sync/templates/renovate.json5"
 preset_prefix="github>DevSecNinja/.github//.renovate/"
 default_preset="${preset_prefix}default.json5"
 # Presets a repository adds to its own renovate.json5 when it needs them.
-opt_in=()
+opt_in=(typescript-eslint.json5)
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "${tmp_dir}"' EXIT
 
@@ -55,6 +55,11 @@ for file in "${repo_root}"/.renovate/*.json5; do
     done
     printf '%s\n' "${default_presets[@]}" | grep -Fxq -- "${preset}" ||
         fail ".renovate/default.json5 does not extend ${preset}; extend it or list it as opt-in in this test"
+done
+for optional in "${opt_in[@]}"; do
+    [ -f "${repo_root}/.renovate/${optional}" ] || fail "opt-in preset ${optional} does not exist"
+    ! printf '%s\n' "${default_presets[@]}" | grep -Fxq -- "${optional}" ||
+        fail ".renovate/default.json5 must not extend the opt-in preset ${optional}"
 done
 [ "$(printf '%s\n' "${default_presets[@]}")" = "$(shared_presets "${repo_root}/renovate.json5")" ] ||
     fail ".renovate/default.json5 must extend the shared presets in the same order as renovate.json5"

@@ -939,16 +939,17 @@ details.
 The `.renovate/` directory contains shared Renovate preset fragments imported
 by individual repositories via their `renovate.json5`.
 
-| Preset                  | Purpose                                                       |
-| ----------------------- | ------------------------------------------------------------- |
-| `default.json5`         | Org defaults: `config:recommended` plus every preset below    |
-| `base.json5`            | Core scheduling, rebase and PR settings                       |
-| `autoMerge.json5`       | Auto-merge rules for non-major updates                        |
-| `groups.json5`          | Dependency grouping, including the weekly all-non-major batch |
-| `labels.json5`          | Label assignment for Renovate PRs                             |
-| `packageRules.json5`    | Per-ecosystem rules (and opt-outs from the weekly batch)      |
-| `customManagers.json5`  | Custom regex managers (e.g. `mise-version` in workflow files) |
-| `semanticCommits.json5` | Conventional Commits for Renovate PRs                         |
+| Preset                    | Purpose                                                           |
+| ------------------------- | ----------------------------------------------------------------- |
+| `default.json5`           | Org defaults: `config:recommended` plus every non-opt-in preset   |
+| `base.json5`              | Core scheduling, rebase and PR settings                           |
+| `autoMerge.json5`         | Auto-merge rules for non-major updates                            |
+| `groups.json5`            | Dependency grouping, including the weekly all-non-major batch     |
+| `labels.json5`            | Label assignment for Renovate PRs                                 |
+| `packageRules.json5`      | Per-ecosystem rules (and opt-outs from the weekly batch)          |
+| `customManagers.json5`    | Custom regex managers (e.g. `mise-version` in workflow files)     |
+| `semanticCommits.json5`   | Conventional Commits for Renovate PRs                             |
+| `typescript-eslint.json5` | **Opt-in.** Caps `typescript` to the typescript-eslint peer range |
 
 ### Batching and schedule
 
