@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.2.0](https://github.com/DevSecNinja/.github/compare/v4.1.0...v4.2.0) (2026-11-16)
+
+
+### 🚀 Features
+
+* **automation:** sign config-sync and APM PR commits through the API ([#538](https://github.com/DevSecNinja/.github/issues/538)) ([5c662df](https://github.com/DevSecNinja/.github/commit/5c662df18ebba6e696f48defcb579f1541da8167))
+
 ## [4.1.0](https://github.com/DevSecNinja/.github/compare/v4.0.0...v4.1.0) (2026-11-16)
 
 
