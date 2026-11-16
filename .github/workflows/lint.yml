@@ -320,6 +320,8 @@ jobs:
 
       - name: Report gitleaks findings
         if: ${{ !cancelled() }}
+        env:
+          FINDINGS_ARTIFACT: gitleaks-findings-${{ job.check_run_id }}
         run: |-
           # Turns the gitleaks report into one PR annotation per finding and a
           # step-summary table. Only the rule, location, commit and date leave
@@ -343,7 +345,7 @@ jobs:
             echo "### gitleaks: ${count} finding(s)"
             echo ""
             echo "Secrets are redacted. To accept a false positive, add its fingerprint (in the"
-            echo "\`gitleaks-findings\` artifact) to \`.gitleaksignore\`; rotate any real secret."
+            echo "\`${FINDINGS_ARTIFACT}\` artifact) to \`.gitleaksignore\`; rotate any real secret."
             echo ""
             echo "| Rule | File:line | Commit | Author date |"
             echo "| ---- | --------- | ------ | ----------- |"
@@ -359,7 +361,8 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: gitleaks-findings
+          # Unique per job: a caller may run lint.yml more than once per run.
+          name: gitleaks-findings-${{ job.check_run_id }}
           path: ${{ runner.temp }}/gitleaks-findings.json
           if-no-files-found: ignore
           retention-days: 5
@@ -873,6 +876,8 @@ jobs:
 
       - name: Report gitleaks findings
         if: ${{ !cancelled() && inputs.lint-gitleaks }}
+        env:
+          FINDINGS_ARTIFACT: gitleaks-findings-${{ job.check_run_id }}
         run: |-
           # Turns the gitleaks report into one PR annotation per finding and a
           # step-summary table. Only the rule, location, commit and date leave
@@ -896,7 +901,7 @@ jobs:
             echo "### gitleaks: ${count} finding(s)"
             echo ""
             echo "Secrets are redacted. To accept a false positive, add its fingerprint (in the"
-            echo "\`gitleaks-findings\` artifact) to \`.gitleaksignore\`; rotate any real secret."
+            echo "\`${FINDINGS_ARTIFACT}\` artifact) to \`.gitleaksignore\`; rotate any real secret."
             echo ""
             echo "| Rule | File:line | Commit | Author date |"
             echo "| ---- | --------- | ------ | ----------- |"
@@ -912,7 +917,8 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: gitleaks-findings
+          # Unique per job: a caller may run lint.yml more than once per run.
+          name: gitleaks-findings-${{ job.check_run_id }}
           path: ${{ runner.temp }}/gitleaks-findings.json
           if-no-files-found: ignore
           retention-days: 5

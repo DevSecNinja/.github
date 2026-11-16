@@ -87,8 +87,9 @@ The next step annotates each finding on the PR (`::error` with the file, line,
 rule ID and short commit SHA) and adds a table of rule, file:line, commit and
 author date to the job summary. Only those fields leave the report, never the
 secret, match or matched line. The same fields plus each finding's
-`.gitleaksignore` fingerprint are uploaded as the `gitleaks-findings` artifact,
-kept for five days. The exit code and the lint gate are unchanged.
+`.gitleaksignore` fingerprint are uploaded as the
+`gitleaks-findings-<check run ID>` artifact, kept for five days. The exit code
+and the lint gate are unchanged.
 
 | Input                   | Description                                                            |
 | ----------------------- | ---------------------------------------------------------------------- |

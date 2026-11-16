@@ -84,7 +84,7 @@ scan() {
     (cd "${repo}" && PATH="${tmp_dir}/bin:${PATH}" RUNNER_TEMP="${temp}" CONFIG_DIR="" \
         bash -eo pipefail -c "${run_script}") >"${tmp_dir}/$1.out" 2>&1 || status=$?
     (cd "${repo}" && RUNNER_TEMP="${temp}" GITHUB_STEP_SUMMARY="${tmp_dir}/$1-summary.md" \
-        bash -eo pipefail -c "${report_script}") >>"${tmp_dir}/$1.out" 2>&1 ||
+        FINDINGS_ARTIFACT=gitleaks-findings-42 bash -eo pipefail -c "${report_script}") >>"${tmp_dir}/$1.out" 2>&1 ||
         fail "'Report gitleaks findings' failed on $1: $(cat "${tmp_dir}/$1.out")"
     out="$(cat "${tmp_dir}/$1.out")"
     summary="$(cat "${tmp_dir}/$1-summary.md")"
@@ -99,6 +99,15 @@ grep -Fqx -- "${annotation}" <<<"${out}" ||
 [ "$(grep -c '^::error file=' <<<"${out}")" -eq 1 ] || fail "expected exactly one annotation; got: ${out}"
 grep -Eq "^\| github-pat \| fake,token\.txt:1 \| ${commit} \| [0-9]{4}-[0-9]{2}-[0-9]{2}T" <<<"${summary}" ||
     fail "the step summary must list rule, file:line, commit and date; got: ${summary}"
+# shellcheck disable=SC2016 # literal backticks
+grep -Fq '`gitleaks-findings-42` artifact' <<<"${summary}" ||
+    fail "the step summary must name the job's findings artifact; got: ${summary}"
+# A caller may run lint.yml twice in one run (lint-caller.yml runs both modes),
+# so each upload needs a job-unique artifact name.
+artifact_names="$(grep -E '^          name: gitleaks-findings' "${workflow}" | sort -u)"
+# shellcheck disable=SC2016 # literal workflow expression
+[ "${artifact_names}" = '          name: gitleaks-findings-${{ job.check_run_id }}' ] ||
+    fail "the gitleaks-findings artifact name must be unique per job; got: ${artifact_names}"
 for artifact in "${tmp_dir}/leak.out" "${tmp_dir}/leak-summary.md" \
     "${tmp_dir}/leak-runner-temp/gitleaks-report.json" "${tmp_dir}/leak-runner-temp/gitleaks-findings.json"; do
     [ -f "${artifact}" ] || fail "missing ${artifact##*/}"
