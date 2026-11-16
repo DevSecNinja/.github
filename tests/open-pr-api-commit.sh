@@ -439,6 +439,17 @@ grep -Fq "which createCommitOnBranch can't commit. Use commit-method: git" "${tm
 [ "$(remote_tip "${branch}")" = "${before}" ] || fail "a failed run must not touch the branch"
 no_tmp_refs "symlink"
 
+# 7b. A changed Git LFS pointer fails too: the API can't upload its object.
+lfs="${tmp_dir}/lfs"
+new_checkout "${lfs}"
+printf 'version https://git-lfs.github.com/spec/v1\noid sha256:%064d\nsize 12\n' 0 >"${lfs}/model.bin"
+if run_action "${lfs}" "${tmp_dir}/output-7b" >"${tmp_dir}/run-7b.log" 2>&1; then
+    fail "an LFS pointer must fail with commit-method: api"
+fi
+grep -Fq "model.bin is a Git LFS pointer" "${tmp_dir}/run-7b.log" || fail "no clear error for an LFS pointer"
+[ "$(remote_tip "${branch}")" = "${before}" ] || fail "a failed run must not touch the branch"
+no_tmp_refs "lfs"
+
 # 8. A local commit that was never pushed can't be the parent.
 local_commit="${tmp_dir}/local-commit"
 new_checkout "${local_commit}"

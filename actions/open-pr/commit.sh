@@ -198,6 +198,13 @@ commit_with_api() {
             echo "::error::${path} is ${size} bytes, over GitHub's ${max_file_bytes}-byte file limit." >&2
             exit 1
         fi
+        # The API can't upload Git LFS objects, so a changed pointer would
+        # reference content that only exists on the runner.
+        if [ "${size}" -lt 1024 ] &&
+            git cat-file blob "${new_sha}" | head -n 1 | grep -Fxq 'version https://git-lfs.github.com/spec/v1'; then
+            echo "::error::${path} is a Git LFS pointer, and createCommitOnBranch can't upload LFS objects. Use commit-method: git for this change." >&2
+            exit 1
+        fi
         git cat-file blob "${new_sha}" | base64 | tr -d '\n' >"${work}/contents"
         jq -cn --arg path "${path}" --rawfile contents "${work}/contents" \
             '{path: $path, contents: $contents}' >>"${work}/additions.jsonl"

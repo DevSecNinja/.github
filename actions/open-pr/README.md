@@ -114,6 +114,8 @@ applies:
 - New executable files are committed as regular files (a warning is
   printed). Modified files keep their mode.
 - Symlinks and submodules can't be committed (the run fails).
+- Changed Git LFS files can't be committed, because the API can't upload
+  their objects (the run fails).
 - The whole change goes in one request. Config-sized changes (a few MB)
   work; in testing, requests of 10 to 25 MB of base64 payload failed
   intermittently. No file may exceed 100 MiB.
