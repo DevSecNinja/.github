@@ -49,7 +49,7 @@ grep -Fq -- '--redact' <<<"${run_script}" || fail "'Run gitleaks' must keep --re
 [ -n "${report_script}" ] || fail "the gitleaks job has no 'Report gitleaks findings' step"
 
 # Stand-ins for mise (`mise which`, `mise exec --`) and for the visibility
-# lookup `gh api repos/<repo> --jq .private`, answered from $FAKE_PRIVATE.
+# lookup `gh api repos/<repo> --jq .visibility`, answered from $FAKE_VISIBILITY.
 mkdir -p "${tmp_dir}/bin"
 cat >"${tmp_dir}/bin/mise" <<'EOF'
 #!/usr/bin/env bash
@@ -61,8 +61,8 @@ esac
 EOF
 cat >"${tmp_dir}/bin/gh" <<'EOF'
 #!/usr/bin/env bash
-[ "$1" = api ] && [ "${FAKE_PRIVATE}" != error ] || exit 1
-echo "${FAKE_PRIVATE}"
+[ "$1" = api ] && [[ " $* " == *" .visibility "* ]] && [ "${FAKE_VISIBILITY}" != error ] || exit 1
+echo "${FAKE_VISIBILITY}"
 EOF
 chmod +x "${tmp_dir}/bin/mise" "${tmp_dir}/bin/gh"
 
@@ -94,7 +94,7 @@ make_repo() {
     )
 }
 
-# Runs both steps in repository $1. BASE_SHA/HEAD_SHA (PR mode), FAKE_PRIVATE,
+# Runs both steps in repository $1. BASE_SHA/HEAD_SHA/BASE_REF (PR mode), FAKE_VISIBILITY,
 # UPLOAD_SARIF and CONFIG_DIR are taken from the environment. Sets status (the
 # gitleaks step's exit code), out (both steps' output), summary and outputs.
 scan() {
@@ -124,7 +124,7 @@ assert_redacted() {
     done < <(find "${tmp_dir}" -maxdepth 2 \( -path "${tmp_dir}/$1.out" -o -path "${tmp_dir}/$1-*" \) -type f -print0)
 }
 
-export UPLOAD_SARIF=true CONFIG_DIR="" FAKE_PRIVATE=false BASE_SHA="" HEAD_SHA="" RUNNER_DEBUG=""
+export UPLOAD_SARIF=true CONFIG_DIR="" FAKE_VISIBILITY=public BASE_SHA="" HEAD_SHA="" BASE_REF=main RUNNER_DEBUG=""
 
 # PR mode: only the PR's own commit is scanned and annotated.
 make_repo pr
@@ -152,9 +152,32 @@ if grep -q '^::error' <<<"${out}" || [ -n "${summary}" ]; then
     fail "a PR without new secrets must not annotate; got: ${out}${summary}"
 fi
 
+# A PR that merged newer base-branch commits: the event's base SHA is older,
+# so only the base branch's current tip keeps those commits out of the scan.
+make_repo stale
+(
+    cd "${tmp_dir}/stale"
+    git branch -q pr-old HEAD~1
+    git update-ref refs/remotes/origin/main HEAD
+    git checkout -q pr-old
+    echo pr-change >pr.txt
+    git add -A
+    git commit -qm pr
+    git merge -q --no-edit origin/main
+)
+BASE_SHA="$(git -C "${tmp_dir}/stale" rev-parse HEAD~1~1)" HEAD_SHA="$(git -C "${tmp_dir}/stale" rev-parse HEAD)" scan stale
+[ "${status}" -eq 0 ] || fail "base-branch commits merged into a PR must not fail it (got ${status}): ${out}"
+if grep -q '^::error' <<<"${out}" || [ -n "${summary}" ]; then
+    fail "base-branch commits merged into a PR must not be annotated; got: ${out}${summary}"
+fi
+
+# A PR whose commits aren't checked out (pull_request_target) fails loudly.
+BASE_SHA="$(git -C "${tmp_dir}/pr" rev-parse HEAD)" HEAD_SHA=0123456789abcdef0123456789abcdef01234567 scan pr
+[ "${status}" -eq 1 ] || fail "a missing PR head commit must fail (got ${status}): ${out}"
+grep -Fq "isn't checked out" <<<"${out}" || fail "a missing PR head commit must be explained; got: ${out}"
 # Private history: report only, every finding annotated as a warning.
 make_repo private
-FAKE_PRIVATE=true scan private
+FAKE_VISIBILITY=private scan private
 [ "${status}" -eq 0 ] || fail "a history scan must only report (got ${status}): ${out}"
 grep -Fqx mode=history-private <<<"${outputs}" || fail "expected mode=history-private; got: ${outputs}"
 [ "$(grep -c '^::warning file=' <<<"${out}")" -eq 2 ] || fail "expected two warning annotations; got: ${out}"
@@ -164,7 +187,8 @@ grep -Fq 'finding(s) in the git history' <<<"${summary}" || fail "expected a his
 [ -s "${tmp_dir}/private-runner-temp/gitleaks-findings.json" ] || fail "private history findings must be uploadable"
 assert_redacted private
 
-# Public history (and a failed visibility lookup): SARIF and a count only. The
+# Public history (also internal repositories and a failed visibility lookup):
+# SARIF and a count only. The
 # extra commit holds a path that isn't a valid URI and a path-only finding
 # (line 0, a custom rule), which code scanning's upload would log or reject.
 make_repo public
@@ -187,14 +211,16 @@ id = "fake-key-file"
 description = "Fake key file"
 path = '''\.fakekey$'''
 EOF
-for visibility in false error; do
-    FAKE_PRIVATE="${visibility}" scan public
+for visibility in public internal error; do
+    FAKE_VISIBILITY="${visibility}" scan public
     [ "${status}" -eq 0 ] || fail "a history scan must only report (got ${status}): ${out}"
     grep -Fqx mode=history-public <<<"${outputs}" || fail "expected mode=history-public; got: ${outputs}"
     grep -Fqx sarif=true <<<"${outputs}" || fail "expected sarif=true; got: ${outputs}"
     grep -Fqx '::warning::gitleaks found 4 finding(s) in the git history. They are in code scanning (category gitleaks/history), visible only with write access.' <<<"${out}" ||
         fail "expected a count-only warning; got: ${out}"
-    for detail in old.txt fake,token github-pat 'my dir' café id.fakekey "$(git -C "${tmp_dir}/public" rev-parse --short=7 HEAD)" '::error' 'file='; do
+    unexpected="$(grep -vE '(commits scanned|scanned ~|leaks found)|^::warning::gitleaks found 4 finding' <<<"${out}" || true)"
+    [ -z "${unexpected}" ] || fail "the public log may hold only gitleaks totals and the count; got: ${unexpected}"
+    for detail in old.txt fake,token github-pat gitleaks-history 'my dir' café id.fakekey "$(git -C "${tmp_dir}/public" rev-parse --short=7 HEAD)" '::error' 'file='; do
         if grep -Fq -- "${detail}" <<<"${out}"; then
             fail "the public log must show a count only, but it contains '${detail}': ${out}"
         fi

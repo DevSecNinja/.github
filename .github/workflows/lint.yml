@@ -302,6 +302,7 @@ jobs:
           CONFIG_DIR: ${{ inputs.lint-config-dir }}
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+          BASE_REF: ${{ github.base_ref || github.event.merge_group.base_ref }}
           UPLOAD_SARIF: ${{ inputs.upload-sarif }}
           GH_TOKEN: ${{ github.token }}
         run: |-
@@ -328,7 +329,19 @@ jobs:
           # in the PR fails it. The next step annotates those findings.
           if [ -n "${BASE_SHA}" ] && [ -n "${HEAD_SHA}" ]; then
             echo "mode=pr" >>"${GITHUB_OUTPUT}"
-            mise exec -- gitleaks detect --redact --log-opts="${BASE_SHA}..${HEAD_SHA}" \
+            for sha in "${BASE_SHA}" "${HEAD_SHA}"; do
+              if ! git cat-file -e "${sha}^{commit}" 2>/dev/null; then
+                echo "::error::Commit ${sha} of this pull request isn't checked out (pull_request_target?), so its commits can't be scanned."
+                exit 1
+              fi
+            done
+            # Also skip commits already on the base branch's current tip: the
+            # event's base SHA can be older when the PR merged newer commits.
+            range="${HEAD_SHA} --not ${BASE_SHA}"
+            if base_tip="$(git rev-parse --verify -q "refs/remotes/origin/${BASE_REF#refs/heads/}^{commit}")"; then
+              range="${range} ${base_tip}"
+            fi
+            mise exec -- gitleaks detect --redact --log-opts="${range}" \
               --report-format json --report-path "${report}" "${config_args[@]}"
             exit 0
           fi
@@ -337,8 +350,9 @@ jobs:
           # new gitleaks rules re-check old commits. This only reports, so the
           # findings are triaged as alerts. Job logs of public repositories are
           # public: there the findings go only to code scanning, and the log
-          # shows a count. The visibility lookup fails closed to public.
-          if [ "$(gh api "repos/${GITHUB_REPOSITORY}" --jq .private 2>/dev/null)" = true ]; then
+          # shows a count. Internal repositories (logs visible enterprise-wide)
+          # and a failed visibility lookup count as public.
+          if [ "$(gh api "repos/${GITHUB_REPOSITORY}" --jq .visibility 2>/dev/null)" = private ]; then
             mode=history-private
             format=json
           else
@@ -348,8 +362,16 @@ jobs:
           fi
           echo "mode=${mode}" >>"${GITHUB_OUTPUT}"
           status=0
+          log="${RUNNER_TEMP}/gitleaks-history.log"
           mise exec -- gitleaks detect --redact --exit-code 42 \
-            --report-format "${format}" --report-path "${report}" "${config_args[@]}" || status=$?
+            --report-format "${format}" --report-path "${report}" "${config_args[@]}" >"${log}" 2>&1 || status=$?
+          if [ "${mode}" = history-private ]; then
+            cat "${log}"
+          else
+            # gitleaks' own log is public here: keep only its totals and fatal errors.
+            grep -E 'commits scanned|scanned ~|leaks found|FTL' "${log}" || true
+          fi
+          rm -f "${log}"
           if [ "${status}" -ne 0 ] && [ "${status}" -ne 42 ]; then
             exit "${status}"
           fi
@@ -938,6 +960,7 @@ jobs:
           CONFIG_DIR: ${{ inputs.lint-config-dir }}
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+          BASE_REF: ${{ github.base_ref || github.event.merge_group.base_ref }}
           UPLOAD_SARIF: ${{ inputs.upload-sarif }}
           GH_TOKEN: ${{ github.token }}
         run: |-
@@ -964,7 +987,19 @@ jobs:
           # in the PR fails it. The next step annotates those findings.
           if [ -n "${BASE_SHA}" ] && [ -n "${HEAD_SHA}" ]; then
             echo "mode=pr" >>"${GITHUB_OUTPUT}"
-            mise exec -- gitleaks detect --redact --log-opts="${BASE_SHA}..${HEAD_SHA}" \
+            for sha in "${BASE_SHA}" "${HEAD_SHA}"; do
+              if ! git cat-file -e "${sha}^{commit}" 2>/dev/null; then
+                echo "::error::Commit ${sha} of this pull request isn't checked out (pull_request_target?), so its commits can't be scanned."
+                exit 1
+              fi
+            done
+            # Also skip commits already on the base branch's current tip: the
+            # event's base SHA can be older when the PR merged newer commits.
+            range="${HEAD_SHA} --not ${BASE_SHA}"
+            if base_tip="$(git rev-parse --verify -q "refs/remotes/origin/${BASE_REF#refs/heads/}^{commit}")"; then
+              range="${range} ${base_tip}"
+            fi
+            mise exec -- gitleaks detect --redact --log-opts="${range}" \
               --report-format json --report-path "${report}" "${config_args[@]}"
             exit 0
           fi
@@ -973,8 +1008,9 @@ jobs:
           # new gitleaks rules re-check old commits. This only reports, so the
           # findings are triaged as alerts. Job logs of public repositories are
           # public: there the findings go only to code scanning, and the log
-          # shows a count. The visibility lookup fails closed to public.
-          if [ "$(gh api "repos/${GITHUB_REPOSITORY}" --jq .private 2>/dev/null)" = true ]; then
+          # shows a count. Internal repositories (logs visible enterprise-wide)
+          # and a failed visibility lookup count as public.
+          if [ "$(gh api "repos/${GITHUB_REPOSITORY}" --jq .visibility 2>/dev/null)" = private ]; then
             mode=history-private
             format=json
           else
@@ -984,8 +1020,16 @@ jobs:
           fi
           echo "mode=${mode}" >>"${GITHUB_OUTPUT}"
           status=0
+          log="${RUNNER_TEMP}/gitleaks-history.log"
           mise exec -- gitleaks detect --redact --exit-code 42 \
-            --report-format "${format}" --report-path "${report}" "${config_args[@]}" || status=$?
+            --report-format "${format}" --report-path "${report}" "${config_args[@]}" >"${log}" 2>&1 || status=$?
+          if [ "${mode}" = history-private ]; then
+            cat "${log}"
+          else
+            # gitleaks' own log is public here: keep only its totals and fatal errors.
+            grep -E 'commits scanned|scanned ~|leaks found|FTL' "${log}" || true
+          fi
+          rm -f "${log}"
           if [ "${status}" -ne 0 ] && [ "${status}" -ne 42 ]; then
             exit "${status}"
           fi
