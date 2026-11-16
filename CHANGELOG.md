@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.1.0](https://github.com/DevSecNinja/.github/compare/v4.0.0...v4.1.0) (2026-11-16)
+
+
+### 🚀 Features
+
+* **lint:** scan PR commits on PRs and full history privately ([#525](https://github.com/DevSecNinja/.github/issues/525)) ([795967c](https://github.com/DevSecNinja/.github/commit/795967c245512496b5c20af1aaeb26c246c45383))
+* **renovate:** exempt known-stable packages from the abandonment flag ([#531](https://github.com/DevSecNinja/.github/issues/531)) ([36da004](https://github.com/DevSecNinja/.github/commit/36da004359f3362d12c683ebefbd7de93545f75c))
+* **renovate:** group Go toolchain updates and add an opt-in go preset ([#533](https://github.com/DevSecNinja/.github/issues/533)) ([95ce390](https://github.com/DevSecNinja/.github/commit/95ce390cb6c80cb57e1992d5b0d88af2a688aa19))
+* **renovate:** re-enable digest updates for actions pinned to a branch ([#530](https://github.com/DevSecNinja/.github/issues/530)) ([5b80262](https://github.com/DevSecNinja/.github/commit/5b80262a10a35f9a0469411777f06d7e8cd32354))
+* **renovate:** widen the central annotation custom managers ([#534](https://github.com/DevSecNinja/.github/issues/534)) ([8db5057](https://github.com/DevSecNinja/.github/commit/8db5057ccee6d8c790f3998401a89ce41e7fa170))
+
+
+### 🐛 Bug Fixes
+
+* **config-sync:** make issue-labeler rules valid JavaScript regexes ([#514](https://github.com/DevSecNinja/.github/issues/514)) ([d6986c6](https://github.com/DevSecNinja/.github/commit/d6986c6e485ca73b2140fd6f74d967dff0a93a43))
+
 ## [4.0.0](https://github.com/DevSecNinja/.github/compare/v3.7.1...v4.0.0) (2026-11-16)
 
 
