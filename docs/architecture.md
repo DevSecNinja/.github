@@ -74,6 +74,13 @@ requires per-linter checks to `single`, require `all linters` instead — skippe
 per-linter jobs report success. See
 [ADR 0010](design-decisions/0010-batch-renovate-updates-to-save-actions-minutes.md).
 
+**Linter scripts.** Both layouts run the same scripts from `scripts/lint/` of
+this repository, where shellcheck, shfmt and `tests/lint-scripts.sh` reach them.
+Because `lint.yml` runs in the caller's checkout, every job first checks those
+scripts (and the inline-script checker) out from the DevSecNinja/.github commit
+the caller pinned (`job.workflow_sha`), then moves them to `$RUNNER_TEMP`, where
+the caller's own linters don't scan them.
+
 **Tool installation.** Every job runs a full `mise install` of the caller's
 mise config, never a per-linter subset. The `pipx:` tools (yamllint, checkov)
 depend on Python, so when the caller configures one (for example through
@@ -177,8 +184,7 @@ Findings are annotated on the file and line of the `run:` key and listed in
 the job summary with the opt-outs. They are warnings by default; set
 `lint-inline-scripts-blocking: true` to report errors and fail the linter
 (a file that can't be parsed then fails it too). A
-later major release makes blocking the default. The linter fetches the checker
-from the DevSecNinja/.github commit the caller pinned and runs it with the
+later major release makes blocking the default. The checker runs with the
 runner's system Python, which ships PyYAML (`ubuntu-24.04`).
 
 | Input                          | Description                                                            |
