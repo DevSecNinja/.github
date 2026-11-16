@@ -139,17 +139,18 @@ update_refs() {
     gh api graphql --input "${work}/update-refs.json" >/dev/null
 }
 
-# True when the remote tree holds the same blobs at the same paths as the local
-# tree. Covers trees that differ only in file modes, which the API can't set.
-same_blobs() {
+# True when the remote tree holds the same entries as the local tree: every
+# file, symlink and submodule at the same path with the same object. Only the
+# executable bit is ignored, because the API can't set it on new files.
+same_entries() {
     gh api "repos/${repo}/git/trees/$1?recursive=1" >"${work}/remote-tree.json" 2>/dev/null || return 1
     [ "$(jq -r '.truncated' "${work}/remote-tree.json")" = "false" ] || return 1
-    jq -r '.tree[] | select(.type == "blob") | "\(.sha)\t\(.path)"' "${work}/remote-tree.json" |
-        LC_ALL=C sort >"${work}/remote-blobs"
+    jq -r '.tree[] | select(.type != "tree") | "\(.mode | sub("^100755$"; "100644")) \(.sha)\t\(.path)"' \
+        "${work}/remote-tree.json" | LC_ALL=C sort >"${work}/remote-entries"
     git ls-tree -r -z "${tree}" | tr '\0' '\n' |
-        awk -F '\t' '{ split($1, meta, " "); if (meta[2] == "blob") { sub(/^[^\t]*\t/, ""); print meta[3] "\t" $0 } }' |
-        LC_ALL=C sort >"${work}/local-blobs"
-    cmp -s "${work}/remote-blobs" "${work}/local-blobs"
+        awk -F '\t' '{ split($1, meta, " "); mode = meta[1] == "100755" ? "100644" : meta[1]; sub(/^[^\t]*\t/, ""); print mode " " meta[3] "\t" $0 }' |
+        LC_ALL=C sort >"${work}/local-entries"
+    cmp -s "${work}/remote-entries" "${work}/local-entries"
 }
 
 commit_with_api() {
@@ -252,7 +253,7 @@ commit_with_api() {
         # Leave an identical, signed branch alone, so the PR's CI does not
         # re-run. An unsigned one (e.g. pushed by commit-method: git) is
         # replaced, so switching a caller to the API unblocks its open PR.
-        if [ "${tip_parents}" = "${parent}" ] && { [ "${tip_tree}" = "${tree}" ] || same_blobs "${tip_tree}"; }; then
+        if [ "${tip_parents}" = "${parent}" ] && { [ "${tip_tree}" = "${tree}" ] || same_entries "${tip_tree}"; }; then
             if [ "${tip_signed}" = "true" ]; then
                 echo "${BRANCH} already has these changes on the same base; skipping commit."
                 return

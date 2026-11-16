@@ -363,6 +363,26 @@ grep -Fxq "${tip}" "${origin}/signed-commits" || fail "the replacement commit mu
 grep -Fq "not signed; replacing it" "${tmp_dir}/run-2b.log" || fail "no message about replacing the unsigned commit"
 no_tmp_refs "switch"
 
+# 2c. A signed tip with the same files but an extra submodule (or symlink) is
+# not identical and gets replaced.
+index="${tmp_dir}/gitlink-index"
+GIT_INDEX_FILE="${index}" git -C "${origin}" read-tree "${tip}"
+GIT_INDEX_FILE="${index}" git -C "${origin}" update-index --add --cacheinfo "160000,$(remote_tip main),vendor/module"
+gitlink_tree="$(GIT_INDEX_FILE="${index}" git -C "${origin}" write-tree)"
+gitlink_tip="$(git -C "${origin}" commit-tree "${gitlink_tree}" -p "$(remote_tip main)" -m "add submodule")"
+echo "${gitlink_tip}" >>"${origin}/signed-commits"
+git -C "${origin}" update-ref "refs/heads/${branch}" "${gitlink_tip}"
+gitlink="${tmp_dir}/gitlink"
+new_checkout "${gitlink}"
+run_action "${gitlink}" "${tmp_dir}/output-2c" >"${tmp_dir}/run-2c.log" 2>&1 || {
+    cat "${tmp_dir}/run-2c.log" >&2
+    fail "replacing a tip with an extra submodule failed"
+}
+tip="$(remote_tip "${branch}")"
+[ "${tip}" != "${gitlink_tip}" ] || fail "a tip with an extra submodule must not count as identical"
+[ -z "$(git -C "${origin}" ls-tree "${tip}" vendor/module)" ] || fail "the stray submodule survived the update"
+no_tmp_refs "gitlink"
+
 # 3. New content replaces the commit in one leased step; the branch (and an
 # open PR on it) never points at main in between.
 update="${tmp_dir}/update"
