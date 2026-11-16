@@ -3,11 +3,17 @@ name: Open pull request
 description: |
   Open (or update) a pull request from the current working tree.
 
-  Stages, commits, and force-pushes any uncommitted changes in the
-  caller's checkout to a dedicated working branch, then opens a PR
-  against the target branch via the `gh` CLI. If a PR for that branch
-  already exists (e.g. a previous run that hasn't been merged yet), the
-  force-push updates its contents and the existing PR is reused.
+  Stages any uncommitted changes in the caller's checkout, commits them
+  as a single commit on top of the checked-out commit to a dedicated
+  working branch, then opens a PR against the target branch via the `gh`
+  CLI. If a PR for that branch already exists (e.g. a previous run that
+  hasn't been merged yet), the branch is replaced with the new commit and
+  the existing PR is reused.
+
+  With `commit-method: api` the commit is created through the GitHub
+  GraphQL API, so GitHub signs it and the PR passes a "require signed
+  commits" rule. The default, `commit-method: git`, keeps the original
+  local commit and force-push, which is unsigned.
 
   This is a composite action so it can act on the caller's working tree
   (a reusable workflow runs in its own job and would not see those
@@ -26,7 +32,7 @@ description: |
 inputs:
   branch:
     description: |
-      Name of the working branch to create or force-push to. Choose a
+      Name of the working branch to create or replace. Choose a
       stable per-purpose name (e.g. `chore/sign-powershell-scripts`) so
       repeat runs reuse the same PR rather than opening duplicates.
     required: true
@@ -70,9 +76,25 @@ inputs:
     required: false
     default: "false"
   signoff:
-    description: "Add a `Signed-off-by` trailer to the commit."
+    description: |
+      Add a `Signed-off-by` trailer to the commit, using `git-user-name`
+      and `git-user-email`.
     required: false
     default: "false"
+  commit-method:
+    description: |
+      How the commit is made:
+        - `git` (default): local commit authored as `git-user-name` and
+          a leased force-push. The commit is unsigned, so a base branch
+          that requires signed commits blocks the PR.
+        - `api`: GraphQL `createCommitOnBranch` with `github-token`.
+          GitHub signs the commit and authors it as the token's identity
+          (the GitHub App bot, or github-actions[bot] for GITHUB_TOKEN).
+          The executable bit can't be set on new files; mode changes,
+          symlinks, submodules and Git LFS files can't be committed; and
+          the checked-out commit must be on GitHub.
+    required: false
+    default: git
   if-no-changes:
     description: |
       What to do when there is nothing to commit:
@@ -81,22 +103,25 @@ inputs:
     required: false
     default: skip
   git-user-name:
-    description: "Author name for the commit."
+    description: |
+      Author name for `commit-method: git`, and the `signoff` name. The
+      API method always authors the commit as the token's identity.
     required: false
     default: "github-actions[bot]"
   git-user-email:
-    description: "Author email for the commit."
+    description: "Author email for `commit-method: git`, and the `signoff` email."
     required: false
     default: "41898282+github-actions[bot]@users.noreply.github.com"
   github-token:
     description: |
-      Token used by `gh` for the PR API call. Defaults to the workflow's
-      GITHUB_TOKEN, which is enough for same-repo PRs and intentionally
-      will NOT retrigger workflows on the bot's push (so this action is
-      safe to use inside loops like sign-on-push).
+      Token used for the commit (API call or `git push`) and the PR API
+      calls. Defaults to the workflow's GITHUB_TOKEN, which is enough for
+      same-repo PRs and intentionally will NOT retrigger workflows on the
+      bot's commit (so this action is safe to use inside loops like
+      sign-on-push). With `commit-method: api` it needs Contents: write.
 
-      Pass a PAT or App token if you need cross-repo PRs or want the
-      bot's push to retrigger CI on the new branch.
+      Pass a GitHub App token if you want the bot's commit to retrigger
+      CI on the new branch; the commit is then authored as the App.
     required: false
     default: ${{ github.token }}
 
@@ -113,8 +138,8 @@ outputs:
   created:
     description: |
       `true` when a brand-new PR was opened by this run, `false` when
-      an existing PR for `branch` was reused (its contents updated via
-      force-push), or when changed=false.
+      an existing PR for `branch` was reused (its branch replaced with
+      the new commit), or when changed=false.
     value: ${{ steps.pr.outputs.created }}
 
 runs:
@@ -129,85 +154,16 @@ runs:
         BRANCH: ${{ inputs.branch }}
         BASE: ${{ inputs.base }}
         COMMIT_MESSAGE: ${{ inputs.commit-message }}
+        COMMIT_METHOD: ${{ inputs.commit-method }}
         TITLE: ${{ inputs.title }}
         PATHS: ${{ inputs.paths }}
         SIGNOFF: ${{ inputs.signoff }}
         IF_NO_CHANGES: ${{ inputs.if-no-changes }}
-        # Use the supplied token for the push so the bot identity is
-        # consistent with the gh CLI call below.
+        # The same token commits (API or git push) and opens the PR below, so
+        # the bot identity is consistent.
+        GH_TOKEN: ${{ inputs.github-token }}
         GITHUB_TOKEN: ${{ inputs.github-token }}
-      run: |
-        set -euo pipefail
-
-        git config user.name  "${GIT_USER_NAME}"
-        git config user.email "${GIT_USER_EMAIL}"
-
-        # Stash any unstaged changes onto a fresh branch rooted at the
-        # current commit so each run produces a clean, single-commit PR
-        # rather than accumulating history on top of a stale branch.
-        git checkout -B "${BRANCH}"
-
-        # Forward `paths` to `git add` as separate arguments. An empty
-        # element (e.g. trailing newline) is filtered out.
-        add_args=()
-        while IFS= read -r line; do
-          trimmed="${line#"${line%%[![:space:]]*}"}"
-          trimmed="${trimmed%"${trimmed##*[![:space:]]}"}"
-          [ -n "${trimmed}" ] && add_args+=("${trimmed}")
-        done <<< "${PATHS}"
-        if [ "${#add_args[@]}" -eq 0 ]; then
-          add_args=(".")
-        fi
-        git add -- "${add_args[@]}"
-
-        if git diff --cached --quiet; then
-          echo "No staged changes for ${BRANCH}."
-          echo "changed=false" >> "${GITHUB_OUTPUT}"
-          if [ "${IF_NO_CHANGES}" = "fail" ]; then
-            echo "::error::if-no-changes=fail and there is nothing to commit." >&2
-            exit 1
-          fi
-          exit 0
-        fi
-
-        msg="${COMMIT_MESSAGE:-${TITLE}}"
-        commit_args=(-m "${msg}")
-        if [ "${SIGNOFF}" = "true" ]; then
-          commit_args+=(--signoff)
-        fi
-        git commit "${commit_args[@]}"
-
-        # Lease the push against the branch tip as it is on the remote right
-        # now. A bare --force-with-lease compares against the local
-        # remote-tracking ref, which a fresh (usually shallow) checkout does
-        # not have for this branch, so every push to an already existing
-        # branch was rejected as "stale info". An empty lease value means
-        # "the branch must not exist yet". Either way, a branch someone moves
-        # between this lookup and the push is still never overwritten.
-        remote_ref="refs/heads/${BRANCH}"
-        remote_sha="$(git ls-remote origin "${remote_ref}" | awk -v ref="${remote_ref}" '$2 == ref { print $1 }')" || {
-          echo "::error::Could not read ${remote_ref} from origin; refusing to push without a lease." >&2
-          exit 1
-        }
-
-        # Leave an identical branch alone: same parent and same tree means the
-        # open PR already carries exactly these changes, and a no-op
-        # force-push would only re-run its CI. Only deepen history when the
-        # checkout is already shallow, so a full clone stays complete.
-        fetch_args=(--quiet --no-tags)
-        if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then
-          fetch_args+=(--depth=2)
-        fi
-        if [ -n "${remote_sha}" ] &&
-          git fetch "${fetch_args[@]}" origin "${remote_sha}" 2>/dev/null &&
-          [ "$(git rev-parse "${remote_sha}^{tree}")" = "$(git rev-parse 'HEAD^{tree}')" ] &&
-          [ "$(git rev-parse --verify --quiet "${remote_sha}^")" = "$(git rev-parse 'HEAD^')" ]; then
-          echo "${BRANCH} already has these changes on the same base; skipping push."
-        else
-          git push --force-with-lease="${remote_ref}:${remote_sha}" origin "HEAD:${remote_ref}"
-        fi
-
-        echo "changed=true" >> "${GITHUB_OUTPUT}"
+      run: bash "${GITHUB_ACTION_PATH}/commit.sh"
 
     - name: Open or reuse pull request
       id: pr
@@ -301,5 +257,5 @@ runs:
             echo "pr-url=${url}"
             echo "pr-number=${number}"
           } >> "${GITHUB_OUTPUT}"
-          echo "Reused existing PR #${number}: ${url} (force-pushed updated contents)."
+          echo "Reused existing PR #${number}: ${url} (its branch holds the new commit)."
         fi
