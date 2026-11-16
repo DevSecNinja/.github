@@ -1056,6 +1056,10 @@ can still assign Code Owners if an automerge PR cannot merge cleanly.
   branch (`uses: owner/repo@<sha> # main`) are the other exception: a branch pin can
   only move by digest, so the digest disable would freeze it. Third-party branch pins
   need owner review.
+- **Abandonment exemptions** — Renovate flags packages without a release for a
+  year as abandoned. Known-stable packages that trip this (for example
+  `@testing-library/user-event`) are exempted by name in
+  `packageRules.json5`, not per repository.
 - **npm `engines` are never pinned** — `rangeStrategy: "pin"` applies to
   dependencies, but `engines` declare the supported range (`node: "^24.0.0"`)
   and use `rangeStrategy: "replace"`. The exact Node.js version for
