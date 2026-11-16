@@ -167,4 +167,43 @@ for job in "${linter_jobs[@]}"; do
         fail "${combined_job} never checks inputs.lint-${job}"
 done
 
+# Every mise-action step installs the caller's whole mise toolset. A scoped
+# install such as `install_args: "uv pipx:yamllint"` skips a Python the caller
+# configures (for example through `.python-version`), and mise then refuses the
+# pipx tool: "requires configured install dependency 'python@…', but its
+# selected version is not installed" (#502). A full `mise install` orders
+# Python before the pipx tools, and installs no Python when none is configured.
+mise_steps="$(
+    awk '
+        function flush() {
+            if (is_mise) print job "|" has_install "|" has_args
+            is_mise = 0
+        }
+        /^  [A-Za-z0-9_-]+:[[:space:]]*$/ {
+            flush()
+            job = $0
+            sub(/^  /, "", job)
+            sub(/:[[:space:]]*$/, "", job)
+            next
+        }
+        /^      - / { flush(); has_install = 0; has_args = 0 }
+        /uses: jdx\/mise-action@/ { is_mise = 1 }
+        /^          install: true[[:space:]]*$/ { has_install = 1 }
+        /^          install_args:/ { has_args = 1 }
+        END { flush() }
+    ' "${workflow}"
+)"
+mise_count=0
+while IFS='|' read -r job has_install has_args; do
+    [ -n "${job}" ] || continue
+    [ "${has_install}" = 1 ] || fail "job ${job}: jdx/mise-action must set 'install: true'"
+    [ "${has_args}" = 0 ] ||
+        fail "job ${job}: jdx/mise-action must not set install_args; scoped installs skip the caller's Python that pipx tools need (#502)"
+    mise_count=$((mise_count + 1))
+done <<<"${mise_steps}"
+for job in yamllint checkov "${combined_job}"; do
+    grep -q "^${job}|" <<<"${mise_steps}" || fail "job ${job} runs a pipx tool but has no jdx/mise-action step"
+done
+
 echo "✓ lint.yml: ${#linter_jobs[@]} linters, ${compared} run scripts identical across parallel and single-job modes."
+echo "✓ lint.yml: ${mise_count} mise-action steps install the caller's full toolset (pipx tools get their Python)."
