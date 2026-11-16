@@ -65,6 +65,16 @@ workflow_cases = {
         ("python-version", None, "3.14"),
     "        # renovate: datasource=python-version\n        python-version: 3.14":
         ("python-version", None, "3.14"),
+    '      # renovate: datasource=github-releases depName=jdx/mise\n      version: "2026.10.19" # pinned\n      other: x':
+        ("github-releases", "jdx/mise", "2026.10.19"),
+    # A multi-version matrix is a compatibility list, not one version: never
+    # track (and replace) only its first entry.
+    "        # renovate: datasource=python-version\n        python-version: [3.13, 3.14]":
+        None,
+    '        # renovate: datasource=python-version\n        python-version: ["3.13", "3.14"]\n':
+        None,
+    "        # renovate: datasource=python-version\n        python-version: [3.13,3.14]":
+        None,
     "        # renovate: datasource=github-tags depName=DevSecNinja/.github\n        uses: DevSecNinja/.github/actions/x@0123 # main":
         None,
 }
