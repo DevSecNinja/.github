@@ -33,6 +33,18 @@
       matchDepNames: ["twpayne/chezmoi", "chezmoi"],
     },
     {
+      // The Go toolchain version lives in several files that must move
+      // together: the go directive in go.mod, the toolchain in .mise.toml and
+      // the go-version of setup-go or a reusable workflow. If go.mod is raised
+      // on its own, Go downloads a different toolchain mid-build or, with
+      // GOTOOLCHAIN=local, fails. Non-major bumps already land together in the
+      // weekly batch below; this group keeps majors in one PR as well.
+      description: "Group Go toolchain updates (go.mod, .mise.toml, workflow go-version)",
+      groupName: "go",
+      matchDatasources: ["golang-version"],
+      matchPackageNames: ["go"],
+    },
+    {
       // Keep this the LAST rule in this file. It overrides the specific groups
       // above for non-major updates (which then still land together, just in
       // the one weekly PR), so those groups only keep their own PR for major

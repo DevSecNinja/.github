@@ -17,7 +17,7 @@ template="${repo_root}/config-sync/templates/renovate.json5"
 preset_prefix="github>DevSecNinja/.github//.renovate/"
 default_preset="${preset_prefix}default.json5"
 # Presets a repository adds to its own renovate.json5 when it needs them.
-opt_in=(typescript-eslint.json5)
+opt_in=(go.json5 typescript-eslint.json5)
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "${tmp_dir}"' EXIT
 

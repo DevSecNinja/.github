@@ -1,0 +1,9 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  description: "Opt-in: Go module housekeeping for repositories with Go source. Extend this from renovate.json5; do not use it in repositories whose go.mod only serves Hugo Modules.",
+  // Keep go.sum and import paths consistent after module updates. Not a
+  // default: `go mod tidy` drops requirements that no Go package imports, so
+  // in a Hugo Modules repository (go.mod without .go files) it would remove
+  // the theme and break the site build.
+  postUpdateOptions: ["gomodTidy", "gomodUpdateImportPaths"],
+}
