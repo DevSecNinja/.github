@@ -1,0 +1,12 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  description: "Opt-in: keep TypeScript inside the peer range of typescript-eslint. Extend this from renovate.json5 in repositories that use typescript-eslint.",
+  packageRules: [
+    {
+      description: "Keep TypeScript inside typescript-eslint's supported peer range (8.72.x: >=4.8.4 <6.1.0). Raise the cap here when typescript-eslint widens its range.",
+      matchManagers: ["npm"],
+      matchPackageNames: ["typescript"],
+      allowedVersions: "<6.1.0",
+    },
+  ],
+}

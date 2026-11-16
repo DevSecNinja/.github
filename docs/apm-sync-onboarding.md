@@ -88,7 +88,8 @@ for the details, including what to delete before the first `apm install`.
   }
   ```
 
-  (The synced `renovate.json5` already does this.)
+  (The `renovate.json5` stub from config-sync extends
+  `github>DevSecNinja/.github//.renovate/default.json5`, which includes it.)
 
 ---
 

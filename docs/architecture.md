@@ -492,7 +492,7 @@ one. See [Org-wide AI instructions](#org-wide-ai-instructions-ai-toolkit).
 
 | Input / secret               | Description                                                                         |
 | ---------------------------- | ----------------------------------------------------------------------------------- |
-| `sync-templates`             | Also bootstrap files from `config-sync/templates/`. Default: `false`.               |
+| `sync-templates`             | Also bootstrap the other `config-sync/templates/` files. Default: `false`.          |
 | `central-ref`                | Git ref of `DevSecNinja/.github` to sync from. Default: `main`.                     |
 | `AUTOMATION_APP_PRIVATE_KEY` | Secret. App private key; pass it by name (v3.4.0+). The App ID is read from `vars`. |
 | `app-id`                     | Explicit App ID; overrides the `AUTOMATION_APP_ID` variable. Default: empty.        |
@@ -657,6 +657,15 @@ jobs:
       issues: write
 ```
 
+config-sync overwrites the synced `pr-labeler.yaml` in every repository, so
+its path rules don't assume a layout. `area/apps` matches files under a
+conventional source root (`src/`, `app/`, `apps/`, `services/`, `packages/`,
+`crates/`, `lib/`, `cmd/`, `pkg/`, `internal/`, `backend/`, `frontend/`),
+except docs, scripts, tests and hidden directories at any depth, Markdown and
+shell scripts. Docs, config, CI and infrastructure files never get it.
+`tests/pr-labeler-config.py` runs changed-file lists from the fleet's layouts
+through the rules.
+
 ### TODO to Issue (`todo-to-issue.yml`)
 
 Converts `TODO` comments in code to GitHub Issues on push to the default
@@ -720,41 +729,49 @@ for attribution caveats, inputs and docs-site or standalone Pages examples.
 
 ### Open PR (`actions/open-pr/`)
 
-Opens (or force-updates) a pull request from the current working tree.
+Opens (or updates) a pull request from the current working tree.
 Use it whenever a job has produced changes that should land via PR
 review rather than a direct push to a protected branch — signing,
 formatting, generated-content updates.
 
 Key properties:
 
-- Uses only the preinstalled `gh` CLI; no third-party action.
+- With `commit-method: api`, commits through the GraphQL
+  `createCommitOnBranch` API, so GitHub signs the commit and the PR passes
+  a "require signed commits" ruleset. The default, `commit-method: git`,
+  keeps the unsigned local commit and force-push. See the action README
+  for the API method's limits (no new executable bits, symlinks or very
+  large changes).
+- Uses only the preinstalled `git`, `jq` and `gh`; no third-party action.
 - Default `GITHUB_TOKEN` does not retrigger workflows on the bot's
-  push, so it is safe inside loops like sign-on-push.
-- Reuses the existing PR (force-pushes its branch) when one already
-  exists for the same `branch -> base` pair, so repeat runs do not
-  spam duplicate PRs.
-- Leases the force-push against the branch tip it reads with
-  `git ls-remote`, so an existing working branch (an open PR, or a branch
-  left behind after merge) is updated instead of rejected as "stale info"
-  (fixed in v3.3.0). When the branch already holds the same changes on the
-  same base, the push is skipped so the PR's CI does not re-run.
+  commit, so it is safe inside loops like sign-on-push.
+- Reuses the existing PR (replaces its branch with the new commit) when
+  one already exists for the same `branch -> base` pair, so repeat runs
+  do not spam duplicate PRs.
+- Leases every branch update against the tip it read, so a concurrent
+  push is never overwritten and an existing working branch (an open PR,
+  or a branch left behind after merge) is updated instead of rejected as
+  "stale info" (fixed in v3.3.0). When the branch already holds the same
+  changes on the same base, nothing is written so the PR's CI does not
+  re-run.
 - Branch protection on the base branch stays fully enforced.
 
-| Input            | Required | Default                     | Description                                                              |
-| ---------------- | -------- | --------------------------- | ------------------------------------------------------------------------ |
-| `branch`         | yes      | —                           | Working branch to create or force-push to.                               |
-| `title`          | yes      | —                           | PR title (also default commit message). Conventional Commit subject.     |
-| `base`           | no       | `main`                      | Branch to merge into.                                                    |
-| `body`           | no       | `""`                        | PR body (Markdown).                                                      |
-| `commit-message` | no       | `title`                     | Override the commit message.                                             |
-| `paths`          | no       | `.`                         | Newline-delimited pathspecs to `git add`.                                |
-| `labels`         | no       | `""`                        | Newline-delimited labels.                                                |
-| `draft`          | no       | `false`                     | Open as draft.                                                           |
-| `signoff`        | no       | `false`                     | Add `Signed-off-by` trailer.                                             |
-| `if-no-changes`  | no       | `skip`                      | `skip` = exit 0; `fail` = error when nothing to commit.                  |
-| `git-user-name`  | no       | `github-actions[bot]`       | Commit author name.                                                      |
-| `git-user-email` | no       | github-actions[bot] noreply | Commit author email.                                                     |
-| `github-token`   | no       | `${{ github.token }}`       | Token for `git push` and `gh`. Override with PAT/App for cross-repo PRs. |
+| Input            | Required | Default                     | Description                                                          |
+| ---------------- | -------- | --------------------------- | -------------------------------------------------------------------- |
+| `branch`         | yes      | —                           | Working branch to create or replace.                                 |
+| `title`          | yes      | —                           | PR title (also default commit message). Conventional Commit subject. |
+| `base`           | no       | `main`                      | Branch to merge into.                                                |
+| `body`           | no       | `""`                        | PR body (Markdown).                                                  |
+| `commit-message` | no       | `title`                     | Override the commit message.                                         |
+| `paths`          | no       | `.`                         | Newline-delimited pathspecs to `git add`.                            |
+| `labels`         | no       | `""`                        | Newline-delimited labels.                                            |
+| `draft`          | no       | `false`                     | Open as draft.                                                       |
+| `signoff`        | no       | `false`                     | Add `Signed-off-by` trailer.                                         |
+| `commit-method`  | no       | `git`                       | `git` = unsigned local commit and push; `api` = signed API commit.   |
+| `if-no-changes`  | no       | `skip`                      | `skip` = exit 0; `fail` = error when nothing to commit.              |
+| `git-user-name`  | no       | `github-actions[bot]`       | Author name for `commit-method: git`, and the sign-off.              |
+| `git-user-email` | no       | github-actions[bot] noreply | Author email for `commit-method: git`, and the sign-off.             |
+| `github-token`   | no       | `${{ github.token }}`       | Token for the commit and `gh`. Use an App token to retrigger CI.     |
 
 Outputs: `changed`, `created`, `pr-number`, `pr-url`.
 
@@ -868,7 +885,6 @@ the repo root.
 | `dprint.json`                                                  | dprint Markdown formatter config                      |
 | `issue-labeler.yaml`                                           | Issue auto-label rules                                |
 | `pr-labeler.yaml`                                              | PR auto-label rules                                   |
-| `renovate.json5`                                               | Renovate base config reference                        |
 
 ### Org-wide AI instructions (ai-toolkit)
 
@@ -924,8 +940,11 @@ manual step:
 
 ### Templates (`config-sync/templates/`)
 
-These are **starting-point** files. Copy them into a new repository and adapt
-as needed — they are not auto-synced. See
+These are **starting-point** files. Config-sync copies them only when the
+caller sets `sync-templates: true` and the file does not exist yet; it never
+overwrites them. `renovate.json5` is always bootstrapped: it is a stub that
+extends [`.renovate/default.json5`](#consuming-the-preset) and holds the
+repository's own Renovate rules. See
 [`config-sync/templates/README.md`](../config-sync/templates/README.md) for
 details.
 
@@ -936,15 +955,17 @@ details.
 The `.renovate/` directory contains shared Renovate preset fragments imported
 by individual repositories via their `renovate.json5`.
 
-| Preset                  | Purpose                                                       |
-| ----------------------- | ------------------------------------------------------------- |
-| `base.json5`            | Core scheduling, rebase and PR settings                       |
-| `autoMerge.json5`       | Auto-merge rules for non-major updates                        |
-| `groups.json5`          | Dependency grouping, including the weekly all-non-major batch |
-| `labels.json5`          | Label assignment for Renovate PRs                             |
-| `packageRules.json5`    | Per-ecosystem rules (and opt-outs from the weekly batch)      |
-| `customManagers.json5`  | Custom regex managers (e.g. `mise-version` in workflow files) |
-| `semanticCommits.json5` | Conventional Commits for Renovate PRs                         |
+| Preset                    | Purpose                                                           |
+| ------------------------- | ----------------------------------------------------------------- |
+| `default.json5`           | Org defaults: `config:recommended` plus every non-opt-in preset   |
+| `base.json5`              | Core scheduling, rebase and PR settings                           |
+| `autoMerge.json5`         | Auto-merge rules for non-major updates                            |
+| `groups.json5`            | Dependency grouping, including the weekly all-non-major batch     |
+| `labels.json5`            | Label assignment for Renovate PRs                                 |
+| `packageRules.json5`      | Per-ecosystem rules (and opt-outs from the weekly batch)          |
+| `customManagers.json5`    | Custom regex managers (e.g. `mise-version` in workflow files)     |
+| `semanticCommits.json5`   | Conventional Commits for Renovate PRs                             |
+| `typescript-eslint.json5` | **Opt-in.** Caps `typescript` to the typescript-eslint peer range |
 
 ### Batching and schedule
 
@@ -1029,28 +1050,30 @@ can still assign Code Owners if an automerge PR cannot merge cleanly.
 - **Digest updates disabled** — prevents merging potentially hijacked tags (except
   DevSecNinja-owned devcontainer images on `ghcr.io/devsecninja/`, which are trusted
   internal images and auto-merge immediately with no wait time).
+- **npm `engines` are never pinned** — `rangeStrategy: "pin"` applies to
+  dependencies, but `engines` declare the supported range (`node: "^24.0.0"`)
+  and use `rangeStrategy: "replace"`. The exact Node.js version for
+  development and CI is pinned in `.mise.toml`.
 
 ### Consuming the preset
 
-Repositories import the shared fragments in their `renovate.json5`:
+Repositories extend `default.json5`, which pulls in `config:recommended` and
+the shared fragments. Config-sync bootstraps this `renovate.json5` stub from
+[`config-sync/templates/`](../config-sync/templates/README.md#renovatejson5)
+when a repository has none, and never overwrites it afterwards:
 
 ```json5
 {
-  extends: [
-    "config:recommended",
-    "helpers:pinGitHubActionDigests",
-    ":dependencyDashboard",
-    ":semanticCommits",
-    "github>DevSecNinja/.github//.renovate/autoMerge.json5",
-    "github>DevSecNinja/.github//.renovate/base.json5",
-    "github>DevSecNinja/.github//.renovate/customManagers.json5",
-    "github>DevSecNinja/.github//.renovate/groups.json5",
-    "github>DevSecNinja/.github//.renovate/labels.json5",
-    "github>DevSecNinja/.github//.renovate/packageRules.json5",
-    "github>DevSecNinja/.github//.renovate/semanticCommits.json5",
-  ],
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: ["github>DevSecNinja/.github//.renovate/default.json5"],
+  // Repository-specific settings go below.
 }
 ```
+
+Repository-specific `packageRules`, `customManagers` and opt-in presets go
+below the `extends` entry in the same file; Renovate reads only one config
+file per repository. Each config-sync run warns when `renovate.json5` no longer
+extends `default.json5`.
 
 ---
 

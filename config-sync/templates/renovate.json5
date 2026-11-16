@@ -1,0 +1,8 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  // Org defaults: config:recommended plus the DevSecNinja presets.
+  // Keep this entry first; config-sync warns when it is missing.
+  extends: ["github>DevSecNinja/.github//.renovate/default.json5"],
+  // Repository-specific settings go below (packageRules, customManagers,
+  // opt-in presets). Config-sync created this file and never overwrites it.
+}

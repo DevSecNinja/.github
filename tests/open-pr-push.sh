@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
-# Functional test for the push logic of actions/open-pr.
+# Functional test for the push logic of actions/open-pr (commit-method: git).
 #
-# Runs the action's "Stage and commit changes" script against a local bare
+# Runs the action's commit script against a local bare
 # remote that mimics a GitHub checkout: a shallow clone with no
 # remote-tracking ref for the working branch. Before the fix, a bare
 # `git push --force-with-lease` then failed with "stale info" whenever the
@@ -34,17 +34,10 @@ git config --global user.email "test@example.com"
 git config --global commit.gpgsign false
 git config --global protocol.file.allow always
 
-script="${tmp_dir}/commit.sh"
-awk '
-    $0 == "    - name: Stage and commit changes" { in_step = 1; next }
-    in_step && $0 ~ /^      run: [|]/ { in_run = 1; next }
-    in_run {
-        if ($0 ~ /^    - name:/ || $0 ~ /^      [a-z-]+:/) exit
-        sub(/^        /, "")
-        print
-    }
-' "${action}" >"${script}"
-[ -s "${script}" ] || fail "could not extract the commit script from ${action}"
+script="${repo_root}/actions/open-pr/commit.sh"
+# shellcheck disable=SC2016 # Literal text in action.yml.
+grep -Fq 'run: bash "${GITHUB_ACTION_PATH}/commit.sh"' "${action}" ||
+    fail "${action} no longer runs commit.sh; update this test"
 
 origin="${tmp_dir}/origin.git"
 git init --quiet --bare "${origin}"
@@ -88,6 +81,7 @@ run_action() {
             BRANCH="${branch}" \
             BASE="main" \
             COMMIT_MESSAGE="" \
+            COMMIT_METHOD="git" \
             TITLE="chore: sync config files" \
             PATHS="." \
             SIGNOFF="false" \
@@ -184,4 +178,4 @@ run_action "${clean}" "${tmp_dir}/output-5" >/dev/null 2>&1 || fail "no-change r
 grep -Fxq "changed=false" "${tmp_dir}/output-5" || fail "changed=false missing when there is nothing to commit"
 [ "$(remote_tip "${branch}")" = "${before}" ] || fail "no-change run must not push"
 
-echo "✓ open-pr: existing, identical, rebased, new, and no-change branches all handled."
+echo "✓ open-pr (git): existing, identical, rebased, new, and no-change branches all handled."
