@@ -188,8 +188,9 @@ mise_steps="$(
         }
         /^      - / { flush(); has_install = 0; has_args = 0 }
         /uses: jdx\/mise-action@/ { is_mise = 1 }
-        /^          install: true[[:space:]]*$/ { has_install = 1 }
-        /^          install_args:/ { has_args = 1 }
+        /^          ["'\'']?install["'\'']?[[:space:]]*:[[:space:]]*["'\'']?true["'\'']?[[:space:]]*(#.*)?$/ { has_install = 1 }
+        # Any non-comment mention, so quoted keys and flow mappings count too.
+        /^[^#]*install_args/ { has_args = 1 }
         END { flush() }
     ' "${workflow}"
 )"
