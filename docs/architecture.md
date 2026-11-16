@@ -28,6 +28,8 @@ repositories use it.
 │   └── design-decisions/   # Architecture Decision Records (ADRs)
 ├── profile/
 │   └── README.md           # Organisation profile shown on github.com/DevSecNinja
+├── scripts/                # Scripts the reusable workflows run (one folder per workflow)
+├── tests/                  # Contract and script tests (`mise run test`)
 └── workflow-templates/     # Starter workflows for the GitHub Actions UI picker
 ```
 
@@ -53,6 +55,19 @@ comment and supply the required inputs.
 > version and annotates it with a `# renovate:` comment so Renovate opens a PR
 > (which runs the caller's CI) when a new version is released.
 > See [ADR 0001](design-decisions/0001-reusable-workflow-version-inputs.md).
+
+**Workflow scripts.** A `run:` step holds one simple command (#537); longer
+logic lives in `scripts/<workflow>/` (for example `scripts/pages/` and
+`scripts/label-sync/`), where shellcheck, shfmt and the tests in `tests/` reach
+it. A reusable workflow runs in the caller's checkout, so each job that runs a
+script first checks `scripts/<workflow>/` out from the DevSecNinja/.github
+commit the caller pinned (`job.workflow_sha`) and moves it to `$RUNNER_TEMP`,
+where a code checkout doesn't delete it and the caller's linters don't scan it.
+`tests/workflow-script-fetch.py` enforces this. Credential preflights that read
+the Automation App key are the exception: they stay inline, opted out with
+`# lint: allow-inline-script`, because `tests/app-key-confinement.py` pins their
+`run:` by hash and allows no earlier step (see
+[`automation-app.md`](automation-app.md)).
 
 ### Lint (`lint.yml`)
 

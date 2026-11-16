@@ -29,7 +29,13 @@ CHECKER = ROOT / "scripts" / "lint-inline-scripts.py"
 CASES = ROOT / "tests" / "fixtures" / "lint-inline-scripts-cases.yml"
 # Files of this repository without inline scripts; each layer of #537 adds the
 # ones it cleans up, until the whole repository passes.
-CLEAN = [".github/workflows/lint.yml"]
+CLEAN = [
+    ".github/workflows/label-sync.yml",
+    ".github/workflows/lint.yml",
+    ".github/workflows/pages.yml",
+    ".github/workflows/release-please.yml",
+    ".github/workflows/release.yml",
+]
 SUMMARY = re.compile(r"; (\d+) to move into a script, (\d+) opted out\.$", re.MULTILINE)
 
 
