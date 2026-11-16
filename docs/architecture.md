@@ -74,6 +74,14 @@ requires per-linter checks to `single`, require `all linters` instead — skippe
 per-linter jobs report success. See
 [ADR 0010](design-decisions/0010-batch-renovate-updates-to-save-actions-minutes.md).
 
+**Tool installation.** Every job runs a full `mise install` of the caller's
+mise config, never a per-linter subset. The `pipx:` tools (yamllint, checkov)
+depend on Python, so when the caller configures one (for example through
+`.python-version` and `idiomatic_version_file_enable_tools = ["python"]`), mise
+installs that Python first. Callers without a configured Python get no Python
+download. Releases up to v2.0.x installed only `uv pipx:<tool>` and fail for
+callers that configure Python; v2.1.0+ fixes this.
+
 | Input                   | Description                                                            |
 | ----------------------- | ---------------------------------------------------------------------- |
 | `mise-version`          | **Required.** mise version to install.                                 |
