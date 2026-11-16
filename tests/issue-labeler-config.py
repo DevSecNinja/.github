@@ -51,6 +51,8 @@ CASES = [
     ("fix!: handle empty input", "", {"fix"}),
     ("Build failed on main", "", {"fix"}),
     ("feat: add failover support", "", {"feat"}),
+    ("feat: add Crashlytics and Bugsnag integrations", "", {"feat"}),
+    ("Login is not working", "", {"fix"}),
     ("App crashes on start", "", {"fix", "area/apps"}),
     ("Login page", "What happened?\nThe button is broken.", {"fix"}),
     ("Debug logging is noisy", "", set()),

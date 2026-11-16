@@ -15,7 +15,7 @@ feat:
   - '/^feat(\(.+\))?!?:|\b(feature request|enhancement|add support|would be (nice|great))/i'
 
 fix:
-  - '/^fix(\(.+\))?!?:|\b(error|crash|fail(s|ed|ing|ures?)?\b|broken|not work|doesn.t work|bug)/i'
+  - '/^fix(\(.+\))?!?:|\b(errors?|crash(es|ed|ing)?|fail(s|ed|ing|ures?)?|broken|not work(s|ing)?|doesn.t work|bugs?)\b/i'
 
 perf:
   - '/^perf(\(.+\))?!?:/i'
