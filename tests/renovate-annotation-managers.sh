@@ -54,6 +54,11 @@ workflow = compile_pattern("WORKFLOW_PATTERN")
 ansible = compile_pattern("ANSIBLE_PATTERN")
 names = ("datasource", "depName", "currentValue")
 
+# Renovate runs custom-manager regexes on RE2, which has no lookaround.
+for name in ("WORKFLOW_PATTERN", "ANSIBLE_PATTERN"):
+    if re.search(r"\(\?<?[=!]", os.environ[name]):
+        errors.append(f"{name}: lookaround is not supported by Renovate's RE2 engine")
+
 workflow_cases = {
     '        # renovate: datasource=github-releases depName=jdx/mise\n          version: "2026.10.19"':
         ("github-releases", "jdx/mise", "2026.10.19"),

@@ -18,14 +18,15 @@
         "/workflow-templates/.+\\.ya?ml$/",
       ],
       matchStrings: [
-        "# renovate: datasource=(?<datasource>\\S+)(?: depName=(?<depName>\\S+))?\\n\\s+[\\w-]*version: \\[?\"?(?<currentValue>[^\\s\"\\[\\],]+)\"?\\]?(?=[ \\t]*(?:#[^\\n]*)?(?:\\r?\\n|$))",
+        "# renovate: datasource=(?<datasource>\\S+)(?: depName=(?<depName>\\S+))?\\n\\s+[\\w-]*version: \\[?\"?(?<currentValue>[^\\s\"\\[\\],]+)\"?\\]?[ \\t]*(?:#[^\\n]*)?(?:\\r?\\n|$)",
       ],
       datasourceTemplate: "{{{datasource}}}",
       // `depName=` may be omitted for the runtime datasources, e.g.
       //   # renovate: datasource=python-version
       //   python-version: [3.14]
       // A single-element matrix list is tracked like a scalar; a list with
-      // more entries is not tracked at all (the match must end the line). Without
+      // more entries is not tracked at all (the match must end the line;
+      // Renovate's RE2 engine has no lookahead, so the line end is consumed). Without
       // depName, the name is the datasource minus `-version` (python, node).
       depNameTemplate: "{{#if depName}}{{{depName}}}{{else}}{{{replace '-version$' '' datasource}}}{{/if}}",
     },
