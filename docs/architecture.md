@@ -1048,6 +1048,21 @@ can still assign Code Owners if an automerge PR cannot merge cleanly.
   and use `rangeStrategy: "replace"`. The exact Node.js version for
   development and CI is pinned in `.mise.toml`.
 
+### Version annotations
+
+`customManagers.json5` tracks versions that no built-in manager sees, through a
+`# renovate:` comment on the line above:
+
+- **Workflows** (`.github/workflows/`, `workflow-templates/`): the next line is
+  a `…version:` key. `depName=` is optional for runtime datasources, so
+  `# renovate: datasource=python-version` above `python-version: [3.14]`
+  tracks Python (a single-element matrix list counts as a scalar). Annotated
+  `python-version` values keep their form (`3.14` becomes `3.15`) instead of
+  being pinned to a patch.
+- **Ansible inventory** (`ansible/inventory/`): any datasource, an optional
+  `registryUrl=` and any key, e.g. Debian packages pinned per suite with
+  `# renovate: datasource=deb depName=docker-ce registryUrl=https://…`.
+
 ### Consuming the preset
 
 Repositories extend `default.json5`, which pulls in `config:recommended` and
