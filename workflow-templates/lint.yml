@@ -63,6 +63,7 @@ jobs:
       # lint-trivy: true
       # lint-zizmor: true
       # lint-config-drift: false
+      # Optional: report inline scripts in run: steps. Needs a lint.yml release
+      # after v4.1.0; bump the pin above before uncommenting.
       # lint-inline-scripts: true
-      # Optional: report inline scripts as errors instead of warnings.
-      # lint-inline-scripts-blocking: false
+      # lint-inline-scripts-blocking: false # true: errors instead of warnings

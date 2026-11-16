@@ -202,8 +202,8 @@ runner's system Python, which ships PyYAML (`ubuntu-24.04`).
 | `lint-trivy`                   | Filesystem scan (trivy). Default: `true`.                              |
 | `lint-zizmor`                  | Actions security scan (zizmor). Default: `true`.                       |
 | `lint-config-drift`            | Config-drift check. Default: `false`.                                  |
-| `lint-inline-scripts`          | Inline-script check (see above). Default: `true`.                      |
-| `lint-inline-scripts-blocking` | Report inline scripts as errors. Default: `false`.                     |
+| `lint-inline-scripts`          | Inline-script check (see above). Default: `true`. After v4.1.0.        |
+| `lint-inline-scripts-blocking` | Report inline scripts as errors. Default: `false`. After v4.1.0.       |
 
 **Example caller:**
 
