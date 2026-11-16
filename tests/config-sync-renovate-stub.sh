@@ -80,10 +80,12 @@ log="${tmp_dir}/log"
 # sync-templates input.
 run_sync() {
     local source="${consumer}/.config-sync-source"
-    rm -rf "${consumer}"
+    rm -rf "${consumer}" "${tmp_dir}/output"
     mkdir -p "${source}/config-sync/files" "${consumer}/.github"
     cp -R "${repo_root}/config-sync/templates" "${source}/config-sync/templates"
     echo "central" >"${source}/config-sync/files/.editorconfig"
+    # Already in sync, so renovate.json5 is the only file that can change.
+    echo "central" >"${consumer}/.editorconfig"
     git -C "${source}" init --quiet
     git -C "${source}" -c user.name=t -c user.email=t@t \
         -c commit.gpgsign=false commit --quiet --allow-empty -m init
@@ -118,6 +120,7 @@ local_config="{
 run_sync "${local_config}" "" false
 [ "$(cat "${consumer}/renovate.json5")" = "${local_config}" ] || fail "an existing renovate.json5 must never be overwritten"
 ! warned || fail "a renovate.json5 that extends ${default_preset} must not warn"
+grep -Fxq updated=0 "${tmp_dir}/output" || fail "an existing renovate.json5 must not open a sync PR"
 
 legacy="{ extends: [\"config:recommended\", \"${preset_prefix}base.json5\"] }"
 run_sync "${legacy}" "" false
