@@ -63,3 +63,6 @@ jobs:
       # lint-trivy: true
       # lint-zizmor: true
       # lint-config-drift: false
+      # lint-inline-scripts: true
+      # Optional: report inline scripts as errors instead of warnings.
+      # lint-inline-scripts-blocking: false

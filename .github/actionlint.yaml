@@ -7,3 +7,9 @@ paths:
       # reusable workflow calls (July 2026). Drop this once it supports it
       # (#552).
       - 'reusable workflow call "\$/\.github/workflows/lint\.yml" at "uses" is not following the format'
+  .github/workflows/lint.yml:
+    ignore:
+      # actionlint 1.7.12 predates the job.workflow_* context properties that
+      # GitHub added in September 2026 (reusable workflows reading their own
+      # source). Drop this once a Renovate bump of actionlint knows them.
+      - 'property "workflow_(repository|sha)" is not defined in object type'

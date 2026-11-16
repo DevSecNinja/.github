@@ -1,0 +1,341 @@
+#!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.9"
+# dependencies = ["pyyaml==6.0.3"]
+# ///
+"""Report inline scripts in GitHub Actions `run:` steps (#537).
+
+Code in a `run:` block is out of reach of linters, formatters and tests, so a
+`run:` may hold exactly one line with one simple command, such as
+`./scripts/build.sh`, `bash .github/scripts/x.sh` or `mise run test`. This
+checker reports every `run:` step of the workflows in `.github/workflows/` and
+of the composite actions (`action.yml` / `action.yaml`) in the repository that
+contains any of:
+
+- more than one line;
+- a pipe, or a command list (`&&`, `||`, `;`, `&`);
+- command substitution (`$(...)`, backticks, `<(...)`) or a heredoc (`<<`);
+- shell control flow (`if`, `for`, `while`, `case`, ...);
+- a `${{ }}` expression (pass the value through `env:` instead, which also
+  prevents template injection);
+- any code under a non-bash `shell:` (python, pwsh, ...).
+
+A step opts out with a comment `# lint: allow-inline-script <reason>`, either
+in the comment lines directly above the step or anywhere inside it (for
+example as the first line of the script). The reason is required.
+
+Findings are GitHub annotations: warnings by default, errors with `--blocking`
+(or LINT_INLINE_SCRIPTS_BLOCKING=true), in which case the exit code is 1 when
+anything is found. Without arguments the current directory is checked; pass
+directories to check those repositories, or files to check single workflows or
+actions.
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+import re
+import sys
+from pathlib import Path
+
+try:
+    import yaml
+except ImportError:
+    print(
+        "::error title=Inline scripts::PyYAML is not installed for "
+        f"{sys.executable}. Run this checker with a Python that has PyYAML, "
+        "or with `uv run --script`."
+    )
+    sys.exit(2)
+
+OPT_OUT = re.compile(r"#\s*lint:\s*allow-inline-script(?![\w-])(?P<reason>.*)$")
+SKIP_DIRS = {".git", "node_modules"}
+BASH_SHELLS = {"bash", "sh"}
+CONTROL_WORDS = {
+    "if", "then", "elif", "else", "fi", "for", "while", "until", "do", "done",
+    "case", "esac", "select", "function", "{", "}", "(", ")", "[[",
+}  # fmt: skip
+
+MULTILINE = "multiple lines"
+PIPE = "a pipe (|)"
+CHAIN = "a command list (&&, ||, ; or &)"
+SUBSTITUTION = "command substitution ($(...), backticks or <(...))"
+HEREDOC = "a heredoc or here-string (<<)"
+CONTROL = "shell control flow (if, for, while, case, ...)"
+EXPRESSION = "a ${{ }} expression (pass it through env: instead)"
+REASON_ORDER = [MULTILINE, PIPE, CHAIN, SUBSTITUTION, HEREDOC, CONTROL, EXPRESSION]
+GUIDANCE = (
+    "Move the code to a script under scripts/ or .github/scripts/ and call it "
+    "with one command, or opt out with '# lint: allow-inline-script <reason>'."
+)
+
+
+def scan_line(line: str) -> set[str]:
+    """Shell constructs on one line that make it more than a simple command."""
+    found: set[str] = set()
+    words = line.split()
+    if words and (words[0] in CONTROL_WORDS or words[0][0] in "({"):
+        found.add(CONTROL)
+    quote = None
+    i, n = 0, len(line)
+    while i < n:
+        c = line[i]
+        if quote == "'":
+            if c == "'":
+                quote = None
+            i += 1
+            continue
+        if c == "\\":
+            i += 2
+            continue
+        if quote == '"':
+            if c == '"':
+                quote = None
+            elif c == "`" or line.startswith("$(", i):
+                found.add(SUBSTITUTION)
+            i += 1
+            continue
+        if c == "#" and (i == 0 or line[i - 1].isspace()):
+            break
+        if c in "'\"":
+            quote = c
+        elif c == "`" or line.startswith(("$(", "<(", ">("), i):
+            found.add(SUBSTITUTION)
+        elif line.startswith("<<", i):
+            found.add(HEREDOC)
+            i += 3 if line.startswith("<<<", i) else 2
+            continue
+        elif line.startswith(("&&", "||"), i):
+            found.add(CHAIN)
+            i += 2
+            continue
+        elif c == "|":
+            found.add(PIPE)
+        elif c == ";":
+            found.add(CHAIN)
+        elif c == "&":
+            # 2>&1, >&2 and &> are redirections; a lone & backgrounds a command.
+            before = line[i - 1] if i else ""
+            after = line[i + 1] if i + 1 < n else ""
+            if before not in "<>" and after != ">":
+                found.add(CHAIN)
+        i += 1
+    return found
+
+
+def run_problems(script: str, shell: str | None) -> list[str]:
+    """Why a `run:` script is not one simple command (empty when it is)."""
+    problems: set[str] = set()
+    lines = [line for line in script.strip().splitlines() if line.strip()]
+    if len(lines) > 1:
+        problems.add(MULTILINE)
+    for line in lines:
+        problems |= scan_line(line)
+    if "${{" in script:
+        problems.add(EXPRESSION)
+    ordered = [reason for reason in REASON_ORDER if reason in problems]
+    words = (shell or "").split()
+    # A shell given by an expression can't be resolved statically.
+    if words and "${{" not in shell:
+        if words[0].rsplit("/", 1)[-1] not in BASH_SHELLS:
+            ordered.append(f"inline code for shell '{shell}'")
+    return ordered
+
+
+def child(node: yaml.Node | None, key: str) -> yaml.Node | None:
+    if isinstance(node, yaml.MappingNode):
+        for key_node, value_node in node.value:
+            if isinstance(key_node, yaml.ScalarNode) and key_node.value == key:
+                return value_node
+    return None
+
+
+def scalar(node: yaml.Node | None) -> str | None:
+    return node.value if isinstance(node, yaml.ScalarNode) else None
+
+
+def run_line(step: yaml.MappingNode) -> int:
+    for key_node, _ in step.value:
+        if isinstance(key_node, yaml.ScalarNode) and key_node.value == "run":
+            return key_node.start_mark.line + 1
+    return step.start_mark.line + 1
+
+
+def defaults_shell(node: yaml.Node | None) -> str | None:
+    return scalar(child(child(child(node, "defaults"), "run"), "shell"))
+
+
+def indent(line: str) -> int:
+    return len(line) - len(line.lstrip(" "))
+
+
+def step_lines(lines: list[str], step: yaml.MappingNode) -> list[str]:
+    """The comment lines directly above a step, and every line of the step."""
+    start = step.start_mark.line
+    base = indent(lines[start])
+    above = []
+    k = start - 1
+    while k >= 0 and lines[k].lstrip().startswith("#") and indent(lines[k]) <= base:
+        above.append(lines[k])
+        k -= 1
+    body = [lines[start]]
+    for line in lines[start + 1 :]:
+        if line.strip() and indent(line) <= base:
+            break
+        body.append(line)
+    return above + body
+
+
+def msg(value: str) -> str:
+    return value.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+
+
+def prop(value: str) -> str:
+    return msg(value).replace(":", "%3A").replace(",", "%2C")
+
+
+def cell(value: str) -> str:
+    return value.replace("|", "\\|").replace("\n", " ")
+
+
+class Checker:
+    def __init__(self, level: str) -> None:
+        self.level = level
+        # (file, line, step, problems or opt-out reason)
+        self.findings: list[tuple[str, int, str, str]] = []
+        self.opt_outs: list[tuple[str, int, str, str]] = []
+        self.steps = 0
+        self.files = 0
+
+    def check_file(self, path: Path, display: str, is_action: bool) -> None:
+        try:
+            text = path.read_text(encoding="utf-8")
+            root = yaml.compose(text, Loader=yaml.SafeLoader)
+        except (OSError, UnicodeDecodeError, yaml.YAMLError) as error:
+            first = (str(error).splitlines() or [type(error).__name__])[0]
+            print(f"::warning file={prop(display)},title=Inline scripts::Could not parse: {msg(first)}")
+            return
+        self.files += 1
+        lines = text.splitlines()
+        if is_action:
+            runs = child(root, "runs")
+            if scalar(child(runs, "using")) == "composite":
+                self.check_steps(child(runs, "steps"), lines, display, "composite action", None)
+            return
+        jobs = child(root, "jobs")
+        if not isinstance(jobs, yaml.MappingNode):
+            return
+        workflow_shell = defaults_shell(root)
+        for job_key, job in jobs.value:
+            job_shell = defaults_shell(job) or workflow_shell
+            self.check_steps(child(job, "steps"), lines, display, f"job '{job_key.value}'", job_shell)
+
+    def check_steps(
+        self,
+        steps: yaml.Node | None,
+        lines: list[str],
+        display: str,
+        owner: str,
+        default_shell: str | None,
+    ) -> None:
+        if not isinstance(steps, yaml.SequenceNode):
+            return
+        for index, step in enumerate(steps.value, start=1):
+            script = scalar(child(step, "run"))
+            if script is None:
+                continue
+            self.steps += 1
+            label = scalar(child(step, "name")) or scalar(child(step, "id")) or f"#{index}"
+            where = f"{owner}, step '{label}'"
+            line = run_line(step)
+            problems = run_problems(script, scalar(child(step, "shell")) or default_shell)
+            opt_out = next(filter(None, map(OPT_OUT.search, step_lines(lines, step))), None)
+            if opt_out:
+                reason = opt_out.group("reason").lstrip(" :-").strip()
+                if reason:
+                    self.opt_outs.append((display, line, where, reason))
+                    continue
+                problems.append("an allow-inline-script opt-out without a reason")
+            if problems:
+                self.report(display, line, where, ", ".join(problems))
+
+    def report(self, display: str, line: int, where: str, problems: str) -> None:
+        text = f"{where[0].upper()}{where[1:]}: {problems}. {GUIDANCE}"
+        print(f"::{self.level} file={prop(display)},line={line},title=Inline script::{msg(text)}")
+        self.findings.append((display, line, where, problems))
+
+    def write_summary(self, summary: str) -> None:
+        out = []
+        for rows, title, column in (
+            (self.findings, "`run:` step(s) to move into a script", "Problems"),
+            (self.opt_outs, "opt-out(s)", "Reason"),
+        ):
+            if not rows:
+                continue
+            out += [
+                f"### Inline scripts: {len(rows)} {title}",
+                "",
+                f"| File:line | Step | {column} |",
+                f"| --------- | ---- | {'-' * len(column)} |",
+            ]
+            out += [f"| {cell(f)}:{n} | {cell(w)} | {cell(p)} |" for f, n, w, p in rows]
+            out.append("")
+        if self.findings:
+            out += [GUIDANCE, ""]
+        if out:
+            with open(summary, "a", encoding="utf-8") as handle:
+                handle.write("\n".join(out) + "\n")
+
+
+def discover(root: Path) -> list[tuple[Path, bool]]:
+    """The workflows and action metadata files of a repository."""
+    found: list[tuple[Path, bool]] = []
+    workflows = root / ".github" / "workflows"
+    if workflows.is_dir():
+        found += [
+            (path, False)
+            for path in sorted(workflows.iterdir())
+            if path.is_file() and path.suffix in (".yml", ".yaml")
+        ]
+    for directory, dirnames, filenames in os.walk(root):
+        dirnames[:] = sorted(name for name in dirnames if name not in SKIP_DIRS)
+        found += [
+            (Path(directory) / name, True)
+            for name in sorted(filenames)
+            if name in ("action.yml", "action.yaml")
+        ]
+    return found
+
+
+def main(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(description="Report inline scripts in GitHub Actions run: steps.")
+    parser.add_argument("paths", nargs="*", type=Path, help="repositories, workflows or actions to check")
+    parser.add_argument(
+        "--blocking",
+        action="store_true",
+        default=os.environ.get("LINT_INLINE_SCRIPTS_BLOCKING", "").lower() == "true",
+        help="report errors and exit 1 on findings (default: warnings, exit 0)",
+    )
+    args = parser.parse_args(argv)
+    checker = Checker("error" if args.blocking else "warning")
+    for target in args.paths or [Path(".")]:
+        if target.is_dir():
+            for path, is_action in discover(target):
+                checker.check_file(path, path.relative_to(target).as_posix(), is_action)
+        elif target.is_file():
+            checker.check_file(target, target.as_posix(), target.name in ("action.yml", "action.yaml"))
+        else:
+            print(f"::error title=Inline scripts::No such file or directory: {msg(str(target))}")
+            return 2
+    if os.environ.get("GITHUB_STEP_SUMMARY"):
+        checker.write_summary(os.environ["GITHUB_STEP_SUMMARY"])
+    print(
+        f"Inline scripts: checked {checker.steps} run step(s) in {checker.files} file(s); "
+        f"{len(checker.findings)} to move into a script, {len(checker.opt_outs)} opted out."
+    )
+    return 1 if args.blocking and checker.findings else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
