@@ -17,6 +17,37 @@
       minimumReleaseAge: "0",
     },
     {
+      // `uses: owner/repo@<sha> # main` tracks a branch: there is no tag to
+      // move to, so a digest update is the only way the pin ever advances.
+      // The digest disable above froze these pins (DevSecNinja/dotfiles was
+      // 500+ commits behind). The hijacked-tag risk behind that disable does
+      // not apply: a branch pin is meant to follow the branch head. Branch
+      // heads may carry no release timestamp, so a missing one does not leave
+      // the update pending forever; when one exists, the 14-day soak applies.
+      description: "Re-enable digest updates for GitHub Actions pinned to a branch (# main / # master); a branch pin can only move by digest",
+      matchManagers: ["github-actions"],
+      matchUpdateTypes: ["digest"],
+      matchCurrentValue: "/^(main|master)$/",
+      enabled: true,
+      minimumReleaseAgeBehaviour: "timestamp-optional",
+    },
+    {
+      // DevSecNinja branch pins keep automerge from autoMerge.json5 and join
+      // the weekly non-major batch. Third-party branch heads are unreleased
+      // code, so they get their own PR (groupName null keeps the weekly batch
+      // automerging) and wait for owner review. Renovate cannot remove the
+      // `merge: auto` label that autoMerge.json5 adds; `automerge: false` wins.
+      description: "Third-party actions pinned to a branch need owner review: own PR, no automerge",
+      matchManagers: ["github-actions"],
+      matchUpdateTypes: ["digest"],
+      matchCurrentValue: "/^(main|master)$/",
+      matchPackageNames: ["!DevSecNinja/**"],
+      automerge: false,
+      groupName: null,
+      commitMessageSuffix: "",
+      addLabels: ["merge: manual"],
+    },
+    {
       description: "Disable Docker lookups for official Dev Container feature references",
       matchManagers: ["devcontainer"],
       matchDatasources: ["docker"],
