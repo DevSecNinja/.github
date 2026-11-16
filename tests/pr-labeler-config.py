@@ -9,7 +9,9 @@ config-sync/files/pr-labeler.yaml is read by actions/labeler v7 (pinned in
 .github/workflows/labeler.yml) in every repository that calls the reusable
 labeler, whatever its layout. This test runs changed-file lists from the
 fleet's layouts (src/, services/, apps/ + crates/, backend/ + frontend/,
-home/) through the rules and checks the labels.
+home/) through the rules and checks the labels. area/apps is an allowlist of
+source directories, so docs, Markdown, config, CI and infrastructure files must
+not get it.
 
 It mirrors actions/labeler v7: top-level `changed-files` entries of a label are
 alternatives, each operator (`any-glob-to-any-file`, `all-globs-to-any-file`,
@@ -48,8 +50,8 @@ CASES = [
     (["apps/web/main.ts", "crates/core/src/lib.rs"], {"area/apps"}),
     # hadiscover
     (["backend/app.py", "frontend/src/App.tsx"], {"area/apps"}),
-    # dotfiles
-    (["home/dot_bashrc.tmpl"], {"area/apps"}),
+    # dotfiles: home/ holds dotfiles, not application code
+    (["home/dot_bashrc.tmpl"], set()),
     (["src/README.md"], {"area/docs"}),
     (["docs/guide.md", "docs/img/flow.png"], {"area/docs"}),
     (["README.md"], {"area/docs"}),
@@ -62,7 +64,7 @@ CASES = [
     (["scripts/setup.sh"], {"area/scripts"}),
     (["script/bootstrap"], {"area/scripts"}),
     ([".devcontainer/post-create.sh"], {"area/scripts"}),
-    (["src/build.sh"], {"area/apps", "area/scripts"}),
+    (["src/build.sh"], {"area/scripts"}),
     (["tests/test_parser.py", "specs/001-feature/spec.md"], {"area/docs"}),
     ([".mise.toml", "pr-labeler.yaml", "LICENSE"], set()),
     # Excluded areas count at any depth
@@ -70,6 +72,14 @@ CASES = [
     (["apps/web/docs/flow.svg"], {"area/docs"}),
     (["src/.cache/index.json"], set()),
     (["src/scripts/seed.py"], {"area/scripts"}),
+    (["src/__tests__/app.test.ts"], set()),
+    # Only source code gets area/apps: not docs, config, CI or infrastructure
+    (["src/docs/guide.txt", "apps/web/README.md"], {"area/docs"}),
+    (["infra/main.bicep", "config/settings.yaml", "public/index.html"], set()),
+    (["tools/gen/main.go", "Dockerfile", "package.json"], set()),
+    ([".github/workflows/ci.yml", ".devcontainer/devcontainer.json"], {"area/github"}),
+    (["src/config/appsettings.json"], {"area/apps"}),
+    (["docs/guide.md", "src/app.ts"], {"area/docs", "area/apps"}),
 ]
 
 

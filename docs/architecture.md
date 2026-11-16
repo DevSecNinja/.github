@@ -642,11 +642,13 @@ jobs:
 ```
 
 config-sync overwrites the synced `pr-labeler.yaml` in every repository, so
-its path rules don't assume a layout. `area/apps` matches any changed file
-that isn't a root-level file or Markdown and isn't in a hidden, docs, scripts,
-tests or specs directory at any depth. It works whether the code lives under
-`src/`, `services/`, `apps/` or elsewhere. `tests/pr-labeler-config.py` runs
-changed-file lists from the fleet's layouts through the rules.
+its path rules don't assume a layout. `area/apps` matches files under a
+conventional source root (`src/`, `app/`, `apps/`, `services/`, `packages/`,
+`crates/`, `lib/`, `cmd/`, `pkg/`, `internal/`, `backend/`, `frontend/`),
+except docs, scripts, tests and hidden directories at any depth, Markdown and
+shell scripts. Docs, config, CI and infrastructure files never get it.
+`tests/pr-labeler-config.py` runs changed-file lists from the fleet's layouts
+through the rules.
 
 ### TODO to Issue (`todo-to-issue.yml`)
 

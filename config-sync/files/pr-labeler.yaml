@@ -7,19 +7,21 @@
 #
 # Tests: tests/pr-labeler-config.py
 
-# Application code, wherever it lives (src/, services/, apps/, crates/,
-# backend/, ...): a changed file that is not a root-level file, Markdown, or
-# in a hidden, docs, scripts, tests or specs directory at any depth.
+# Application code: a changed file under a conventional top-level source
+# directory, except docs, scripts, tests and hidden directories at any depth,
+# Markdown and shell scripts (those belong to area/docs or area/scripts).
+# Other top-level directories (infra/, config/, public/, home/, ...) and
+# root-level files get no area/apps.
 area/apps:
   - changed-files:
       - all-globs-to-any-file:
-          - '!*'
+          - '{src,app,apps,services,packages,crates,lib,cmd,pkg,internal,backend,frontend}/**'
           - '!**/.*/**'
           - '!**/{doc,docs}/**'
           - '!**/{script,scripts}/**'
-          - '!**/{test,tests,e2e}/**'
-          - '!**/specs/**'
+          - '!**/{test,tests,e2e,__tests__}/**'
           - '!**/*.{md,mdx}'
+          - '!**/*.{sh,bash,ps1,psm1}'
 
 area/docs:
   - changed-files:
