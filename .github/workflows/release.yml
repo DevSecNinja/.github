@@ -43,7 +43,4 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ inputs.tag }}
-        run: |-
-          gh release create "${TAG}" \
-            --title "${TAG}" \
-            --notes-file /tmp/release-notes.md
+        run: gh release create "${TAG}" --title "${TAG}" --notes-file /tmp/release-notes.md

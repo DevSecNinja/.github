@@ -37,6 +37,24 @@ jobs:
       contents: read
       issues: write
     steps:
+      - name: Checkout label-sync scripts
+        # The label-sync scripts ship with this reusable workflow: fetch them from
+        # the same commit of DevSecNinja/.github that the caller pinned.
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .devsecninja-label-sync
+          sparse-checkout: |-
+            scripts/label-sync/
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Move label-sync scripts out of the workspace
+        # Outside the workspace the caller's linters don't scan them, and a
+        # code checkout doesn't delete them.
+        run: mv .devsecninja-label-sync "${RUNNER_TEMP}/devsecninja-label-sync"
+
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -50,30 +68,7 @@ jobs:
         env:
           BASE_LABELS_FILE: ${{ inputs.base-labels-file }}
           LABELS_FILE: ${{ inputs.labels-file }}
-        run: |-
-          set -euo pipefail
-
-          config_files=""
-          for file in "${BASE_LABELS_FILE}" "${LABELS_FILE}"; do
-              [ -z "${file}" ] && continue
-              if [ -f "${file}" ]; then
-                  echo "  ✓ including ${file}"
-                  config_files="${config_files}${file}"$'\n'
-              else
-                  echo "  ⊘ skipping ${file} (not found)"
-              fi
-          done
-
-          if [ -z "${config_files}" ]; then
-              echo "::error::No label config files found (looked for '${BASE_LABELS_FILE}' and '${LABELS_FILE}')"
-              exit 1
-          fi
-
-          {
-              echo "config-files<<EOF"
-              printf '%s' "${config_files}"
-              echo "EOF"
-          } >> "${GITHUB_OUTPUT}"
+        run: bash "${RUNNER_TEMP}/devsecninja-label-sync/scripts/label-sync/resolve-config-files.sh"
 
       - name: Sync Labels
         uses: EndBug/label-sync@52074158190acb45f3077f9099fea818aa43f97a # v2.3.3

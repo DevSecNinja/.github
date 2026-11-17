@@ -222,6 +222,22 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
+      - name: Checkout pages scripts
+        # The pages scripts ship with this reusable workflow: fetch them from
+        # the same commit of DevSecNinja/.github that the caller pinned.
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .devsecninja-pages
+          sparse-checkout: |-
+            scripts/pages/
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - name: Move pages scripts out of the workspace
+        # Outside the workspace the caller's linters don't scan them, and a
+        # code checkout doesn't delete them.
+        run: mv .devsecninja-pages "${RUNNER_TEMP}/devsecninja-pages"
       - name: Validate tool versions
         env:
           NODE_VERSION: ${{ inputs.node-version }}
@@ -240,104 +256,7 @@ jobs:
           CLOUDFLARE_MANAGE_DNS: ${{ inputs.cloudflare-manage-dns }}
           CLOUDFLARE_DNS_ZONE: ${{ inputs.cloudflare-dns-zone }}
           CONFIGURED_PROJECT_NAME: ${{ inputs.cloudflare-project-name }}
-        run: |-
-          set -euo pipefail
-
-          if [ -z "${NODE_VERSION}" ] && {
-            [ -n "${INSTALL_COMMAND}" ] ||
-            [ -n "${TEST_SETUP_COMMAND}" ] ||
-            [ -n "${TEST_COMMAND}" ] ||
-            [ -n "${BUILD_COMMAND}" ]
-          }; then
-            echo "::error::node-version is required when install-command, test-setup-command, test-command, or build-command is set; provide node-version or clear those commands."
-            exit 1
-          fi
-
-          if [ -n "${ARTIFACT_NAME}" ] && [ -n "${BUILD_COMMAND}" ]; then
-            echo "::error::artifact-name and build-command are mutually exclusive; the artifact is deployed as-is."
-            exit 1
-          fi
-
-          if [ "${BUILD_GITHUB_TOKEN}" = "true" ]; then
-            if [ -z "${BUILD_COMMAND}" ]; then
-              echo "::error::build-github-token requires build-command."
-              exit 1
-            fi
-
-            # The deploy jobs delete artifact-path before restoring the built
-            # artifact, so it must be a dedicated subdirectory of the workspace.
-            # Trailing slashes are harmless; any other empty, `.` or `..` path
-            # component (including an absolute path or the workspace root) is
-            # rejected, since `rm -rf` refuses operands ending in `.`.
-            artifact_path="${ARTIFACT_PATH}"
-            while [[ "${artifact_path}" == */ ]]; do artifact_path="${artifact_path%/}"; done
-            case "/${artifact_path}/" in
-              //* | *//* | */./* | */../*)
-                echo "::error::build-github-token requires artifact-path to be a dedicated relative subdirectory (for example 'dist'), not '${ARTIFACT_PATH}'."
-                exit 1
-                ;;
-            esac
-          fi
-
-          if [ -z "${WRANGLER_VERSION}" ] && {
-            [ "${CLOUDFLARE_PREVIEW}" = "true" ] ||
-            [ "${CLOUDFLARE_PRODUCTION}" = "true" ] ||
-            [ "${CLOUDFLARE_ACCEPTANCE}" = "true" ]
-          }; then
-            echo "::error::wrangler-version is required when cloudflare-preview, cloudflare-production, or cloudflare-acceptance is enabled."
-            exit 1
-          fi
-
-          if [ -n "${CLOUDFLARE_CUSTOM_DOMAIN}" ]; then
-            if [ "${CLOUDFLARE_PRODUCTION}" != "true" ]; then
-              echo "::error::cloudflare-custom-domain requires cloudflare-production: true."
-              exit 1
-            fi
-
-            if [ -z "${CONFIGURED_PROJECT_NAME}" ]; then
-              echo "::error::cloudflare-project-name is required when cloudflare-custom-domain is set."
-              exit 1
-            fi
-
-            if [ "${#CLOUDFLARE_CUSTOM_DOMAIN}" -gt 253 ] ||
-              ! [[ "${CLOUDFLARE_CUSTOM_DOMAIN}" =~ ^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$ ]]; then
-              echo "::error::cloudflare-custom-domain must be a lowercase FQDN with at least two labels; schemes, paths, ports, wildcards, underscores, and trailing dots are not allowed."
-              exit 1
-            fi
-          fi
-
-          if [ "${CLOUDFLARE_MANAGE_DNS}" = "true" ]; then
-            if [ "${CLOUDFLARE_PRODUCTION}" != "true" ]; then
-              echo "::error::cloudflare-manage-dns requires cloudflare-production: true."
-              exit 1
-            fi
-
-            if [ -z "${CLOUDFLARE_CUSTOM_DOMAIN}" ]; then
-              echo "::error::cloudflare-manage-dns requires cloudflare-custom-domain."
-              exit 1
-            fi
-
-            if [ -z "${CLOUDFLARE_DNS_ZONE}" ]; then
-              echo "::error::cloudflare-manage-dns requires cloudflare-dns-zone."
-              exit 1
-            fi
-
-            if [ "${#CLOUDFLARE_DNS_ZONE}" -gt 253 ] ||
-              ! [[ "${CLOUDFLARE_DNS_ZONE}" =~ ^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$ ]]; then
-              echo "::error::cloudflare-dns-zone must be a lowercase DNS zone with at least two labels; schemes, paths, ports, wildcards, underscores, and trailing dots are not allowed."
-              exit 1
-            fi
-
-            case "${CLOUDFLARE_CUSTOM_DOMAIN}" in
-              "${CLOUDFLARE_DNS_ZONE}" | *."${CLOUDFLARE_DNS_ZONE}") ;;
-              *)
-                echo "::error::cloudflare-custom-domain must equal cloudflare-dns-zone or be its subdomain."
-                exit 1
-                ;;
-            esac
-          fi
-
-          echo "Input validation passed."
+        run: bash "${RUNNER_TEMP}/devsecninja-pages/scripts/pages/validate-inputs.sh"
   detect-cloudflare:
     name: Detect Cloudflare configuration
     needs:
@@ -357,6 +276,22 @@ jobs:
       # branch}) that should run for this event. Empty when nothing deploys.
       targets: ${{ steps.detect.outputs.targets }}
     steps:
+      - name: Checkout pages scripts
+        # The pages scripts ship with this reusable workflow: fetch them from
+        # the same commit of DevSecNinja/.github that the caller pinned.
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .devsecninja-pages
+          sparse-checkout: |-
+            scripts/pages/
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - name: Move pages scripts out of the workspace
+        # Outside the workspace the caller's linters don't scan them, and a
+        # code checkout doesn't delete them.
+        run: mv .devsecninja-pages "${RUNNER_TEMP}/devsecninja-pages"
       - name: Detect Cloudflare secrets
         id: detect
         env:
@@ -374,89 +309,7 @@ jobs:
           GIT_REF: ${{ github.ref }}
           CONFIGURED_PROJECT_NAME: ${{ inputs.cloudflare-project-name }}
           REPOSITORY_NAME: ${{ github.event.repository.name }}
-        run: |-
-          set -euo pipefail
-
-          project_name="${CONFIGURED_PROJECT_NAME:-$REPOSITORY_NAME}"
-
-          if [ "${CLOUDFLARE_PREVIEW}" != "true" ] && [ "${CLOUDFLARE_PRODUCTION}" != "true" ] && [ "${CLOUDFLARE_ACCEPTANCE}" != "true" ]; then
-            {
-              echo "enabled=false"
-              echo "deploy-production=false"
-              echo "targets=[]"
-            } >>"${GITHUB_OUTPUT}"
-            echo "Cloudflare Pages deployments are disabled by input."
-            exit 0
-          fi
-
-          if [ -z "${CLOUDFLARE_API_TOKEN}" ] || [ -z "${CLOUDFLARE_ACCOUNT_ID}" ]; then
-            {
-              echo "enabled=false"
-              echo "deploy-production=false"
-              echo "targets=[]"
-            } >>"${GITHUB_OUTPUT}"
-            if [ -n "${CLOUDFLARE_CUSTOM_DOMAIN}" ]; then
-              echo "::error::cloudflare-custom-domain requires CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID."
-              exit 1
-            elif [ "${CLOUDFLARE_PRODUCTION}" = "true" ] || [ "${CLOUDFLARE_ACCEPTANCE}" = "true" ]; then
-              echo "::error::cloudflare-production or cloudflare-acceptance is enabled, but CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID is missing."
-              exit 1
-            fi
-
-            echo "::notice::Missing Cloudflare secrets; skipping preview deploys."
-            exit 0
-          fi
-
-          if [ -z "${project_name}" ]; then
-            echo "::error::cloudflare-project-name is required."
-            exit 1
-          fi
-
-          if ! [[ "${project_name}" =~ ^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$ ]]; then
-            echo "::error::cloudflare-project-name must contain only lowercase letters, numbers, and hyphens."
-            exit 1
-          fi
-
-          # Work out which production-style targets deploy for this event.
-          # Pull request previews are handled by a separate job.
-          is_production_branch="false"
-          if [ "${EVENT_NAME}" != "pull_request" ] && [ "${GIT_REF}" = "refs/heads/${PRODUCTION_BRANCH}" ]; then
-            is_production_branch="true"
-          fi
-
-          deploy_production="false"
-          if [ "${CLOUDFLARE_PRODUCTION}" = "true" ]; then
-            if [ "${CLOUDFLARE_PRODUCTION_ON_RELEASE}" = "true" ]; then
-              [ "${EVENT_NAME}" = "release" ] && deploy_production="true"
-            else
-              [ "${is_production_branch}" = "true" ] && deploy_production="true"
-            fi
-          fi
-
-          deploy_acceptance="false"
-          if [ "${CLOUDFLARE_ACCEPTANCE}" = "true" ] && [ "${is_production_branch}" = "true" ]; then
-            deploy_acceptance="true"
-          fi
-
-          targets="$(
-            jq -cn \
-              --arg prod_branch "${CLOUDFLARE_PRODUCTION_BRANCH}" \
-              --arg acc_branch "${CLOUDFLARE_ACCEPTANCE_BRANCH}" \
-              --argjson prod "${deploy_production}" \
-              --argjson acc "${deploy_acceptance}" \
-              '[
-                 (if $prod then {target: "production", environment: "cloudflare-pages", branch: $prod_branch} else empty end),
-                 (if $acc then {target: "acceptance", environment: "cloudflare-pages-acceptance", branch: $acc_branch} else empty end)
-               ]'
-          )"
-
-          {
-            echo "project-name=${project_name}"
-            echo "enabled=true"
-            echo "deploy-production=${deploy_production}"
-            echo "targets=${targets}"
-          } >>"${GITHUB_OUTPUT}"
-          echo "Cloudflare Pages deployments are configured (targets: ${targets})."
+        run: bash "${RUNNER_TEMP}/devsecninja-pages/scripts/pages/detect-cloudflare.sh"
   test:
     name: Run tests
     needs:
@@ -544,6 +397,24 @@ jobs:
       # ephemeral merge commit, so prefer the PR head SHA when present.
       APP_COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
+      - name: Checkout pages scripts
+        if: ${{ inputs.update-sitemap-lastmod }}
+        # The pages scripts ship with this reusable workflow: fetch them from
+        # the same commit of DevSecNinja/.github that the caller pinned.
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .devsecninja-pages
+          sparse-checkout: |-
+            scripts/pages/
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - name: Move pages scripts out of the workspace
+        if: ${{ inputs.update-sitemap-lastmod }}
+        # Outside the workspace the caller's linters don't scan them, and a
+        # code checkout doesn't delete them.
+        run: mv .devsecninja-pages "${RUNNER_TEMP}/devsecninja-pages"
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -607,20 +478,7 @@ jobs:
         if: ${{ inputs.update-sitemap-lastmod }}
         env:
           SITEMAP_PATH: ${{ inputs.sitemap-path }}
-        run: |-
-          set -euo pipefail
-          today="$(date -u +%Y-%m-%d)"
-          if [ ! -f "${SITEMAP_PATH}" ]; then
-            echo "::error::Sitemap file '${SITEMAP_PATH}' does not exist."
-            exit 1
-          fi
-          if ! grep -Eq "<lastmod>[0-9]{4}-[0-9]{2}-[0-9]{2}</lastmod>" "${SITEMAP_PATH}"; then
-            echo "::error::No sitemap lastmod tags found in '${SITEMAP_PATH}'."
-            exit 1
-          fi
-          sed -i -E \
-            "s|<lastmod>[0-9]{4}-[0-9]{2}-[0-9]{2}</lastmod>|<lastmod>${today}</lastmod>|g" \
-            "${SITEMAP_PATH}"
+        run: bash "${RUNNER_TEMP}/devsecninja-pages/scripts/pages/update-sitemap-lastmod.sh"
       - name: Upload artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
@@ -757,6 +615,22 @@ jobs:
       dns-target: ${{ steps.register.outputs.dns-target }}
       dns-action: ${{ steps.register.outputs.dns-action }}
     steps:
+      - name: Checkout pages scripts
+        # The pages scripts ship with this reusable workflow: fetch them from
+        # the same commit of DevSecNinja/.github that the caller pinned.
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .devsecninja-pages
+          sparse-checkout: |-
+            scripts/pages/
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - name: Move pages scripts out of the workspace
+        # Outside the workspace the caller's linters don't scan them, and a
+        # code checkout doesn't delete them.
+        run: mv .devsecninja-pages "${RUNNER_TEMP}/devsecninja-pages"
       - name: Register Cloudflare Pages custom domain
         id: register
         env:
@@ -767,281 +641,7 @@ jobs:
           DNS_ZONE: ${{ inputs.cloudflare-dns-zone }}
           DNS_PROXIED: ${{ inputs.cloudflare-dns-proxied }}
           PROJECT_NAME: ${{ needs.detect-cloudflare.outputs.project-name }}
-        run: |-
-          set -euo pipefail
-
-          api_base="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${PROJECT_NAME}"
-          domain_response="$(mktemp)"
-          project_response="$(mktemp)"
-          zone_response="$(mktemp)"
-          records_response="$(mktemp)"
-          records_all="$(mktemp)"
-          records_next="$(mktemp)"
-          request_body="$(mktemp)"
-          trap 'rm -f "${domain_response}" "${project_response}" "${zone_response}" "${records_response}" "${records_all}" "${records_next}" "${request_body}"' EXIT
-
-          api_errors() {
-            local response_file="$1"
-            jq -r \
-              'if ([.errors[]?.message] | length) > 0
-               then [.errors[]?.message] | join("; ")
-               else "no error details returned"
-               end' \
-              "${response_file}" 2>/dev/null || printf '%s' "invalid JSON response"
-          }
-
-          request() {
-            local method="$1"
-            local url="$2"
-            local output_file="$3"
-            local data_file="${4:-}"
-            local -a args=(
-              --silent
-              --show-error
-              --connect-timeout 10
-              --max-time 60
-              --output "${output_file}"
-              --write-out "%{http_code}"
-              --request "${method}"
-              --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
-            )
-
-            if [ "${method}" = "GET" ]; then
-              args+=(--retry 2 --retry-all-errors)
-            fi
-
-            if [ -n "${data_file}" ]; then
-              args+=(
-                --header "Content-Type: application/json"
-                --data-binary "@${data_file}"
-              )
-            fi
-
-            local http_code
-            if ! http_code="$(curl "${args[@]}" "${url}")"; then
-              echo "::error::Cloudflare API ${method} request failed before an HTTP response was received." >&2
-              return 1
-            fi
-            printf '%s' "${http_code}"
-          }
-
-          domain_url="${api_base}/domains/${CUSTOM_DOMAIN}"
-          domain_http_code="$(request GET "${domain_url}" "${domain_response}")"
-
-          if [ "${domain_http_code}" = "200" ]; then
-            if ! jq -e \
-              --arg domain "${CUSTOM_DOMAIN}" \
-              '.success == true and .result.name == $domain' \
-              "${domain_response}" >/dev/null; then
-              echo "::error::Cloudflare returned an unsuccessful or mismatched custom-domain response: $(api_errors "${domain_response}")"
-              exit 1
-            fi
-            status="$(jq -r '.result.status' "${domain_response}")"
-            case "${status}" in
-              active | pending | initializing)
-                echo "Cloudflare Pages custom domain '${CUSTOM_DOMAIN}' already exists with status '${status}'."
-                ;;
-              *)
-                echo "::error::Cloudflare Pages custom domain '${CUSTOM_DOMAIN}' is in unexpected status '${status}'."
-                exit 1
-                ;;
-            esac
-          elif [ "${domain_http_code}" = "404" ]; then
-            jq -cn --arg name "${CUSTOM_DOMAIN}" '{name: $name}' >"${request_body}"
-            domain_http_code="$(request POST "${api_base}/domains" "${domain_response}" "${request_body}")"
-            if [ "${domain_http_code}" -lt 200 ] || [ "${domain_http_code}" -ge 300 ]; then
-              echo "::error::Failed to register Cloudflare Pages custom domain '${CUSTOM_DOMAIN}' (HTTP ${domain_http_code}): $(api_errors "${domain_response}")"
-              exit 1
-            fi
-            if ! jq -e \
-              --arg domain "${CUSTOM_DOMAIN}" \
-              '.success == true and .result.name == $domain' \
-              "${domain_response}" >/dev/null; then
-              echo "::error::Cloudflare returned an unsuccessful or mismatched custom-domain registration response: $(api_errors "${domain_response}")"
-              exit 1
-            fi
-            status="$(jq -r '.result.status' "${domain_response}")"
-            case "${status}" in
-              active | pending | initializing)
-                echo "Registered Cloudflare Pages custom domain '${CUSTOM_DOMAIN}' with status '${status}'."
-                ;;
-              *)
-                echo "::error::Cloudflare registered custom domain '${CUSTOM_DOMAIN}' with unexpected status '${status}'."
-                exit 1
-                ;;
-            esac
-          else
-            echo "::error::Failed to query Cloudflare Pages custom domain '${CUSTOM_DOMAIN}' (HTTP ${domain_http_code}): $(api_errors "${domain_response}")"
-            exit 1
-          fi
-
-          project_http_code="$(request GET "${api_base}" "${project_response}")"
-          if [ "${project_http_code}" -lt 200 ] || [ "${project_http_code}" -ge 300 ]; then
-            echo "::error::Failed to query Cloudflare Pages project '${PROJECT_NAME}' (HTTP ${project_http_code}): $(api_errors "${project_response}")"
-            exit 1
-          fi
-          if ! dns_target="$(
-            jq -er \
-              --arg project "${PROJECT_NAME}" \
-              'select(.success == true and .result.name == $project)
-               | .result.subdomain
-               | select(type == "string" and endswith(".pages.dev"))' \
-              "${project_response}"
-          )"; then
-            echo "::error::Cloudflare returned an unsuccessful project response or no valid pages.dev subdomain: $(api_errors "${project_response}")"
-            exit 1
-          fi
-
-          dns_action="unmanaged"
-          dns_proxied_summary="not managed"
-          if [ "${MANAGE_DNS}" = "true" ]; then
-            dns_proxied_summary="${DNS_PROXIED}"
-            zones_url="https://api.cloudflare.com/client/v4/zones?name=${DNS_ZONE}&status=active&account.id=${CLOUDFLARE_ACCOUNT_ID}&page=1&per_page=50"
-            zones_http_code="$(request GET "${zones_url}" "${zone_response}")"
-            if [ "${zones_http_code}" -lt 200 ] || [ "${zones_http_code}" -ge 300 ]; then
-              echo "::error::Failed to resolve active Cloudflare DNS zone '${DNS_ZONE}' (HTTP ${zones_http_code}): $(api_errors "${zone_response}")"
-              exit 1
-            fi
-            if ! jq -e \
-              --arg zone "${DNS_ZONE}" \
-              --arg account "${CLOUDFLARE_ACCOUNT_ID}" \
-              '.success == true
-               and (.result | type) == "array"
-               and ((.result_info.total_pages // 1) == 1)
-               and ([.result[]
-                     | select(.name == $zone
-                              and .status == "active"
-                              and .account.id == $account)]
-                    | length) == 1
-               and (.result | length) == 1' \
-              "${zone_response}" >/dev/null; then
-              echo "::error::Cloudflare must return exactly one active '${DNS_ZONE}' zone in the configured account: $(api_errors "${zone_response}")"
-              exit 1
-            fi
-            zone_id="$(jq -er '.result[0].id | select(type == "string" and length > 0)' "${zone_response}")"
-            zone_api="https://api.cloudflare.com/client/v4/zones/${zone_id}"
-
-            printf '[]' >"${records_all}"
-            page=1
-            total_pages=1
-            while [ "${page}" -le "${total_pages}" ]; do
-              records_url="${zone_api}/dns_records?name=${CUSTOM_DOMAIN}&page=${page}&per_page=100"
-              records_http_code="$(request GET "${records_url}" "${records_response}")"
-              if [ "${records_http_code}" -lt 200 ] || [ "${records_http_code}" -ge 300 ]; then
-                echo "::error::Failed to query DNS records for '${CUSTOM_DOMAIN}' (HTTP ${records_http_code}): $(api_errors "${records_response}")"
-                exit 1
-              fi
-              if ! jq -e \
-                '.success == true
-                 and (.result | type) == "array"
-                 and ((.result_info.total_pages // 1) | type) == "number"
-                 and (.result_info.total_pages // 1) >= 1' \
-                "${records_response}" >/dev/null; then
-                echo "::error::Cloudflare returned an invalid DNS records response: $(api_errors "${records_response}")"
-                exit 1
-              fi
-              total_pages="$(jq -r '.result_info.total_pages // 1' "${records_response}")"
-              jq -s '.[0] + .[1].result' "${records_all}" "${records_response}" >"${records_next}"
-              mv "${records_next}" "${records_all}"
-              page=$((page + 1))
-            done
-
-            record_count="$(
-              jq -r --arg name "${CUSTOM_DOMAIN}" \
-                '[.[] | select(.name == $name)] | length' \
-                "${records_all}"
-            )"
-            if [ "${record_count}" -eq 0 ]; then
-              jq -cn \
-                --arg name "${CUSTOM_DOMAIN}" \
-                --arg content "${dns_target}" \
-                --argjson proxied "${DNS_PROXIED}" \
-                '{type: "CNAME", name: $name, content: $content, ttl: 1, proxied: $proxied}' \
-                >"${request_body}"
-              create_http_code="$(request POST "${zone_api}/dns_records" "${records_response}" "${request_body}")"
-              if [ "${create_http_code}" -lt 200 ] || [ "${create_http_code}" -ge 300 ]; then
-                echo "::error::Failed to create DNS CNAME for '${CUSTOM_DOMAIN}' (HTTP ${create_http_code}): $(api_errors "${records_response}")"
-                exit 1
-              fi
-              if ! jq -e \
-                --arg name "${CUSTOM_DOMAIN}" \
-                --arg content "${dns_target}" \
-                --argjson proxied "${DNS_PROXIED}" \
-                '.success == true
-                 and .result.type == "CNAME"
-                 and .result.name == $name
-                 and .result.content == $content
-                 and .result.proxied == $proxied' \
-                "${records_response}" >/dev/null; then
-                echo "::error::Cloudflare returned an unsuccessful or mismatched DNS creation response: $(api_errors "${records_response}")"
-                exit 1
-              fi
-              dns_action="created"
-              echo "Created DNS CNAME '${CUSTOM_DOMAIN}' pointing to '${dns_target}' (proxied: ${DNS_PROXIED})."
-            elif [ "${record_count}" -eq 1 ] && jq -e \
-              --arg name "${CUSTOM_DOMAIN}" \
-              --arg content "${dns_target}" \
-              --argjson proxied "${DNS_PROXIED}" \
-              '.[] | select(.name == $name)
-               | .type == "CNAME"
-                 and .content == $content
-                 and .proxied == $proxied' \
-              "${records_all}" >/dev/null; then
-              dns_action="no-op"
-              echo "DNS CNAME '${CUSTOM_DOMAIN}' already points to '${dns_target}' with the requested proxy state."
-            else
-              echo "::error::A conflicting DNS record already exists for '${CUSTOM_DOMAIN}'. Refusing to change or replace it."
-              exit 1
-            fi
-
-            if [ "${status}" != "active" ]; then
-              poll_interval="${PAGES_DOMAIN_POLL_INTERVAL_SECONDS:-10}"
-              for attempt in $(seq 1 12); do
-                sleep "${poll_interval}"
-                domain_http_code="$(request GET "${domain_url}" "${domain_response}")"
-                if [ "${domain_http_code}" != "200" ] || ! jq -e \
-                  --arg domain "${CUSTOM_DOMAIN}" \
-                  '.success == true and .result.name == $domain' \
-                  "${domain_response}" >/dev/null; then
-                  echo "::error::Failed to poll Cloudflare Pages custom domain '${CUSTOM_DOMAIN}' (HTTP ${domain_http_code}): $(api_errors "${domain_response}")"
-                  exit 1
-                fi
-                status="$(jq -r '.result.status' "${domain_response}")"
-                case "${status}" in
-                  active)
-                    echo "Cloudflare Pages custom domain '${CUSTOM_DOMAIN}' is active."
-                    break
-                    ;;
-                  pending | initializing)
-                    if [ "${attempt}" -eq 12 ]; then
-                      echo "::notice title=Cloudflare Pages domain pending::Custom domain '${CUSTOM_DOMAIN}' remains '${status}' after the bounded activation wait."
-                    fi
-                    ;;
-                  *)
-                    echo "::error::Cloudflare Pages custom domain '${CUSTOM_DOMAIN}' entered unexpected status '${status}'."
-                    exit 1
-                    ;;
-                esac
-              done
-            fi
-          fi
-
-          {
-            echo "status=${status}"
-            echo "dns-target=${dns_target}"
-            echo "dns-action=${dns_action}"
-          } >>"${GITHUB_OUTPUT}"
-          echo "::notice title=Cloudflare Pages custom domain::Domain '${CUSTOM_DOMAIN}', project '${PROJECT_NAME}', target '${dns_target}', DNS '${dns_action}', proxied '${dns_proxied_summary}', Pages status '${status}'."
-          {
-            echo "### Cloudflare Pages custom domain"
-            echo
-            echo "- Domain: \`${CUSTOM_DOMAIN}\`"
-            echo "- Resolved project: \`${PROJECT_NAME}\`"
-            echo "- DNS CNAME target: \`${dns_target}\`"
-            echo "- DNS action: \`${dns_action}\`"
-            echo "- DNS proxied: \`${dns_proxied_summary}\`"
-            echo "- Pages domain status: \`${status}\`"
-          } >>"${GITHUB_STEP_SUMMARY}"
+        run: bash "${RUNNER_TEMP}/devsecninja-pages/scripts/pages/register-cloudflare-domain.sh"
   deploy-preview:
     name: Deploy Cloudflare preview
     needs:
@@ -1194,59 +794,26 @@ jobs:
     permissions:
       deployments: write
     steps:
+      - name: Checkout pages scripts
+        # The pages scripts ship with this reusable workflow: fetch them from
+        # the same commit of DevSecNinja/.github that the caller pinned.
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .devsecninja-pages
+          sparse-checkout: |-
+            scripts/pages/
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - name: Move pages scripts out of the workspace
+        # Outside the workspace the caller's linters don't scan them, and a
+        # code checkout doesn't delete them.
+        run: mv .devsecninja-pages "${RUNNER_TEMP}/devsecninja-pages"
       - name: Delete Cloudflare Pages preview deployments
         env:
           BRANCH: ${{ github.head_ref }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           PROJECT_NAME: ${{ needs.detect-cloudflare.outputs.project-name }}
-        run: |-
-          set -euo pipefail
-
-          http_code="$(
-            curl -sS -o /tmp/cf_response.json -w "%{http_code}" \
-              -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-              "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${PROJECT_NAME}/deployments"
-          )"
-          if [ "${http_code}" -lt 200 ] || [ "${http_code}" -ge 300 ]; then
-            echo "::error::Failed to list deployments (HTTP ${http_code}):"
-            cat /tmp/cf_response.json
-            exit 1
-          fi
-
-          if ! deployment_ids="$(
-            jq -r \
-              --arg branch "${BRANCH}" \
-              'if (.result | type) == "array" then
-                .result[]
-                | select(.deployment_trigger.metadata.branch == $branch)
-                | .id
-              else
-                error("Cloudflare response did not include a result array")
-              end' \
-              /tmp/cf_response.json
-          )"; then
-            echo "::error::Failed to parse Cloudflare deployments response:"
-            cat /tmp/cf_response.json
-            exit 1
-          fi
-
-          if [ -z "${deployment_ids}" ]; then
-            echo "No preview deployments found for branch '${BRANCH}'"
-            exit 0
-          fi
-
-          for deployment_id in ${deployment_ids}; do
-            echo "Deleting deployment ${deployment_id} for branch '${BRANCH}'"
-            del_code="$(
-              curl -sS -o /tmp/cf_del_response.json -w "%{http_code}" -X DELETE \
-                -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-                "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${PROJECT_NAME}/deployments/${deployment_id}?force=true"
-            )"
-            if [ "${del_code}" -lt 200 ] || [ "${del_code}" -ge 300 ]; then
-              echo "::warning::Failed to delete deployment ${deployment_id} (HTTP ${del_code}):"
-              cat /tmp/cf_del_response.json
-            else
-              echo "Deleted ${deployment_id}"
-            fi
-          done
+        run: bash "${RUNNER_TEMP}/devsecninja-pages/scripts/pages/delete-preview-deployments.sh"

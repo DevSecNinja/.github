@@ -22,6 +22,9 @@ description = "Run repository tests"
 run = [
   "bash ./tests/copilot-model-policy-contract.sh",
   "bash ./tests/pages-custom-domain-contract.sh",
+  "bash ./tests/pages-scripts.sh",
+  "bash ./tests/label-sync-scripts.sh",
+  "uv run --script ./tests/workflow-script-fetch.py",
   "bash ./tests/renovate-custom-manager-coverage.sh",
   "bash ./tests/renovate-apm-manager.sh",
   "bash ./tests/renovate-annotation-managers.sh",

@@ -1,6 +1,10 @@
 ---
 # actionlint configuration: https://github.com/rhysd/actionlint/blob/main/docs/config.md
 paths:
+  .github/workflows/label-sync.yml:
+    ignore:
+      # Same job.workflow_* gap as lint.yml below.
+      - 'property "workflow_(repository|sha)" is not defined in object type'
   .github/workflows/lint-include.yml:
     ignore:
       # actionlint (1.7.12) predates GitHub's `$/` self-repository syntax for
@@ -12,4 +16,8 @@ paths:
       # actionlint 1.7.12 predates the job.workflow_* context properties that
       # GitHub added in September 2026 (reusable workflows reading their own
       # source). Drop this once a Renovate bump of actionlint knows them.
+      - 'property "workflow_(repository|sha)" is not defined in object type'
+  .github/workflows/pages.yml:
+    ignore:
+      # Same job.workflow_* gap as lint.yml above.
       - 'property "workflow_(repository|sha)" is not defined in object type'
