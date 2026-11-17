@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.4.0](https://github.com/DevSecNinja/.github/compare/v4.3.0...v4.4.0) (2026-11-17)
+
+
+### 🚀 Features
+
+* **lint:** add lint-include workflow that runs only the linters a caller enables ([#551](https://github.com/DevSecNinja/.github/issues/551)) ([7b28a65](https://github.com/DevSecNinja/.github/commit/7b28a6528ba86b7cb7f10b084980038e632a79af))
+
 ## [4.3.0](https://github.com/DevSecNinja/.github/compare/v4.2.1...v4.3.0) (2026-11-16)
 
 
