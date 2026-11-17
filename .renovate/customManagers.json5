@@ -2,13 +2,25 @@
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
   customManagers: [
     {
+      // Annotated versions in shell scripts (and chezmoi .tmpl copies), e.g.
+      //   # renovate: datasource=github-releases depName=bats-core/bats-assert
+      //   BATS_ASSERT_VERSION="v2.1.0"
+      //   # renovate: datasource=docker depName=docker.io/library/postgres
+      //   POSTGRES_IMAGE="docker.io/library/postgres:18.3-alpine@sha256:<64 hex>"
+      // Optional packageName=, versioning=, extractVersion= and registryUrl=
+      // follow depName= in that order, like Renovate's own *Versions presets.
+      // An image value keeps its `<registry>/<name>:` prefix; only the tag and
+      // digest are tracked. A value that is not a plain literal (`"${X}"`,
+      // `"v1.2-$SUFFIX"`) is not matched. Replaces the truenas-apps-only SOPS
+      // manager for scripts/dccd.sh, which this covers.
       customType: "regex",
-      description: "Process SOPS version in dccd.sh",
-      managerFilePatterns: ["/scripts/dccd\\.sh$/"],
+      description: "Process annotated versions in shell scripts",
+      managerFilePatterns: ["/\\.(?:sh|bash|zsh|bats)(?:\\.tmpl)?$/"],
       matchStrings: [
-        "# renovate: datasource=github-releases depName=(?<depName>\\S+)\\nSOPS_VERSION=\"(?<currentValue>[^\"]+)\"",
+        "#[ \\t]*renovate:[ \\t]*datasource=(?<datasource>\\S+)[ \\t]+depName=(?<depName>\\S+)(?:[ \\t]+packageName=(?<packageName>\\S+))?(?:[ \\t]+versioning=(?<versioning>\\S+))?(?:[ \\t]+extractVersion=(?<extractVersion>\\S+))?(?:[ \\t]+registryUrl=(?<registryUrl>\\S+))?[ \\t]*\\r?\\n[ \\t]*(?:(?:export|local|readonly|declare(?:[ \\t]+-[a-zA-Z]+)*)[ \\t]+)?[A-Za-z_][A-Za-z0-9_]*=[\"']?(?:[^\\s\"'@$]*/[^\\s\"'@$/]*:|[^\\s\"'@$:/]+:)?(?<currentValue>[A-Za-z0-9][^\\s\"'@$:]*)(?:@(?<currentDigest>sha256:[a-f0-9]{64}))?[\"']?(?:[ \\t;#]|\\r?\\n|$)",
       ],
-      datasourceTemplate: "github-releases",
+      datasourceTemplate: "{{{datasource}}}",
+      versioningTemplate: "{{#if versioning}}{{{versioning}}}{{/if}}",
     },
     {
       customType: "regex",
@@ -18,7 +30,7 @@
         "/workflow-templates/.+\\.ya?ml$/",
       ],
       matchStrings: [
-        "# renovate: datasource=(?<datasource>\\S+)(?: depName=(?<depName>\\S+))?\\n\\s+[\\w-]*version: \\[?\"?(?<currentValue>[^\\s\"\\[\\],]+)\"?\\]?[ \\t]*(?:#[^\\n]*)?(?:\\r?\\n|$)",
+        "# renovate: datasource=(?<datasource>\\S+)(?: depName=(?<depName>\\S+))?\\r?\\n\\s+[\\w-]*version: \\[?\"?(?<currentValue>[^\\s\"\\[\\],]+)\"?\\]?[ \\t]*(?:#[^\\n]*)?(?:\\r?\\n|$)",
       ],
       datasourceTemplate: "{{{datasource}}}",
       // `depName=` may be omitted for the runtime datasources, e.g.
@@ -44,7 +56,7 @@
         "/workflow-templates/.+\\.ya?ml$/",
       ],
       matchStrings: [
-        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\n\\s+[\\w-]+:\\s*\"?[^\\s\"@]+:(?<currentValue>[^\\s\"@]+)@(?<currentDigest>sha256:[a-f0-9]+)\"?",
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\r?\\n\\s+[\\w-]+:\\s*\"?[^\\s\"@]+:(?<currentValue>[^\\s\"@]+)@(?<currentDigest>sha256:[a-f0-9]+)\"?",
       ],
       datasourceTemplate: "{{{datasource}}}",
     },
@@ -53,7 +65,7 @@
       description: "Process min_version in .mise.toml",
       managerFilePatterns: ["/\\.mise\\.toml$/"],
       matchStrings: [
-        "# renovate: datasource=github-releases depName=(?<depName>\\S+)\\nmin_version = \"(?<currentValue>[^\"]+)\"",
+        "# renovate: datasource=github-releases depName=(?<depName>\\S+)\\r?\\nmin_version = \"(?<currentValue>[^\"]+)\"",
       ],
       datasourceTemplate: "github-releases",
     },
@@ -64,7 +76,7 @@
         "/ansible/inventory/.+\\.ya?ml$/",
       ],
       matchStrings: [
-        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)(?: registryUrl=(?<registryUrl>\\S+))?[ \\t]*\\n\\s*[\\w-]+:\\s*\"?(?<currentValue>[^\\s\"]+)\"?",
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)(?: registryUrl=(?<registryUrl>\\S+))?[ \\t]*\\r?\\n\\s*[\\w-]+:\\s*\"?(?<currentValue>[^\\s\"]+)\"?",
       ],
       // Any datasource, with an optional registryUrl, and any key on the next
       // line: the annotation marks the value. For example, Debian packages
