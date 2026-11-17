@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.5.0](https://github.com/DevSecNinja/.github/compare/v4.4.1...v4.5.0) (2026-11-17)
+
+
+### 🚀 Features
+
+* **lint:** report inline scripts in workflow run steps ([#541](https://github.com/DevSecNinja/.github/issues/541)) ([d43123b](https://github.com/DevSecNinja/.github/commit/d43123bc581dfbed887c331f826cd4c5a1faa0c2))
+
 ## [4.4.1](https://github.com/DevSecNinja/.github/compare/v4.4.0...v4.4.1) (2026-11-17)
 
 
