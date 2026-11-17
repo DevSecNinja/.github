@@ -8,13 +8,14 @@
 Every case in tests/fixtures/lint-inline-scripts-cases.yml is written into a
 temporary repository and checked. The case passes when the annotations match
 `expect` one to one and in order, the opt-out count matches `opt-outs`, and the
-exit code is 1 only for a blocking run with findings. A final run checks this
-repository itself, which must parse cleanly in warning mode, and the files in
-CLEAN, whose inline scripts have moved into scripts/, must pass a blocking run.
+exit code is 1 only for a blocking run with findings. A final blocking run
+checks this repository itself, which must have no inline scripts; its only
+opt-outs are the App-key preflights that tests/app-key-confinement.py pins.
 """
 
 from __future__ import annotations
 
+import importlib.util
 import os
 import re
 import subprocess
@@ -27,21 +28,19 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 CHECKER = ROOT / "scripts" / "lint-inline-scripts.py"
 CASES = ROOT / "tests" / "fixtures" / "lint-inline-scripts-cases.yml"
-# Files of this repository without inline scripts; each layer of #537 adds the
-# ones it cleans up, until the whole repository passes.
-CLEAN = [
-    ".github/workflows/apm-materialize.yml",
-    ".github/workflows/apm-sync.yml",
-    ".github/workflows/autofix.yml",
-    ".github/workflows/config-sync.yml",
-    ".github/workflows/label-sync.yml",
-    ".github/workflows/lint.yml",
-    ".github/workflows/pages.yml",
-    ".github/workflows/release-please.yml",
-    ".github/workflows/release.yml",
-    ".github/workflows/vendored-file-sync.yml",
-]
 SUMMARY = re.compile(r"; (\d+) to move into a script, (\d+) opted out\.$", re.MULTILINE)
+# A row of the opt-out table in the step summary: file, job (empty for a
+# composite action) and step.
+OPT_OUT = re.compile(r"^\| (\S+):\d+ \| (?:job '([^']+)'|[Cc]omposite action), step '([^']+)' \|", re.MULTILINE)
+
+
+def key_preflights() -> set:
+    """(workflow, job id, step name) of the App-key preflights app-key-confinement.py pins."""
+    sys.dont_write_bytecode = True  # no __pycache__ in tests/
+    spec = importlib.util.spec_from_file_location("app_key_confinement", ROOT / "tests" / "app-key-confinement.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return {(workflow, job, step) for workflow, job, step, _ in module.EMPTINESS_CHECKS}
 
 
 def run(args: list[str], cwd: Path, summary: Path) -> subprocess.CompletedProcess[str]:
@@ -103,21 +102,28 @@ def main() -> int:
             for error in errors:
                 print(f"    {error}")
     with tempfile.TemporaryDirectory() as tmp:
-        result = run([str(ROOT)], ROOT, Path(tmp) / "summary.md")
-    if result.returncode != 0 or "Could not parse" in result.stdout or not SUMMARY.search(result.stdout):
+        summary = Path(tmp) / "summary.md"
+        result = run(["--blocking", str(ROOT)], ROOT, summary)
+        rows = OPT_OUT.findall(summary.read_text(encoding="utf-8")) if summary.is_file() else []
+    counts = SUMMARY.search(result.stdout)
+    if result.returncode != 0 or not counts:
         failed += 1
-        print(f"✗ this repository must parse cleanly in warning mode:\n{result.stdout}{result.stderr}")
-    with tempfile.TemporaryDirectory() as tmp:
-        result = run(["--blocking", *(str(ROOT / path) for path in CLEAN)], ROOT, Path(tmp) / "summary.md")
-    if result.returncode != 0:
+        print(f"✗ this repository must have no inline scripts:\n{result.stdout}{result.stderr}")
+    opt_outs = set(rows)
+    preflights = key_preflights()
+    if counts and int(counts.group(2)) != len(rows):
         failed += 1
-        print(f"✗ {', '.join(CLEAN)} must have no inline scripts:\n{result.stdout}{result.stderr}")
+        print(f"✗ {counts.group(2)} opt-out(s) reported, but {len(rows)} parsed from the step summary")
+    if opt_outs != preflights:
+        failed += 1
+        print(f"✗ only the App-key preflights may opt out: unexpected {sorted(opt_outs - preflights)}, "
+              f"missing {sorted(preflights - opt_outs)}")
     if failed:
         print(f"{failed} lint-inline-scripts case(s) failed.")
         return 1
     print(
-        f"✓ lint-inline-scripts: {len(cases)} cases pass, this repository parses in warning mode, "
-        f"and {len(CLEAN)} file(s) have no inline scripts."
+        f"✓ lint-inline-scripts: {len(cases)} cases pass, and this repository has no inline scripts "
+        f"apart from {len(preflights)} App-key preflight(s)."
     )
     return 0
 

@@ -2,7 +2,7 @@
 #
 # Functional test for the label handling of actions/open-pr.
 #
-# Runs the action's "Open or reuse pull request" script against a fake `gh`
+# Runs the action's "Open or reuse pull request" script (open-pr.sh) against a fake `gh`
 # that, like the real one, rejects `gh pr create --label` for a label the repo
 # doesn't have. Before the fix, one missing label (e.g. `apm-sync` in a repo
 # that never synced it) made the whole step fail, and a reused PR never got
@@ -21,17 +21,13 @@ fail() {
     exit 1
 }
 
-script="${tmp_dir}/open-pr.sh"
-awk '
-    $0 == "    - name: Open or reuse pull request" { in_step = 1; next }
-    in_step && $0 ~ /^      run: [|]/ { in_run = 1; next }
-    in_run {
-        if ($0 ~ /^    - name:/ || $0 ~ /^      [a-z-]+:/) exit
-        sub(/^        /, "")
-        print
-    }
-' "${action}" >"${script}"
-[ -s "${script}" ] || fail "could not extract the PR script from ${action}"
+script="${repo_root}/actions/open-pr/open-pr.sh"
+# shellcheck disable=SC2016 # Literal text in action.yml.
+grep -Fq 'run: bash "${GITHUB_ACTION_PATH}/open-pr.sh"' "${action}" ||
+    fail "${action} no longer runs open-pr.sh; update this test"
+for variable in GH_TOKEN BRANCH BASE TITLE BODY LABELS DRAFT; do
+    grep -Eq "^        ${variable}: " "${action}" || fail "${action} does not pass ${variable} to open-pr.sh"
+done
 
 # Fake gh: repo labels live in $STATE/labels, every call is logged.
 mkdir -p "${tmp_dir}/bin"
@@ -70,6 +66,7 @@ case "$1 $2" in
             shift
         done
         [ -f "${STATE}/pr-exists" ] && { echo "a pull request already exists" >&2; exit 1; }
+        [ -f "${STATE}/create-fails" ] && { echo "HTTP 502" >&2; exit 1; }
         echo "https://github.com/o/r/pull/7"
         ;;
     "pr view") echo 7 ;;
@@ -99,7 +96,7 @@ run_case() {
         TITLE="chore: materialize" \
         BODY="" \
         LABELS="$2" \
-        DRAFT="false" \
+        DRAFT="${DRAFT_INPUT:-false}" \
         bash "${script}" >"${STATE}/log" 2>&1
 }
 
@@ -132,4 +129,17 @@ run_case recheck $'bug' "" "" bug || fail "PR creation failed when a label looku
 grep -Fq "::warning::" "${STATE}/log" && fail "an existing label must not be dropped after a failed lookup"
 grep -F "pr create" "${STATE}/calls" | grep -Fq -- "--label bug" || fail "existing label was dropped after a failed lookup"
 
-echo "✓ open-pr: missing, uncreatable, reused, absent and re-checked labels all handled."
+# 6. draft: true opens a draft PR; the default does not.
+grep -F "pr create" "${tmp_dir}/none/calls" | grep -Fq -- "--draft" && fail "a PR must not be a draft by default"
+DRAFT_INPUT=true run_case draft "" || fail "draft PR creation failed"
+grep -F "pr create" "${STATE}/calls" | grep -Fq -- "--draft" || fail "draft: true did not open a draft PR"
+
+# 7. A failed create with no open PR to reuse fails the step.
+mkdir -p "${tmp_dir}/broken" && touch "${tmp_dir}/broken/create-fails"
+run_case broken "" && fail "a failed create without an open PR must fail"
+grep -Fq "::error::gh pr create failed and no existing open PR found for chore/apm-materialize -> main." "${STATE}/log" ||
+    fail "a failed create must explain the failure: $(cat "${STATE}/log")"
+grep -Fq "HTTP 502" "${STATE}/log" || fail "a failed create must surface the gh error"
+[ -s "${STATE}/output" ] && fail "a failed create must not set outputs"
+
+echo "✓ open-pr: missing, uncreatable, reused, absent and re-checked labels, drafts and failed creates all handled."

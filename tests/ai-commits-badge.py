@@ -80,16 +80,16 @@ class BadgeContract(unittest.TestCase):
             "out": str(self.work / "out"), "themes": "false", "repo-dir": str(self.repo),
         }
         inputs.update(overrides)
-        env = dict(self.env, ACTION_PATH=str(ACTION), GITHUB_OUTPUT=str(self.work / "outputs"))
+        env = dict(self.env, GITHUB_OUTPUT=str(self.work / "outputs"))
         mappings = re.findall(r"^        ([A-Z_]+): \$\{\{ inputs\.([\w-]+) \}\}$", text, re.M)
         self.assertEqual({name for _, name in mappings}, set(inputs))
         for variable, name in mappings:
             env[variable] = inputs[name]
-        step = re.split(r"      run: \|[-+]?\n", text, maxsplit=1)[1]
-        script = "\n".join(line[8:] for line in step.splitlines()) + "\n"
+        self.assertIn('      run: bash "${GITHUB_ACTION_PATH}/generate.sh"\n', text)
+        generate = shlex.quote(str(ACTION / "generate.sh").replace("\\", "/"))
         # Windows's python3 app alias is not necessarily the interpreter running this test.
         interpreter = shlex.quote(sys.executable.replace("\\", "/"))
-        script = f"python3() {{ {interpreter} \"$@\"; }}\n" + script
+        script = f"python3() {{ {interpreter} \"$@\"; }}\nexport -f python3\nbash {generate}\n"
         return subprocess.run(
             [shutil.which("bash"), "--noprofile", "--norc", "-c", script],
             env=env, cwd=self.work, text=True, capture_output=True, encoding="utf-8",
