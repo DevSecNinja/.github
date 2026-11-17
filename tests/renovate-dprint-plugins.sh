@@ -8,7 +8,9 @@
 # - third-party plugins (`plugins.dprint.dev/<owner>/<repo>-v<version>.wasm`)
 #   resolve to <owner>/<repo> with v-prefixed tags;
 # - process plugins and other URLs are not matched;
-# - every plugin URL in this repository's dprint configs is tracked.
+# - every plugin URL in this repository's dprint configs is tracked;
+# - plugin updates keep the soak and automerge but get their own PR, so a
+#   formatting change cannot block the weekly non-major batch.
 
 set -euo pipefail
 
@@ -115,3 +117,27 @@ if errors:
     sys.exit(1)
 print("Renovate dprint plugin managers: OK")
 PY
+
+# Effective package rules for a dprint plugin update, in the order
+# .renovate/default.json5 extends the presets (tests/lib/renovate-effective.jq).
+mapfile -t presets < <(
+    pyjson5 --as-json "${repo_root}/.renovate/default.json5" |
+        jq -r '.extends[] | select(startswith("github>DevSecNinja/.github//.renovate/")) | ltrimstr("github>DevSecNinja/.github//.renovate/")' |
+        tr -d '\r'
+)
+rules="$(
+    for preset in "${presets[@]}"; do
+        pyjson5 --as-json "${repo_root}/.renovate/${preset}" | jq '.packageRules // []'
+    done | jq -s 'add'
+)"
+base="$(pyjson5 --as-json "${repo_root}/.renovate/base.json5" | jq -c '{minimumReleaseAge}')"
+for update in minor patch; do
+    dep="$(printf '{"manager":"custom.regex","datasource":"github-releases","depType":"dprint-plugin","updateType":"%s","packageName":"dprint/dprint-plugin-markdown","currentValue":"0.21.1"}' "${update}")"
+    result="$(jq -c --argjson dep "${dep}" --argjson base "${base}" -f "${repo_root}/tests/lib/renovate-effective.jq" <<<"${rules}")"
+    jq -e '.enabled == true and has("groupName") and .groupName == null and .minimumReleaseAge == "14 days" and .automerge == true' \
+        <<<"${result}" >/dev/null || {
+        echo "error: dprint plugin ${update} update must keep the soak and automerge in its own PR: ${result}" >&2
+        exit 1
+    }
+done
+echo "Renovate dprint plugin updates: own PR, soaked"

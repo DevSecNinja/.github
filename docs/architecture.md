@@ -1111,7 +1111,7 @@ CI), Renovate batches its work
   ("all non-major dependencies"). It overrides the specific groups (go, mise, vite,
   postgres, chezmoi) for non-major updates, which therefore still land
   together; those groups keep their own PR for major updates only.
-- **Not batched:** major updates (separate, manual), pins (separate, no soak), vulnerability fixes
+- **Not batched:** major updates (separate, manual), pins (separate, no soak), dprint plugins (separate, soaked), vulnerability fixes
   (separate, immediate), `docker-gated-` images (separate, so the
   [ADR 0005](design-decisions/0005-pr-age-cooldown-for-untrusted-timestamps.md)
   cooldown keeps working), and the dotfiles devcontainer image (branch
@@ -1229,10 +1229,10 @@ in `dprint.json` (also `.dprint.json` and `.jsonc`) itself, with
 - `https://plugins.dprint.dev/<owner>/<repo>-v<version>.wasm` (third-party
   plugins): releases of `<owner>/<repo>`, e.g. `g-plane/malva-v0.16.0.wasm`.
 
-Process plugins (`….json@<checksum>`) are not tracked. The updates follow the
-same soak and weekly batch as other GitHub releases. A plugin update can change
-formatting, which then fails the repository's `lint / dprint` check until the
-Markdown is reformatted with `dprint fmt`. The synced `dprint.json` in
+Process plugins (`….json@<checksum>`) are not tracked. Plugin updates keep the
+soak and automerge of other GitHub releases but get their own PR, outside the
+weekly batch: a plugin update can change formatting, which fails the repository's
+`lint / dprint` check until the Markdown is reformatted with `dprint fmt`. The synced `dprint.json` in
 `config-sync/files/` is bumped here, and config-sync then distributes it.
 
 ### Consuming the preset
