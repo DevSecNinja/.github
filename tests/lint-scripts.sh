@@ -120,7 +120,7 @@ expect_out "::error::'dprint' is not pinned in this repository's mise config." "
 [ -z "${log}" ] || fail "an unpinned tool must not run: ${log}"
 
 # Every linter that needs a pinned tool checks for it first.
-for script in dprint yamlfmt yamllint shellcheck shfmt trivy ruff; do
+for script in dprint yamlfmt yamllint shellcheck shfmt trivy; do
     run "${script}" FAKE_TOOLS=""
     expect_status 1 "${script} without its tool"
     expect_out "::error::'${script}' is not pinned" "${script} without its tool"
@@ -228,6 +228,16 @@ expect_status 0 "a repository without Python files"
 [ "${outputs}" = found=false ] || fail "expected found=false; got: ${outputs}"
 expect_out "::notice::No python files found; skipping its linter" "a repository without Python files"
 
+# A repository with Python files that doesn't pin ruff opts out: ruff is
+# skipped with a warning that names the fix, and the step passes (#567).
+run_in "${code}" ruff
+expect_status 0 "ruff without its pin"
+expect_out "::warning title=ruff is not pinned::" "ruff without its pin"
+expect_out "pin ruff in .mise.toml" "ruff without its pin"
+expect_out "ruff.toml" "ruff without its pin"
+[ -z "${log}" ] || fail "ruff must not run without its pin: ${log}"
+[ -z "${outputs}" ] || fail "ruff without its pin must not report a SARIF report: ${outputs}"
+
 # ruff lints and format-checks only those files, and writes SARIF for code
 # scanning without letting it gate the step.
 export FAKE_TOOLS="${FAKE_TOOLS} ruff"
@@ -247,6 +257,9 @@ run_in "${code}" ruff
 expect_status 0 "ruff without Python files"
 expect_out "::notice::No Python files found; skipping ruff" "ruff without Python files"
 [ -z "${log}" ] || fail "ruff must not run without Python files: ${log}"
+run_in "${code}" ruff FAKE_TOOLS=""
+expect_out "::notice::No Python files found; skipping ruff" "a repository without Python files must not warn about the pin"
+grep -Fq '::warning' <<<"${out}" && fail "a repository without Python files must not warn about the ruff pin: ${out}"
 
 # The SARIF filter drops checkov's skipped checks (level none) and tolerates a
 # missing report.

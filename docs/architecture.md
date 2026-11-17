@@ -180,9 +180,15 @@ mise install and the linter, so the job costs seconds. Generated and vendored
 paths don't count: the excludes of the shared `dprint.json` (Spec Kit output,
 APM-deployed agent files, `node_modules`, `.venv*`).
 
+A language linter also runs only when the repository pins its tool in its mise
+config: pinning is the opt-in. Without the pin, the linter is skipped with a
+warning that names the fix, and the step passes, so a `lint.yml` bump never
+turns a repository's CI red before it has adopted the linter. Once the tool is
+pinned, findings fail the linter like any other.
+
 - **ruff** (`lint-ruff`, Python, after v4.5.0) runs `ruff check` and
-  `ruff format --diff` on the `*.py` and `*.pyi` files. Pin `ruff` in the
-  repository's mise config. ruff reads the repository's own `ruff.toml`,
+  `ruff format --diff` on the `*.py` and `*.pyi` files once `ruff` is pinned
+  in the repository's mise config. ruff reads the repository's own `ruff.toml`,
   `.ruff.toml` or `[tool.ruff]` in `pyproject.toml`; config-sync's
   [`ruff.toml` template](../config-sync/templates/ruff.toml) is a starting
   point. Findings are annotated on the PR, and with `upload-sarif` they also go
