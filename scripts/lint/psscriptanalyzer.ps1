@@ -53,11 +53,13 @@ function ConvertTo-CommandValue {
 
 $annotations = [Collections.Generic.List[string]]::new()
 $results = foreach ($finding in $findings) {
-    $uri = [IO.Path]::GetRelativePath($PWD.Path, $finding.ScriptPath).Replace('\', '/')
+    $file = [IO.Path]::GetRelativePath($PWD.Path, $finding.ScriptPath).Replace('\', '/')
+    # SARIF wants a URI: percent-encode each segment (# or % in a file name).
+    $uri = ($file.Split('/') | ForEach-Object { [Uri]::EscapeDataString($_) }) -join '/'
     $level = $levels["$($finding.Severity)"]
     $line = [Math]::Max(1, $finding.Line)
     $column = [Math]::Max(1, $finding.Column)
-    $properties = "file=$(ConvertTo-CommandValue $uri -Property),line=$line,col=$column," +
+    $properties = "file=$(ConvertTo-CommandValue $file -Property),line=$line,col=$column," +
         "title=$(ConvertTo-CommandValue $finding.RuleName -Property)"
     $annotations.Add("::$($commands[$level]) ${properties}::$(ConvertTo-CommandValue $finding.Message)")
     [ordered]@{
