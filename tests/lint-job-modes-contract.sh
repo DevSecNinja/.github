@@ -131,12 +131,11 @@ grep -Fq 'default: auto' <<<"${mode_input}" || fail "lint-job-mode must default 
 grep -Fq 'required: false' <<<"${mode_input}" || fail "lint-job-mode must stay optional"
 
 # Exactly one mode runs: per-linter jobs carry the parallel guard, the
-# combined job its negation. The `lint-only` match in between is checked by
-# tests/lint-only.py.
+# combined job its negation.
 for job in "${linter_jobs[@]}"; do
     condition="$(job_if "${job}")"
-    [[ "${condition}" == "\${{ inputs.lint-${job} && "*" && ${parallel_guard} }}" ]] ||
-        fail "job ${job} must use: if: \${{ inputs.lint-${job} && <lint-only match> && ${parallel_guard} }} (found: ${condition})"
+    [ "${condition}" = "\${{ inputs.lint-${job} && ${parallel_guard} }}" ] ||
+        fail "job ${job} must use: if: \${{ inputs.lint-${job} && ${parallel_guard} }} (found: ${condition})"
 done
 condition="$(job_if "${combined_job}")"
 [ "${condition}" = "\${{ !${parallel_guard} }}" ] ||
