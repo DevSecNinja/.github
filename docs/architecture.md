@@ -115,8 +115,8 @@ on the event (v4.1.0+):
   failed visibility lookup count as public.
   Repositories whose Lint caller runs on pull requests only get the full-history
   scan from a second caller, after each merge, weekly and on dispatch (this
-  repository's `secret-scan-caller.yml`). It sets `lint-gitleaks-only: true`
-  (v4.3.0+), which skips every other linter, including linters added to
+  repository's `secret-scan-caller.yml`). It sets `lint-only: gitleaks`
+  (v4.4.0+), which skips every other linter, including linters added to
   `lint.yml` later, so the caller keeps no list of linters to turn off. A Lint
   caller that also runs on push already scans the history there, so drop `push`
   below.
@@ -135,7 +135,7 @@ permissions:
 
 jobs:
   gitleaks:
-    uses: DevSecNinja/.github/.github/workflows/lint.yml@<sha> # v4.3.0
+    uses: DevSecNinja/.github/.github/workflows/lint.yml@<sha> # v4.4.0
     permissions:
       contents: read
       security-events: write
@@ -145,7 +145,7 @@ jobs:
       # Findings only report; fail the run if the scan or upload fails.
       lint-fail-on-error: true
       # Run gitleaks and nothing else, now and after future linter additions.
-      lint-gitleaks-only: true
+      lint-only: gitleaks
       # upload-sarif: false # private repos without GitHub Advanced Security
 ```
 
@@ -156,6 +156,7 @@ jobs:
 | `go-version-file`       | Go version file for setup-go. Default: `go.mod`.                       |
 | `lint-config-dir`       | Optional linter config directory. Default: `""`.                       |
 | `lint-fail-on-error`    | Fail when a linter fails. Default: `false`.                            |
+| `lint-only`             | Run only these linters, e.g. `gitleaks` (see below). Default: `""`.    |
 | `lint-job-mode`         | `auto`, `single`, or `parallel` (see above). Default: `auto`. v3.3.0+. |
 | `upload-sarif`          | Upload checkov/trivy/zizmor SARIF to code scanning. Default: `true`.   |
 | `lint-dprint`           | Markdown formatting (dprint). Default: `true`.                         |
@@ -163,7 +164,6 @@ jobs:
 | `lint-yamllint`         | YAML linting (yamllint). Default: `true`.                              |
 | `lint-actionlint`       | GitHub Actions linting. Default: `true`.                               |
 | `lint-gitleaks`         | Secret scanning (gitleaks). Default: `true`.                           |
-| `lint-gitleaks-only`    | Run only gitleaks, skip all other linters. Default: `false`. v4.3.0+.  |
 | `lint-go`               | Go linting (golangci-lint). Default: `true`.                           |
 | `lint-shellcheck`       | Shell linting (shellcheck). Default: `true`.                           |
 | `lint-shfmt`            | Shell formatting (shfmt). Default: `true`.                             |
@@ -171,6 +171,17 @@ jobs:
 | `lint-trivy`            | Filesystem scan (trivy). Default: `true`.                              |
 | `lint-zizmor`           | Actions security scan (zizmor). Default: `true`.                       |
 | `lint-config-drift`     | Config-drift check. Default: `false`.                                  |
+
+**Running only some linters (v4.4.0+).** `lint-only` takes a comma-separated
+list of linter names, the `lint-*` input names without the prefix (`dprint`,
+`gitleaks`, `config-drift`, …); spaces around the commas are fine. Only the
+listed linters run, and linters added to `lint.yml` later stay off, which the
+`lint-*: false` switches can't promise. A listed linter still needs its
+`lint-*` input on (`config-drift` also needs `lint-config-drift: true`). A
+`lint-only` job checks the list whenever it is set and fails the run on an
+unknown name, a disabled linter or an empty list, whatever
+`lint-fail-on-error` says, so a typo can't silently skip a scan. That job is
+billed like any other.
 
 **Example caller:**
 

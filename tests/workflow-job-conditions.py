@@ -266,6 +266,11 @@ class Evaluator:
             for index, arg in enumerate(args[1:]):
                 result = result.replace("{" + str(index) + "}", "" if arg is None else str(arg))
             return result
+        if name == "contains":
+            search, item = args
+            if isinstance(search, list):
+                return any(loose_equal(entry, item) for entry in search)
+            return str(item).lower() in ("" if search is None else str(search)).lower()
         raise ValueError(f"unsupported function {name}()")
 
 
@@ -379,6 +384,7 @@ def lint_context(*, mode="auto", private=False, has_repository=True, event_name=
     inputs = {f"lint-{name}": True for name in ("dprint", "yamlfmt", "yamllint", "actionlint", "gitleaks", "go",
                                                 "shellcheck", "shfmt", "checkov", "trivy", "zizmor")}
     inputs["lint-config-drift"] = False
+    inputs["lint-only"] = ""
     inputs["lint-job-mode"] = mode
     inputs.update({f"lint-{k.replace('_', '-')}": v for k, v in toggles.items()})
     event = {"repository": {"private": private}} if has_repository else {"schedule": "0 0 * * 1"}
@@ -400,11 +406,15 @@ lint_scenarios = [
      PER_LINTER - {"go", "trivy"}),
     ("public repo, config drift on", lint_context(config_drift=True), PER_LINTER | {"config-drift"}),
     ("invalid mode fails loudly in the single job", lint_context(mode="bogus"), SINGLE),
-    ("public repo, gitleaks only", lint_context(gitleaks_only=True, config_drift=True), {"gitleaks"}),
-    ("private repo, parallel, gitleaks only", lint_context(mode="parallel", private=True, gitleaks_only=True),
-     {"gitleaks"}),
-    ("private repo, gitleaks only (steps gated in the single job)", lint_context(private=True, gitleaks_only=True),
-     SINGLE),
+    ("public repo, lint-only gitleaks", lint_context(only="gitleaks", config_drift=True), {"gitleaks", "lint-only"}),
+    ("public repo, lint-only with spaces", lint_context(only=" gitleaks ,  trivy"), {"gitleaks", "trivy", "lint-only"}),
+    ("public repo, lint-only lists a disabled linter", lint_context(only="gitleaks,go", go=False),
+     {"gitleaks", "lint-only"}),
+    ("public repo, lint-only typo runs only the validation", lint_context(only="gitleak"), {"lint-only"}),
+    ("private repo, parallel, lint-only gitleaks", lint_context(mode="parallel", private=True, only="gitleaks"),
+     {"gitleaks", "lint-only"}),
+    ("private repo, lint-only gitleaks (steps gated in the single job)", lint_context(private=True, only="gitleaks"),
+     SINGLE | {"lint-only"}),
 ]
 for name, context, expected in lint_scenarios:
     check("lint.yml", name, running_jobs(lint, context), expected)
