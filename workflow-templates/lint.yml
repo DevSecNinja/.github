@@ -71,9 +71,9 @@ jobs:
       # and pins biome in its mise config (without the pin, Biome is skipped with a
       # warning).
       # lint-biome: true
-      # Optional: needs a lint.yml release after v4.5.0; runs only when the
-      # repository has *.ps1, *.psm1 or *.psd1 files, which then need this
-      # version (installed from the PowerShell Gallery).
+      # Optional: needs a lint.yml release after v4.6.0; runs only when the
+      # repository has *.ps1, *.psm1 or *.psd1 files. Without this version
+      # (installed from the PowerShell Gallery) it skips with a warning.
       # lint-psscriptanalyzer: true
       # renovate: datasource=nuget depName=PSScriptAnalyzer registryUrl=https://www.powershellgallery.com/api/v2/
       # psscriptanalyzer-version: "1.25.0"

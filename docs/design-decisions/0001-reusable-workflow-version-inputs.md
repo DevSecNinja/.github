@@ -46,6 +46,20 @@ It does **not** apply to:
 - Non-version configuration inputs (file paths, feature toggles, labels, …).
   These may and should have sensible defaults to keep callers terse.
 
+**Conditional version inputs.** A version input for a tool that runs only when
+the calling repository has matching files (Go code, PowerShell scripts, …) MAY
+be declared `required: false`, so repositories without those files need no
+version. It MUST still have no version default (`default: ""`): the workflow
+never picks a version for the caller. When the tool would run and the caller
+passed no version, the workflow MUST either fail with guidance, or skip the
+tool with a `::warning` that names the input to set. The caller then owns the
+version exactly as with `required: true`. In `lint.yml`,
+`golangci-lint-version` (with `go.mod`) fails, and `psscriptanalyzer-version`
+(with `*.ps1`, `*.psm1` or `*.psd1` files) skips with a warning, the rule
+chosen for the language linters (#539): adopting a linter must not
+turn a caller's lint red before it has picked a version. Once the version is
+set, findings fail as usual.
+
 ## Consequences
 
 ### Pros
@@ -129,9 +143,8 @@ It does **not** apply to:
 
 ## Compliance
 
-- `lint.yml` — `mise-version` and `golangci-lint-version` required ✅;
-  `psscriptanalyzer-version` has no default and is required when PowerShell
-  files exist ✅
+- `lint.yml` — `mise-version` required ✅; `golangci-lint-version` and
+  `psscriptanalyzer-version` conditional, no default (see the Decision) ✅
 - `release.yml` — `mise-version` required ✅
 - `autofix.yml` — `mise-version` required ✅
 - `config-sync.yml`, `label-sync.yml`, `labeler.yml`, `todo-to-issue.yml` —

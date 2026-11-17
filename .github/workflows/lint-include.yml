@@ -27,8 +27,8 @@ on:
         type: string
         default: "go.mod"
       psscriptanalyzer-version:
-        description: "PSScriptAnalyzer version to install from the PowerShell Gallery (required only when PSScriptAnalyzer
-          runs on PowerShell files)"
+        description: "PSScriptAnalyzer version to install from the PowerShell Gallery. Without it, PSScriptAnalyzer skips
+          the repository's PowerShell files with a warning"
         required: false
         type: string
         default: ""

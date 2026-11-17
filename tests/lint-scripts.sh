@@ -340,10 +340,12 @@ chmod +x "${tmp_dir}/bin/pwsh"
 touch "${code}/a.ps1" "${code}/sub/b.psm1" "${code}/sub/c.psd1" "${code}/.specify/d.ps1"
 git -C "${code}" add -f -- a.ps1 sub/b.psm1 sub/c.psd1 .specify/d.ps1
 run_in "${code}" psscriptanalyzer
-expect_status 1 "PowerShell files without psscriptanalyzer-version"
-expect_out "::error::PowerShell linting is required (PowerShell files found) but no psscriptanalyzer-version input" \
+expect_status 0 "PowerShell files without psscriptanalyzer-version"
+expect_out "::warning title=psscriptanalyzer-version is not set::This repository has PowerShell files, but PSScriptAnalyzer is skipped" \
     "PowerShell files without psscriptanalyzer-version"
+expect_out "To lint them, pass psscriptanalyzer-version" "the skip warning must name the fix"
 [ -z "${log}" ] || fail "PSScriptAnalyzer must not run without a version: ${log}"
+[ -z "${outputs}" ] || fail "a skipped PSScriptAnalyzer must not report a SARIF report: ${outputs}"
 export PSSCRIPTANALYZER_VERSION=1.25.0
 pssa_call="pwsh -NoProfile -NonInteractive -File psscriptanalyzer.ps1 -Version 1.25.0"
 pssa_call+=" -PathList ${RUNNER_TEMP}/psscriptanalyzer-files"

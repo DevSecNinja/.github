@@ -207,12 +207,13 @@ pinned, findings fail the linter like any other.
   Biome steps aside in repositories that configure ESLint (`eslint.config.*`,
   `.eslintrc*`), which lint in their own CI with their plugins; set
   `lint-biome-with-eslint` to run both. dprint formats only Markdown.
-- **PSScriptAnalyzer** (`lint-psscriptanalyzer`, PowerShell, after v4.5.0)
+- **PSScriptAnalyzer** (`lint-psscriptanalyzer`, PowerShell, after v4.6.0)
   analyzes the `*.ps1`, `*.psm1` and `*.psd1` files with the runner's `pwsh`.
   It needs no mise: pass `psscriptanalyzer-version` instead, with a Renovate
-  annotation (see the [workflow template](../workflow-templates/lint.yml)). The
-  linter fails when a repository with PowerShell files doesn't pass it, like
-  `golangci-lint-version` for Go. That version is installed from the PowerShell
+  annotation (see the [workflow template](../workflow-templates/lint.yml)).
+  Without it, a repository with PowerShell files gets a warning that names the
+  fix, and the linter skips instead of failing. Once the version is set,
+  findings fail as below. That version is installed from the PowerShell
   Gallery unless the runner has it already. The repository's
   `PSScriptAnalyzerSettings.psd1` configures it; config-sync's
   [template](../config-sync/templates/PSScriptAnalyzerSettings.psd1) is a
@@ -258,7 +259,7 @@ runner's system Python, which ships PyYAML (`ubuntu-24.04`).
 | `mise-version`                 | **Required.** mise version to install.                                 |
 | `golangci-lint-version`        | **Required.** golangci-lint version to install.                        |
 | `go-version-file`              | Go version file for setup-go. Default: `go.mod`.                       |
-| `psscriptanalyzer-version`     | PSScriptAnalyzer version, needed with PowerShell files. After v4.5.0.  |
+| `psscriptanalyzer-version`     | PSScriptAnalyzer version; skips with a warning if unset. After v4.6.0. |
 | `lint-config-dir`              | Optional linter config directory. Default: `""`.                       |
 | `lint-fail-on-error`           | Fail when a linter fails. Default: `false`.                            |
 | `lint-job-mode`                | `auto`, `single`, or `parallel` (see above). Default: `auto`. v3.3.0+. |
