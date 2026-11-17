@@ -281,6 +281,13 @@ run_in "${code}" "detect-language web" STEP_ASIDE_FOR=
 git -C "${code}" rm -q --cached sub/.eslintrc
 run_in "${code}" "detect-language web" STEP_ASIDE_FOR=eslint
 [ "${outputs}" = found=true ] || fail "Biome must run without ESLint; got: ${outputs}"
+run_in "${code}" biome FAKE_TOOLS=""
+expect_status 1 "Biome without its tool"
+expect_out "::error::'biome' is not pinned" "Biome without its tool"
+# Excluding every file skips Biome before it needs a pin.
+run_in "${code}" biome FAKE_TOOLS="" EXCLUDE_PATTERN="*"
+expect_status 0 "Biome with every file excluded"
+expect_out "::notice::No JavaScript, TypeScript, JSON or CSS files found; skipping Biome" "Biome with every file excluded"
 export FAKE_TOOLS="${FAKE_TOOLS} biome"
 biome_call="biome ci --no-errors-on-unmatched --reporter=default --reporter=github"
 run_in "${code}" biome FAKE_WRITES="${RUNNER_TEMP}/biome.sarif"

@@ -11,7 +11,6 @@
 set -eo pipefail
 
 lint_dir="$(dirname "${BASH_SOURCE[0]}")"
-bash "${lint_dir}/require-mise-tool.sh" biome
 mapfile -d '' listed < <(bash "${lint_dir}/language-files.sh" web)
 files=()
 for file in "${listed[@]}"; do
@@ -25,6 +24,8 @@ if [ "${#files[@]}" -eq 0 ]; then
     echo "::notice::No JavaScript, TypeScript, JSON or CSS files found; skipping Biome"
     exit 0
 fi
+# After the guard: a repository whose files are all excluded needs no pin.
+bash "${lint_dir}/require-mise-tool.sh" biome
 
 # The default reporter shows formatting diffs in the log, the github one
 # annotates the PR. --no-errors-on-unmatched: the config may ignore every file.
