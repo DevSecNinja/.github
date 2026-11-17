@@ -62,6 +62,9 @@ jobs:
       # lint-checkov: true
       # lint-trivy: true
       # lint-zizmor: true
+      # Optional: needs a lint.yml release after v4.5.0; runs only when the
+      # repository has Python files. Pin ruff in your mise config.
+      # lint-ruff: true
       # lint-config-drift: false
       # Optional: report inline scripts in run: steps. Needs a lint.yml release
       # after v4.4.0; bump the pin above before uncommenting.

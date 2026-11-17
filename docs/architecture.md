@@ -74,7 +74,7 @@ workflow, so it calls `scripts/apm-materialize/` from its own checkout.
 
 ### Lint (`lint.yml`)
 
-Runs up to twelve linters. By default, linter failures are reported without
+Runs up to fourteen linters. By default, linter failures are reported without
 failing the workflow; set `lint-fail-on-error` to `true` to make lint failures
 fail the workflow. Toggle individual linters on/off with boolean inputs; all
 linter toggles default to `true`.
@@ -173,6 +173,21 @@ jobs:
       lint-gitleaks: true
 ```
 
+**Language linters.** Linters for a programming language run only when the
+repository has files of that language: a first step lists them with
+`git ls-files` (`scripts/lint/language-files.sh`), and without any it skips the
+mise install and the linter, so the job costs seconds. Generated and vendored
+paths don't count: the excludes of the shared `dprint.json` (Spec Kit output,
+APM-deployed agent files, `node_modules`, `.venv*`).
+
+- **ruff** (`lint-ruff`, Python, after v4.5.0) runs `ruff check` and
+  `ruff format --diff` on the `*.py` and `*.pyi` files. Pin `ruff` in the
+  repository's mise config. ruff reads the repository's own `ruff.toml`,
+  `.ruff.toml` or `[tool.ruff]` in `pyproject.toml`; config-sync's
+  [`ruff.toml` template](../config-sync/templates/ruff.toml) is a starting
+  point. Findings are annotated on the PR, and with `upload-sarif` they also go
+  to code scanning (category `ruff`).
+
 **Inline scripts.** Code in a `run:` block is out of reach of linters,
 formatters and tests, so a `run:` step may hold exactly one line with one
 simple command, such as `./scripts/build.sh`, `bash .github/scripts/x.sh`,
@@ -214,7 +229,7 @@ runner's system Python, which ships PyYAML (`ubuntu-24.04`).
 | `lint-config-dir`              | Optional linter config directory. Default: `""`.                       |
 | `lint-fail-on-error`           | Fail when a linter fails. Default: `false`.                            |
 | `lint-job-mode`                | `auto`, `single`, or `parallel` (see above). Default: `auto`. v3.3.0+. |
-| `upload-sarif`                 | Upload checkov/trivy/zizmor SARIF to code scanning. Default: `true`.   |
+| `upload-sarif`                 | Upload SARIF (checkov, trivy, zizmor, ruff). Default: `true`.          |
 | `lint-dprint`                  | Markdown formatting (dprint). Default: `true`.                         |
 | `lint-yamlfmt`                 | YAML formatting (yamlfmt). Default: `true`.                            |
 | `lint-yamllint`                | YAML linting (yamllint). Default: `true`.                              |
@@ -226,6 +241,7 @@ runner's system Python, which ships PyYAML (`ubuntu-24.04`).
 | `lint-checkov`                 | IaC security scan (checkov). Default: `true`.                          |
 | `lint-trivy`                   | Filesystem scan (trivy). Default: `true`.                              |
 | `lint-zizmor`                  | Actions security scan (zizmor). Default: `true`.                       |
+| `lint-ruff`                    | Python linting (ruff, see above). Default: `true`. After v4.5.0.       |
 | `lint-config-drift`            | Config-drift check. Default: `false`.                                  |
 | `lint-inline-scripts`          | Inline-script check (see above). Default: `true`. After v4.4.0.        |
 | `lint-inline-scripts-blocking` | Report inline scripts as errors. Default: `false`. After v4.4.0.       |

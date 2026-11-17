@@ -95,3 +95,10 @@ repo’s tech stack.
 ## trivy.yaml
 
 Base Trivy config. Add repo-specific `skip-files` entries as needed.
+
+## ruff.toml
+
+Config for ruff, which the shared Lint workflow runs when the repo has
+Python files (`lint-ruff`). It sets a 120-character line length and skips the
+same generated and vendored paths as the shared `dprint.json`. Repos that
+configure ruff in `pyproject.toml` don't need it.
