@@ -83,6 +83,11 @@ cases = {
     # Not plain literals, or not annotated: never matched
     f'{gr}a/b\nA_VERSION="1.2.3 ${{SUFFIX}}"\n': None,
     f'{gr}a/b\nA_VERSION="1.2.3"$SUFFIX\n': None,
+    # A `#` that does not start a word is part of the value, not a comment
+    f'{gr}a/b\nA_VERSION="1.2.3"#${{SUFFIX}}\n': None,
+    f"{gr}a/b\nA_VERSION='1.2.3'#${{SUFFIX}}\n": None,
+    f'{gr}a/b\nA_VERSION=1.2.3#${{SUFFIX}}\n': None,
+    f'{gr}a/b\nA_VERSION=1.2.3 # pinned\n': ("github-releases", "a/b", "1.2.3", None),
     # Command substitution is not a literal
     f'# renovate: datasource=docker depName=registry.example/app\nAPP="registry.example/`get_image`:1.2.3"\n': None,
     f'# renovate: datasource=docker depName=registry.example/app\nAPP=registry.example/`get_image`:1.2.3\n': None,
