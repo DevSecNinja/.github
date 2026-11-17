@@ -18,6 +18,7 @@
             - run: bash .github/scripts/x.sh --flag "a | b; c && d"
             - run: python scripts/x.py 2>&1 >out.log
             - run: ./scripts/build.sh >|build.log
+            - run: ./scripts/build.sh ${VALUE:-a|b} ${OTHER:-c;d&&e} <in.txt 2<&0
             - run: pwsh -File scripts/x.ps1 &>/dev/null
             - run: npm ci # a trailing comment is fine
             - run: echo 'no $(substitution) in single quotes'
@@ -62,6 +63,21 @@
             - run: ./a.sh || true
             - run: ./a.sh; ./b.sh
             - run: ./server.sh &
+
+- name: escaped characters never hide an operator, and ${...} can't hide a substitution
+  expect:
+    - "step '#1': a pipe (|)."
+    - "step '#2': a command list"
+    - "step '#3': command substitution"
+  files:
+    .github/workflows/x.yml: |-
+      jobs:
+        build:
+          runs-on: ubuntu-24.04
+          steps:
+            - run: printf '%s\n' \>| wc -c
+            - run: ./a.sh \>& ./b.sh
+            - run: ./a.sh ${X:-$(date)}
 
 - name: command substitution, heredocs and here-strings
   expect:
@@ -171,7 +187,7 @@
             - shell: bash
               run: pwsh -File scripts/x.ps1
         labels:
-          runs-on: [self-hosted, Windows, x64]
+          runs-on: [self-hosted, Windows, "${{ matrix.arch }}"]
           steps:
             - run: ./x.ps1
         group:
@@ -287,6 +303,8 @@
     - "step 'In a string': multiple lines."
     - "step '# lint: allow-inline-script in the name': multiple lines."
     - "step 'In an env value': multiple lines."
+    - "step 'In a multiline quoted argument': multiple lines."
+    - "step 'In a heredoc payload': multiple lines, a heredoc or here-string"
   files:
     .github/workflows/x.yml: |-
       jobs:
@@ -307,6 +325,15 @@
               run: |
                 ./a.sh
                 ./b.sh
+            - name: In a multiline quoted argument
+              run: |
+                printf '%s\n' 'first
+                # lint: allow-inline-script example'
+            - name: In a heredoc payload
+              run: |
+                cat <<'EOF' >notes.txt
+                # lint: allow-inline-script example
+                EOF
 
 - name: blocking mode reports errors and fails
   blocking: true

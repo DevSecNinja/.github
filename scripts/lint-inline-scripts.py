@@ -72,70 +72,101 @@ GUIDANCE = (
 )
 
 
-def scan_line(line: str) -> tuple[set[str], str]:
-    """Shell constructs on one line that make it more than a simple command,
-    and the line's trailing shell comment (empty when there is none)."""
+HEREDOC_WORD = re.compile(r"-?[ \t]*(['\"]?)([^\s'\";&|<>()]+)\1")
+
+
+def scan_script(script: str) -> tuple[set[str], list[str]]:
+    """Shell constructs that make a script more than one simple command, and
+    the script's shell comments. Quote, `${...}` and heredoc state carry
+    across lines, so quoted text and heredoc payloads are data, never
+    operators or comments."""
     found: set[str] = set()
-    words = line.split()
-    if words and (words[0] in CONTROL_WORDS or words[0][0] in "({"):
-        found.add(CONTROL)
+    comments: list[str] = []
     quote = None
-    i, n = 0, len(line)
-    while i < n:
-        c = line[i]
-        if quote == "'":
-            if c == "'":
-                quote = None
-            i += 1
+    braces = 0
+    pending: list[str] = []
+    body: list[str] = []
+    for line in script.splitlines():
+        if body:
+            if line.strip() == body[0]:
+                body.pop(0)
             continue
-        if c == "\\":
-            i += 2
-            continue
-        if quote == '"':
-            if c == '"':
-                quote = None
-            elif c == "`" or line.startswith("$(", i):
+        words = line.split()
+        if quote is None and not braces and words:
+            if words[0] in CONTROL_WORDS or words[0][0] in "({":
+                found.add(CONTROL)
+        i, n = 0, len(line)
+        while i < n:
+            c = line[i]
+            if quote == "'":
+                if c == "'":
+                    quote = None
+                i += 1
+                continue
+            if c == "\\":
+                i += 2
+                continue
+            if quote == '"':
+                if c == '"':
+                    quote = None
+                elif c == "`" or line.startswith("$(", i):
+                    found.add(SUBSTITUTION)
+                i += 1
+                continue
+            if c == "#" and not braces and (i == 0 or line[i - 1] in " \t"):
+                comments.append(line[i:])
+                break
+            if c in "'\"":
+                quote = c
+            elif c == "`" or line.startswith(("$(", "<(", ">("), i):
                 found.add(SUBSTITUTION)
-            i += 1
-            continue
-        if c == "#" and (i == 0 or line[i - 1].isspace()):
-            return found, line[i:]
-        if c in "'\"":
-            quote = c
-        elif c == "`" or line.startswith(("$(", "<(", ">("), i):
-            found.add(SUBSTITUTION)
-        elif line.startswith("<<", i):
-            found.add(HEREDOC)
-            i += 3 if line.startswith("<<<", i) else 2
-            continue
-        elif line.startswith(("&&", "||"), i):
-            found.add(CHAIN)
-            i += 2
-            continue
-        elif c == "|":
-            # >| is a clobbering redirection, not a pipe.
-            if not (i and line[i - 1] == ">"):
-                found.add(PIPE)
-        elif c == ";":
-            found.add(CHAIN)
-        elif c == "&":
-            # 2>&1, >&2 and &> are redirections; a lone & backgrounds a command.
-            before = line[i - 1] if i else ""
-            after = line[i + 1] if i + 1 < n else ""
-            if before not in "<>" and after != ">":
+            elif line.startswith("${", i):
+                braces += 1
+                i += 2
+                continue
+            elif c == "}" and braces:
+                braces -= 1
+            elif braces:
+                pass  # Operators inside ${...} are argument text.
+            elif line.startswith("<<<", i):
+                found.add(HEREDOC)
+                i += 3
+                continue
+            elif line.startswith("<<", i):
+                found.add(HEREDOC)
+                word = HEREDOC_WORD.match(line, i + 2)
+                if word:
+                    pending.append(word.group(2))
+                    i = word.end()
+                else:
+                    i += 2
+                continue
+            elif line.startswith(("&&", "||"), i):
                 found.add(CHAIN)
-        i += 1
-    return found, ""
+                i += 2
+                continue
+            elif c in "<>":
+                # Redirections, consumed whole: >|, >&, <&, >>, <> and 2>&1.
+                i += 2 if line[i + 1 : i + 2] in ("|", "&", ">") else 1
+                continue
+            elif line.startswith("&>", i):
+                i += 3 if line.startswith("&>>", i) else 2
+                continue
+            elif c == "|":
+                found.add(PIPE)
+            elif c in ";&":
+                found.add(CHAIN)
+            i += 1
+        if pending and quote is None:
+            body, pending = pending, []
+    return found, comments
 
 
-def run_problems(script: str, shell: str | None) -> list[str]:
+def run_problems(script: str, shell: str | None, found: set[str]) -> list[str]:
     """Why a `run:` script is not one simple command (empty when it is)."""
-    problems: set[str] = set()
-    lines = [line for line in script.strip().splitlines() if line.strip()]
-    if len(lines) > 1:
+    problems = set(found)
+    if len([line for line in script.splitlines() if line.strip()]) > 1:
         problems.add(MULTILINE)
-    for line in lines:
-        problems |= scan_line(line)[0]
     if "${{" in script:
         problems.add(EXPRESSION)
     ordered = [reason for reason in REASON_ORDER if reason in problems]
@@ -189,7 +220,7 @@ def scalar_spans(node: yaml.Node) -> list[tuple[tuple[int, int], tuple[int, int]
     return []
 
 
-def step_comments(lines: list[str], step: yaml.MappingNode, script: str) -> list[str]:
+def step_comments(lines: list[str], step: yaml.MappingNode, shell_comments: list[str]) -> list[str]:
     """The YAML comments directly above and inside a step, and the shell
     comments of its script. Quoted or other string data never counts."""
     start = step.start_mark.line
@@ -209,7 +240,7 @@ def step_comments(lines: list[str], step: yaml.MappingNode, script: str) -> list
                     comments.append(line[col:])
                     break
         k += 1
-    return comments + [scan_line(line)[1] for line in script.splitlines()]
+    return comments + shell_comments
 
 
 def implicit_shell(job: yaml.Node) -> str | None:
@@ -220,8 +251,8 @@ def implicit_shell(job: yaml.Node) -> str | None:
         runs_on = child(runs_on, "labels")
     nodes = runs_on.value if isinstance(runs_on, yaml.SequenceNode) else [runs_on]
     labels = [label for label in map(scalar, nodes) if label]
-    if any("${{" in label for label in labels):
-        return None
+    # Every label must match, so a literal Windows label decides even when
+    # another label is an expression.
     return "pwsh" if any(label.lower().startswith("windows") for label in labels) else None
 
 
@@ -289,8 +320,10 @@ class Checker:
             label = scalar(child(step, "name")) or scalar(child(step, "id")) or f"#{index}"
             where = f"{owner}, step '{label}'"
             line = run_line(step)
-            problems = run_problems(script, scalar(child(step, "shell")) or default_shell)
-            opt_out = next(filter(None, map(OPT_OUT.search, step_comments(lines, step, script))), None)
+            found, shell_comments = scan_script(script)
+            problems = run_problems(script, scalar(child(step, "shell")) or default_shell, found)
+            comments = step_comments(lines, step, shell_comments)
+            opt_out = next(filter(None, map(OPT_OUT.search, comments)), None)
             if opt_out:
                 reason = opt_out.group("reason").lstrip(" :-").strip()
                 if reason:
