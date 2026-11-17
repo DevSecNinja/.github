@@ -46,7 +46,7 @@ CASES = ROOT / "tests" / "fixtures" / "app-key-confinement-cases.yml"
 # Contexts and secret names are case-insensitive in GitHub expressions.
 KEY_NAMES = {"automation_app_private_key", "app-private-key", "release_please_app_private_key"}
 # A string literal, or the `secrets` context outside one.
-SECRETS_TOKEN = re.compile(r"'(?:[^']|'')*'|(?<![\w.-])(secrets)(?![\w-])", re.I)
+SECRETS_TOKEN = re.compile(r"'(?:[^']|'')*'|(?<![\w.-])(secrets)(?![\w-])", re.IGNORECASE)
 SECRET_DOT = re.compile(r"\s*\.\s*([A-Za-z_][\w-]*)")
 SECRET_INDEX = re.compile(r"\s*\[\s*'((?:[^']|'')*)'\s*\]")
 
@@ -62,12 +62,24 @@ KEY_SECRET_INPUTS = {"AUTOMATION_APP_PRIVATE_KEY", "app-private-key"}
 # review that it still never prints, writes, traces or passes on the key or
 # the environment, then update its hash (the failure message prints it).
 EMPTINESS_CHECKS = {
-    (".github/workflows/release-please.yml", "release-please", "Validate GitHub App credentials", "APP_PRIVATE_KEY"):
-        "a7650154f6c1924cd8224a1b4df2c56a8be41677d1a5c5749e5e7d1cb3be3d49",
-    (".github/workflows/config-sync.yml", "sync", "Resolve GitHub App credentials", "APP_PRIVATE_KEY"):
-        "86bd10419e9a0c2b7773f77f881f1204596cfcba47a59e3790eb275371458f4a",
-    (".github/workflows/apm-sync.yml", "apm-sync", "Resolve GitHub App credentials", "APP_PRIVATE_KEY"):
-        "8a38cc5da27a7b24ffd18fdb6c53b2baf1926a2898cdb9f36555d6d0c0f2c5fa",
+    (
+        ".github/workflows/release-please.yml",
+        "release-please",
+        "Validate GitHub App credentials",
+        "APP_PRIVATE_KEY",
+    ): "a7650154f6c1924cd8224a1b4df2c56a8be41677d1a5c5749e5e7d1cb3be3d49",
+    (
+        ".github/workflows/config-sync.yml",
+        "sync",
+        "Resolve GitHub App credentials",
+        "APP_PRIVATE_KEY",
+    ): "86bd10419e9a0c2b7773f77f881f1204596cfcba47a59e3790eb275371458f4a",
+    (
+        ".github/workflows/apm-sync.yml",
+        "apm-sync",
+        "Resolve GitHub App credentials",
+        "APP_PRIVATE_KEY",
+    ): "8a38cc5da27a7b24ffd18fdb6c53b2baf1926a2898cdb9f36555d6d0c0f2c5fa",
 }
 # Workflows that must keep a confined token-step reference, so the test cannot
 # pass vacuously after a rename or a parsing change.
@@ -118,7 +130,7 @@ def find_expressions(text: str) -> list[str]:
             elif not quoted and text.startswith("}}", pos):
                 break
             pos += 1
-        expressions.append(text[start + 3:pos])
+        expressions.append(text[start + 3 : pos])
         start = text.find("${{", pos + 2)
     return expressions
 
@@ -133,7 +145,7 @@ def secret_reads(path: tuple, text: str) -> tuple[bool, bool]:
         for match in SECRETS_TOKEN.finditer(expression):
             if not match.group(1):
                 continue
-            rest = expression[match.end():]
+            rest = expression[match.end() :]
             access = SECRET_DOT.match(rest) or SECRET_INDEX.match(rest)
             if access is None:
                 dump = True
@@ -190,16 +202,20 @@ def emptiness_problem(doc: dict, job: dict, step: dict, index: int, var: str, di
             return "the allowlisted emptiness check inherits an env variable with a computed name"
     for earlier in job["steps"][:index]:
         if not SAFE_PRECEDING_STEP.match(str(earlier.get("uses") or "")) or set(earlier) - {"name", "uses", "with"}:
-            return (f"step {earlier.get('name') or earlier.get('uses') or 'run'!r} runs before the allowlisted "
-                    f"emptiness check and could change its shell through $GITHUB_ENV")
+            return (
+                f"step {earlier.get('name') or earlier.get('uses') or 'run'!r} runs before the allowlisted "
+                f"emptiness check and could change its shell through $GITHUB_ENV"
+            )
     run = step.get("run") or ""
     for line in run.splitlines():
         if re.search(rf"(?<!\w){re.escape(var)}(?!\w)", line) and not EMPTINESS_LINE.match(line):
             return f"the allowlisted emptiness check reads ${var} outside an emptiness test: {line.strip()!r}"
     actual = hashlib.sha256(run.encode("utf-8")).hexdigest()
     if actual != digest:
-        return (f"the allowlisted emptiness check changed since review (run: sha256 {actual}); confirm it never "
-                f"prints, writes, traces or passes on the key or the environment, then update EMPTINESS_CHECKS")
+        return (
+            f"the allowlisted emptiness check changed since review (run: sha256 {actual}); confirm it never "
+            f"prints, writes, traces or passes on the key or the environment, then update EMPTINESS_CHECKS"
+        )
     return None
 
 
@@ -305,9 +321,11 @@ def main() -> int:
         for failure in failures:
             print(f"  - {failure}", file=sys.stderr)
         return 1
-    print(f"✓ App key confinement: {len(files)} workflows keep the key in the token step "
-          f"({len(token_workflows)} token steps, {len(used_entries)} emptiness checks); "
-          f"{len(cases)} fixture cases behave.")
+    print(
+        f"✓ App key confinement: {len(files)} workflows keep the key in the token step "
+        f"({len(token_workflows)} token steps, {len(used_entries)} emptiness checks); "
+        f"{len(cases)} fixture cases behave."
+    )
     return 0
 
 

@@ -93,6 +93,11 @@ on:
         required: false
         type: boolean
         default: true
+      lint-ruff:
+        description: "Run ruff (Python linting and formatting) when the repository has Python files — uploads SARIF"
+        required: false
+        type: boolean
+        default: true
       lint-config-drift:
         description: "Check local config files match central DevSecNinja/.github repo"
         required: false
@@ -112,8 +117,8 @@ on:
         type: boolean
         default: false
       upload-sarif:
-        description: "Upload checkov/trivy/zizmor results to GitHub code scanning (requires GitHub Advanced Security). Set
-          false for private repos without GHAS to gate on exit codes with console output instead."
+        description: "Upload checkov/trivy/zizmor/ruff results to GitHub code scanning (requires GitHub Advanced Security).
+          Set false for private repos without GHAS to gate on exit codes with console output instead."
         required: false
         type: boolean
         default: true
@@ -674,6 +679,67 @@ jobs:
           sarif_file: ${{ runner.temp }}/zizmor.sarif
           category: zizmor
 
+  ruff:
+    name: ruff
+    if: ${{ inputs.lint-ruff && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
+      }}
+    continue-on-error: ${{ ! inputs.lint-fail-on-error }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout lint scripts
+        # The linter scripts ship with this reusable workflow: fetch them from
+        # the same commit of DevSecNinja/.github that the caller pinned.
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .devsecninja-lint
+          sparse-checkout: |-
+            scripts/lint/
+            scripts/lint-inline-scripts.py
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Move lint scripts out of the workspace
+        # Outside the workspace the caller's linters don't scan them, and the
+        # code checkout doesn't delete them.
+        run: mv .devsecninja-lint "${RUNNER_TEMP}/devsecninja-lint"
+
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Find Python files
+        # Repositories without Python skip the mise install and ruff.
+        id: python-files
+        run: bash "${RUNNER_TEMP}/devsecninja-lint/scripts/lint/detect-language.sh" python
+
+      - name: Install mise
+        if: ${{ steps.python-files.outputs.found == 'true' }}
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          install: true
+          version: ${{ inputs.mise-version }}
+
+      - name: Run ruff
+        id: ruff
+        if: ${{ steps.python-files.outputs.found == 'true' }}
+        env:
+          UPLOAD_SARIF: ${{ inputs.upload-sarif }}
+        run: bash "${RUNNER_TEMP}/devsecninja-lint/scripts/lint/ruff.sh"
+
+      - name: Upload SARIF report
+        if: ${{ !cancelled() && steps.ruff.outputs.sarif == 'true' }}
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: ${{ runner.temp }}/ruff.sarif
+          category: ruff
+
   config-drift:
     name: config drift
     if: ${{ inputs.lint-config-drift && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
@@ -798,11 +864,17 @@ jobs:
           fetch-depth: ${{ !inputs.lint-gitleaks && 1 || 0 }}
           persist-credentials: false
 
+      - name: Find Python files
+        # Repositories without Python skip ruff (and its mise install).
+        id: python-files
+        if: ${{ inputs.lint-ruff }}
+        run: bash "${RUNNER_TEMP}/devsecninja-lint/scripts/lint/detect-language.sh" python
+
       - name: Install mise
         if: >-
           ${{ inputs.lint-dprint || inputs.lint-yamlfmt || inputs.lint-yamllint || inputs.lint-actionlint || inputs.lint-gitleaks
           || inputs.lint-shellcheck || inputs.lint-shfmt || inputs.lint-checkov || inputs.lint-trivy || inputs.lint-zizmor
-          }}
+          || steps.python-files.outputs.found == 'true' }}
         uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
         with:
           install: true
@@ -985,6 +1057,23 @@ jobs:
         with:
           sarif_file: ${{ runner.temp }}/zizmor.sarif
           category: zizmor
+
+      - name: Run ruff
+        id: ruff
+        if: ${{ steps.python-files.outputs.found == 'true' }}
+        continue-on-error: true
+        env:
+          UPLOAD_SARIF: ${{ inputs.upload-sarif }}
+        run: bash "${RUNNER_TEMP}/devsecninja-lint/scripts/lint/ruff.sh"
+
+      - name: Upload ruff SARIF report
+        id: ruff-sarif
+        if: ${{ !cancelled() && steps.ruff.outputs.sarif == 'true' }}
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: ${{ runner.temp }}/ruff.sarif
+          category: ruff
 
       - name: Check config drift against central repo
         id: config-drift

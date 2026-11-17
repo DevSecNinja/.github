@@ -84,6 +84,26 @@ apm_owner() {
     return 1
 }
 
+# A template is not bootstrapped when the repository configures the tool in
+# another file already: ruff.toml would take precedence over [tool.ruff] in
+# pyproject.toml and silently replace its settings.
+configured_elsewhere() {
+    case "$1" in
+    ruff.toml)
+        if [ -e .ruff.toml ]; then
+            echo ".ruff.toml"
+            return 0
+        fi
+        if [ -f pyproject.toml ] && grep -Eq '^[[:space:]]*\[tool\.ruff[].]' pyproject.toml; then
+            echo "[tool.ruff] in pyproject.toml"
+            return 0
+        fi
+        ;;
+    *) ;;
+    esac
+    return 1
+}
+
 sync_tree() {
     local kind="$1"     # "files" or "templates"
     local only="${2:-}" # optional: sync just this path
@@ -124,6 +144,12 @@ sync_tree() {
 
         if [ "${kind}" = "templates" ] && [ -e "${dest}" ]; then
             echo "  ✔ ${dest} already exists (templates are not overwritten)"
+            continue
+        fi
+
+        # shellcheck disable=SC2310 # configured_elsewhere only tests; its status is the answer.
+        if [ "${kind}" = "templates" ] && reason=$(configured_elsewhere "${dest}"); then
+            echo "  ✔ ${dest} skipped: configured in ${reason}"
             continue
         fi
 

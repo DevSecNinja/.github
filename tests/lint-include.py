@@ -113,10 +113,16 @@ def broken_copies(lint: dict, include: dict):
     def job(workflow):
         return next(iter(workflow["jobs"].values()))
 
-    yield mutate("a new lint.yml linter",
-                 lambda w: call_inputs(w).update({"lint-newtool": {"type": "boolean", "default": True}}), "lint")
-    yield mutate("a new lint.yml option",
-                 lambda w: call_inputs(w).update({"lint-newtool-args": {"type": "string", "default": ""}}), "lint")
+    yield mutate(
+        "a new lint.yml linter",
+        lambda w: call_inputs(w).update({"lint-newtool": {"type": "boolean", "default": True}}),
+        "lint",
+    )
+    yield mutate(
+        "a new lint.yml option",
+        lambda w: call_inputs(w).update({"lint-newtool-args": {"type": "string", "default": ""}}),
+        "lint",
+    )
     yield mutate("a linter defaulting to true", lambda w: call_inputs(w)["lint-trivy"].update({"default": True}))
     yield mutate("a linter without a default", lambda w: call_inputs(w)["lint-trivy"].pop("default"))
     yield mutate("an option default that drifted", lambda w: call_inputs(w)["upload-sarif"].update({"default": False}))
@@ -124,13 +130,17 @@ def broken_copies(lint: dict, include: dict):
     yield mutate("a retyped input", lambda w: call_inputs(w)["lint-job-mode"].update({"type": "boolean"}))
     yield mutate("an input not passed through", lambda w: job(w)["with"].pop("lint-shfmt-exclude"))
     yield mutate("a hard-coded value", lambda w: job(w)["with"].update({"lint-zizmor": False}))
-    yield mutate("a value from another input",
-                 lambda w: job(w)["with"].update({"lint-trivy": "${{ inputs.lint-checkov }}"}))
+    yield mutate(
+        "a value from another input", lambda w: job(w)["with"].update({"lint-trivy": "${{ inputs.lint-checkov }}"})
+    )
     yield mutate("a workspace-relative call", lambda w: job(w).update({"uses": "./.github/workflows/lint.yml"}))
     yield mutate("a missing permission", lambda w: job(w)["permissions"].pop("security-events"))
     yield mutate("a downgraded permission", lambda w: job(w)["permissions"].update({"security-events": "read"}))
-    yield mutate("a permission lint.yml starts to need",
-                 lambda w: w["jobs"]["trivy"]["permissions"].update({"actions": "read"}), "lint")
+    yield mutate(
+        "a permission lint.yml starts to need",
+        lambda w: w["jobs"]["trivy"]["permissions"].update({"actions": "read"}),
+        "lint",
+    )
 
 
 def main() -> int:
@@ -148,8 +158,10 @@ def main() -> int:
             print(f"  - {failure}", file=sys.stderr)
         return 1
     linters = sum(is_linter(name, spec) for name, spec in call_inputs(lint).items())
-    print(f"✓ lint-include.yml forwards all {len(call_inputs(lint))} lint.yml inputs ({linters} linters off by "
-          f"default); {len(cases)} broken variants are caught.")
+    print(
+        f"✓ lint-include.yml forwards all {len(call_inputs(lint))} lint.yml inputs ({linters} linters off by "
+        f"default); {len(cases)} broken variants are caught."
+    )
     return 0
 
 

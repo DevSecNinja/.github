@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Offline contract tests using synthetic history and the actual composite step."""
+
 import importlib.util
 import json
 import os
@@ -39,12 +40,14 @@ class BadgeContract(unittest.TestCase):
         self.commit("Human", "human@example.org", "Initial")
         self.commit("copilot-swe-agent[bot]", "agent@example.org", "Agent")
         self.commit(
-            "Human", "human@example.org",
+            "Human",
+            "human@example.org",
             "Pair\n\nCo-authored-by: Someone <someone@example.org>\n"
             "Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>",
         )
         self.commit(
-            "renovate[bot]", "bot@example.org",
+            "renovate[bot]",
+            "bot@example.org",
             "Automation\n\nCo-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>",
         )
         side = self.commit("Human", "human@example.org", "Side")
@@ -52,14 +55,23 @@ class BadgeContract(unittest.TestCase):
 
     def git(self, *args, cwd=None, input=None, env=None):
         return subprocess.run(
-            ["git", *args], cwd=cwd or self.repo, env=env or self.env,
-            input=input, capture_output=True, text=True, encoding="utf-8", check=True,
+            ["git", *args],
+            cwd=cwd or self.repo,
+            env=env or self.env,
+            input=input,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            check=True,
         )
 
     def commit(self, name, email, message, parents=None):
         env = dict(
-            self.env, GIT_AUTHOR_NAME=name, GIT_AUTHOR_EMAIL=email,
-            GIT_COMMITTER_NAME=name, GIT_COMMITTER_EMAIL=email,
+            self.env,
+            GIT_AUTHOR_NAME=name,
+            GIT_AUTHOR_EMAIL=email,
+            GIT_COMMITTER_NAME=name,
+            GIT_COMMITTER_EMAIL=email,
             GIT_AUTHOR_DATE="2020-01-01T12:00:00+00:00",
             GIT_COMMITTER_DATE="2020-01-01T12:00:00+00:00",
         )
@@ -76,12 +88,17 @@ class BadgeContract(unittest.TestCase):
     def run_action(self, **overrides):
         text = (ACTION / "action.yml").read_text(encoding="utf-8")
         inputs = {
-            "ref": "HEAD", "since": "", "name": "owner/repo", "label": "AI commits",
-            "out": str(self.work / "out"), "themes": "false", "repo-dir": str(self.repo),
+            "ref": "HEAD",
+            "since": "",
+            "name": "owner/repo",
+            "label": "AI commits",
+            "out": str(self.work / "out"),
+            "themes": "false",
+            "repo-dir": str(self.repo),
         }
         inputs.update(overrides)
         env = dict(self.env, GITHUB_OUTPUT=str(self.work / "outputs"))
-        mappings = re.findall(r"^        ([A-Z_]+): \$\{\{ inputs\.([\w-]+) \}\}$", text, re.M)
+        mappings = re.findall(r"^        ([A-Z_]+): \$\{\{ inputs\.([\w-]+) \}\}$", text, re.MULTILINE)
         self.assertEqual({name for _, name in mappings}, set(inputs))
         for variable, name in mappings:
             env[variable] = inputs[name]
@@ -89,10 +106,15 @@ class BadgeContract(unittest.TestCase):
         generate = shlex.quote(str(ACTION / "generate.sh").replace("\\", "/"))
         # Windows's python3 app alias is not necessarily the interpreter running this test.
         interpreter = shlex.quote(sys.executable.replace("\\", "/"))
-        script = f"python3() {{ {interpreter} \"$@\"; }}\nexport -f python3\nbash {generate}\n"
+        script = f'python3() {{ {interpreter} "$@"; }}\nexport -f python3\nbash {generate}\n'
         return subprocess.run(
             [shutil.which("bash"), "--noprofile", "--norc", "-c", script],
-            env=env, cwd=self.work, text=True, capture_output=True, encoding="utf-8",
+            check=False,
+            env=env,
+            cwd=self.work,
+            text=True,
+            capture_output=True,
+            encoding="utf-8",
         )
 
     def stats(self):
@@ -103,17 +125,29 @@ class BadgeContract(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         st = self.stats()
         expected = {
-            "commits": 4, "ai_commits": 2, "ai_percent": 50.0,
-            "agent": 1, "coauthored": 1, "unattributed": 2, "excluded_automation": 1,
+            "commits": 4,
+            "ai_commits": 2,
+            "ai_percent": 50.0,
+            "agent": 1,
+            "coauthored": 1,
+            "unattributed": 2,
+            "excluded_automation": 1,
         }
         for key, value in expected.items():
             self.assertEqual(st[key], value, key)
         self.assertEqual(st["tools"], {"Copilot coding agent": 1, "Copilot CLI": 1})
         out = self.work / "out"
-        self.assertEqual({p.name for p in out.iterdir()}, {
-            "ai-commits.svg", "ai-commits.json", "ai-commits-stats.json",
-            "ai-commits-card.svg", "ai-commits-card-light.svg", "ai-commits-card-dark.svg",
-        })
+        self.assertEqual(
+            {p.name for p in out.iterdir()},
+            {
+                "ai-commits.svg",
+                "ai-commits.json",
+                "ai-commits-stats.json",
+                "ai-commits-card.svg",
+                "ai-commits-card-light.svg",
+                "ai-commits-card-dark.svg",
+            },
+        )
         endpoint = json.loads((out / "ai-commits.json").read_text(encoding="utf-8"))
         self.assertEqual(endpoint["schemaVersion"], 1)
         self.assertEqual(endpoint["message"], "50%")
@@ -167,7 +201,8 @@ class BadgeContract(unittest.TestCase):
     def test_invalid_inputs_fail_before_writing(self):
         for overrides in (
             {"themes": "yes"},
-            {"ref": "--all"}, {"ref": "missing"},
+            {"ref": "--all"},
+            {"ref": "missing"},
         ):
             with self.subTest(overrides=overrides):
                 result = self.run_action(**overrides)
@@ -187,7 +222,8 @@ class BadgeContract(unittest.TestCase):
         self.commit("Human", "alice+223556219+Copilot@example.org", "Not Copilot")
         self.commit("not-copilot-swe-agent", "human@example.org", "Not the agent")
         self.commit(
-            "Human", "human@example.org",
+            "Human",
+            "human@example.org",
             "Unrecognized trailers\n\n"
             "Co-authored-by: Human <noreply@anthropic.com.example.org>\n"
             "Co-authored-by: Human <alice+223556219+Copilot@example.org>",

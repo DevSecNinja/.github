@@ -120,7 +120,7 @@ expect_out "::error::'dprint' is not pinned in this repository's mise config." "
 [ -z "${log}" ] || fail "an unpinned tool must not run: ${log}"
 
 # Every linter that needs a pinned tool checks for it first.
-for script in dprint yamlfmt yamllint shellcheck shfmt trivy; do
+for script in dprint yamlfmt yamllint shellcheck shfmt trivy ruff; do
     run "${script}" FAKE_TOOLS=""
     expect_status 1 "${script} without its tool"
     expect_out "::error::'${script}' is not pinned" "${script} without its tool"
@@ -195,6 +195,58 @@ expect_log "zizmor --format sarif ." "zizmor with SARIF"
 run zizmor UPLOAD_SARIF=false FAKE_EXIT=1
 expect_status 1 "zizmor without SARIF"
 expect_log "${repo}: zizmor ." "zizmor without SARIF"
+
+# The language linters see the tracked files of their language, minus every
+# path the shared dprint.json excludes (vendored and generated files).
+code="${tmp_dir}/code"
+mkdir -p "${code}/sub"
+git -C "${code}" init -q
+touch "${code}/mise.toml" "${code}/a.py" "${code}/sub/b.pyi" "${code}/untracked.py" "${code}/c.sh"
+excluded=()
+while IFS= read -r pattern; do
+    pattern="${pattern%$'\r'}" # jq on Windows ends lines with CRLF
+    # **/node_modules -> sub/node_modules/x.py, .venv*/** -> .venvx/x.py
+    path="${pattern/#\*\*\//sub/}"
+    path="${path%/\*\*}"
+    path="${path//\*/x}/x.py"
+    mkdir -p "${code}/${path%/*}"
+    touch "${code}/${path}"
+    excluded+=("${path}")
+done < <(jq -r '.excludes[] | select(endswith(".md") | not)' "${repo_root}/config-sync/files/dprint.json")
+[ "${#excluded[@]}" -ge 10 ] || fail "expected the dprint.json excludes, got: ${excluded[*]}"
+git -C "${code}" add -f -- mise.toml a.py sub/b.pyi c.sh "${excluded[@]}"
+listed="$(cd "${code}" && bash "${scripts}/language-files.sh" python | tr '\0' '\n')"
+[ "${listed}" = $'a.py\nsub/b.pyi' ] || fail "language-files.sh python must list only a.py and sub/b.pyi; got: ${listed}"
+run_in "${code}" "language-files bogus"
+expect_status 2 "an unknown language"
+
+run_in "${code}" "detect-language python"
+expect_status 0 "a repository with Python files"
+[ "${outputs}" = found=true ] || fail "expected found=true; got: ${outputs}"
+run "detect-language python"
+expect_status 0 "a repository without Python files"
+[ "${outputs}" = found=false ] || fail "expected found=false; got: ${outputs}"
+expect_out "::notice::No python files found; skipping its linter" "a repository without Python files"
+
+# ruff lints and format-checks only those files, and writes SARIF for code
+# scanning without letting it gate the step.
+export FAKE_TOOLS="${FAKE_TOOLS} ruff"
+run_in "${code}" ruff
+expect_status 0 "ruff with SARIF"
+expect_log "ruff check --force-exclude --no-fix --exit-zero --output-format sarif --output-file ${RUNNER_TEMP}/ruff.sarif -- a.py sub/b.pyi" \
+    "ruff with SARIF"
+expect_log "ruff check --force-exclude --no-fix --output-format github -- a.py sub/b.pyi" "ruff with SARIF"
+expect_log "ruff format --force-exclude --diff -- a.py sub/b.pyi" "ruff with SARIF"
+[ "${outputs}" = sarif=true ] || fail "ruff must report its SARIF report; got: ${outputs}"
+run_in "${code}" ruff UPLOAD_SARIF=false FAKE_EXIT=1
+expect_status 1 "a failing ruff"
+grep -Fq sarif <<<"${log}${outputs}" && fail "ruff without SARIF must not write it: ${log} ${outputs}"
+expect_log "ruff format --force-exclude --diff" "a failing ruff check must not skip the format check"
+git -C "${code}" rm -q --cached a.py sub/b.pyi
+run_in "${code}" ruff
+expect_status 0 "ruff without Python files"
+expect_out "::notice::No Python files found; skipping ruff" "ruff without Python files"
+[ -z "${log}" ] || fail "ruff must not run without Python files: ${log}"
 
 # The SARIF filter drops checkov's skipped checks (level none) and tolerates a
 # missing report.

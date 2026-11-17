@@ -96,7 +96,7 @@ TOKEN = re.compile(
       | (?P<op>==|!=|&&|\|\||!|\(|\)|,)
       | (?P<ident>[A-Za-z_][A-Za-z0-9_.\-]*)
     )""",
-    re.X,
+    re.VERBOSE,
 )
 STATUS_FUNCTIONS = re.compile(r"\b(success|always|cancelled|failure)\(")
 
@@ -108,7 +108,7 @@ def tokenize(text: str) -> list[tuple[str, str]]:
     while pos < len(text):
         match = TOKEN.match(text, pos)
         if not match or match.end() == pos:
-            raise ValueError(f"cannot tokenize at {text[pos:pos + 30]!r}")
+            raise ValueError(f"cannot tokenize at {text[pos : pos + 30]!r}")
         kind = match.lastgroup
         tokens.append((kind, match.group(kind)))
         pos = match.end()
@@ -309,13 +309,20 @@ failures: list[str] = []
 
 def check(workflow: str, name: str, actual: set[str], expected: set[str]) -> None:
     if actual != expected:
-        failures.append(
-            f"{workflow}: {name}\n    expected: {sorted(expected)}\n    actual:   {sorted(actual)}"
-        )
+        failures.append(f"{workflow}: {name}\n    expected: {sorted(expected)}\n    actual:   {sorted(actual)}")
 
 
-def pages_context(event_name, *, action=None, actor="DevSecNinja", author=None, ref="refs/heads/main",
-                  changes=None, fork=False, preview=True):
+def pages_context(
+    event_name,
+    *,
+    action=None,
+    actor="DevSecNinja",
+    author=None,
+    ref="refs/heads/main",
+    changes=None,
+    fork=False,
+    preview=True,
+):
     event: dict = {"repository": {"name": "site", "private": True}}
     if event_name == "pull_request":
         event.update(
@@ -328,15 +335,25 @@ def pages_context(event_name, *, action=None, actor="DevSecNinja", author=None, 
         if changes is not None:
             event["changes"] = changes
     return {
-        "github": {"event_name": event_name, "event": event, "actor": actor, "ref": ref,
-                   "repository": "DevSecNinja/site"},
-        "inputs": {"cloudflare-preview": preview, "github-pages": True, "production-branch": "main",
-                   "cloudflare-custom-domain": ""},
+        "github": {
+            "event_name": event_name,
+            "event": event,
+            "actor": actor,
+            "ref": ref,
+            "repository": "DevSecNinja/site",
+        },
+        "inputs": {
+            "cloudflare-preview": preview,
+            "github-pages": True,
+            "production-branch": "main",
+            "cloudflare-custom-domain": "",
+        },
     }
 
 
-PAGES_OUTPUTS = {"detect-cloudflare": {"enabled": "true", "targets": "[]", "deploy-production": "false",
-                                       "project-name": "site"}}
+PAGES_OUTPUTS = {
+    "detect-cloudflare": {"enabled": "true", "targets": "[]", "deploy-production": "false", "project-name": "site"}
+}
 PRODUCTION = {"validate-inputs", "detect-cloudflare", "test", "deploy"}
 PREVIEW = {"validate-inputs", "detect-cloudflare", "test", "deploy-preview"}
 TEST_ONLY = {"validate-inputs", "test"}
@@ -350,34 +367,63 @@ pages_scenarios = [
     ("workflow_dispatch on main", pages_context("workflow_dispatch"), PRODUCTION),
     ("human PR opened", pages_context("pull_request", action="opened"), PREVIEW),
     ("human PR synchronize", pages_context("pull_request", action="synchronize"), PREVIEW),
-    ("human PR, previews disabled", pages_context("pull_request", action="opened", preview=False),
-     {"validate-inputs", "detect-cloudflare", "test"}),
-    ("fork PR opened", pages_context("pull_request", action="opened", fork=True),
-     {"validate-inputs", "detect-cloudflare", "test"}),
+    (
+        "human PR, previews disabled",
+        pages_context("pull_request", action="opened", preview=False),
+        {"validate-inputs", "detect-cloudflare", "test"},
+    ),
+    (
+        "fork PR opened",
+        pages_context("pull_request", action="opened", fork=True),
+        {"validate-inputs", "detect-cloudflare", "test"},
+    ),
     ("Renovate PR synchronize", pages_context("pull_request", action="synchronize", actor="renovate[bot]"), TEST_ONLY),
-    ("Renovate PR updated by a human", pages_context("pull_request", action="synchronize", author="renovate[bot]"),
-     TEST_ONLY),
+    (
+        "Renovate PR updated by a human",
+        pages_context("pull_request", action="synchronize", author="renovate[bot]"),
+        TEST_ONLY,
+    ),
     ("Dependabot PR opened", pages_context("pull_request", action="opened", actor="dependabot[bot]"), TEST_ONLY),
-    ("Renovate edits its PR body", pages_context("pull_request", action="edited", actor="renovate[bot]",
-                                                  changes={"body": {"from": "old"}}), NOTHING),
-    ("human edits PR title", pages_context("pull_request", action="edited", changes={"title": {"from": "x"}}),
-     NOTHING),
-    ("human changes PR base branch", pages_context("pull_request", action="edited",
-                                                    changes={"base": {"ref": {"from": "develop"}}}), PREVIEW),
+    (
+        "Renovate edits its PR body",
+        pages_context("pull_request", action="edited", actor="renovate[bot]", changes={"body": {"from": "old"}}),
+        NOTHING,
+    ),
+    ("human edits PR title", pages_context("pull_request", action="edited", changes={"title": {"from": "x"}}), NOTHING),
+    (
+        "human changes PR base branch",
+        pages_context("pull_request", action="edited", changes={"base": {"ref": {"from": "develop"}}}),
+        PREVIEW,
+    ),
     ("human PR closed", pages_context("pull_request", action="closed"), CLOSE),
     ("human PR closed, previews disabled", pages_context("pull_request", action="closed", preview=False), NOTHING),
     ("fork PR closed", pages_context("pull_request", action="closed", fork=True), NOTHING),
     ("Renovate PR automerged", pages_context("pull_request", action="closed", actor="renovate[bot]"), NOTHING),
-    ("Renovate PR merged by a human", pages_context("pull_request", action="closed", author="renovate[bot]"),
-     NOTHING),
+    ("Renovate PR merged by a human", pages_context("pull_request", action="closed", author="renovate[bot]"), NOTHING),
 ]
 for name, context, expected in pages_scenarios:
     check("pages.yml", name, running_jobs(pages, context, PAGES_OUTPUTS), expected)
 
 
 def lint_context(*, mode="auto", private=False, has_repository=True, event_name="pull_request", **toggles):
-    inputs = {f"lint-{name}": True for name in ("dprint", "yamlfmt", "yamllint", "actionlint", "gitleaks", "go",
-                                                "shellcheck", "shfmt", "checkov", "trivy", "zizmor", "inline-scripts")}
+    inputs = {
+        f"lint-{name}": True
+        for name in (
+            "dprint",
+            "yamlfmt",
+            "yamllint",
+            "actionlint",
+            "gitleaks",
+            "go",
+            "shellcheck",
+            "shfmt",
+            "checkov",
+            "trivy",
+            "zizmor",
+            "ruff",
+            "inline-scripts",
+        )
+    }
     inputs["lint-config-drift"] = False
     inputs["lint-job-mode"] = mode
     inputs.update({f"lint-{k.replace('_', '-')}": v for k, v in toggles.items()})
@@ -386,18 +432,37 @@ def lint_context(*, mode="auto", private=False, has_repository=True, event_name=
 
 
 lint = parse_jobs(WORKFLOWS / "lint.yml")
-PER_LINTER = {"dprint", "yamlfmt", "yamllint", "actionlint", "gitleaks", "go", "shellcheck", "shfmt", "checkov",
-              "trivy", "zizmor", "inline-scripts"}
+PER_LINTER = {
+    "dprint",
+    "yamlfmt",
+    "yamllint",
+    "actionlint",
+    "gitleaks",
+    "go",
+    "shellcheck",
+    "shfmt",
+    "checkov",
+    "trivy",
+    "zizmor",
+    "ruff",
+    "inline-scripts",
+}
 SINGLE = {"all-linters"}
 lint_scenarios = [
     ("public repo, auto", lint_context(), PER_LINTER),
     ("private repo, auto", lint_context(private=True), SINGLE),
-    ("schedule event without repository payload, auto", lint_context(has_repository=False, event_name="schedule"),
-     PER_LINTER),
+    (
+        "schedule event without repository payload, auto",
+        lint_context(has_repository=False, event_name="schedule"),
+        PER_LINTER,
+    ),
     ("public repo, single", lint_context(mode="single"), SINGLE),
     ("private repo, parallel", lint_context(mode="parallel", private=True), PER_LINTER),
-    ("private repo, parallel, go and trivy off", lint_context(mode="parallel", private=True, go=False, trivy=False),
-     PER_LINTER - {"go", "trivy"}),
+    (
+        "private repo, parallel, go and trivy off",
+        lint_context(mode="parallel", private=True, go=False, trivy=False),
+        PER_LINTER - {"go", "trivy"},
+    ),
     ("public repo, config drift on", lint_context(config_drift=True), PER_LINTER | {"config-drift"}),
     ("public repo, inline scripts off", lint_context(inline_scripts=False), PER_LINTER - {"inline-scripts"}),
     ("invalid mode fails loudly in the single job", lint_context(mode="bogus"), SINGLE),
@@ -411,8 +476,10 @@ def labeler_context(event_name, *, author="DevSecNinja", fork=False):
     if event_name == "issues":
         event["issue"] = {"user": {"login": author}}
     else:
-        event["pull_request"] = {"user": {"login": author},
-                                 "head": {"repo": {"full_name": "someone/repo" if fork else "DevSecNinja/repo"}}}
+        event["pull_request"] = {
+            "user": {"login": author},
+            "head": {"repo": {"full_name": "someone/repo" if fork else "DevSecNinja/repo"}},
+        }
     return {"github": {"event_name": event_name, "event": event, "repository": "DevSecNinja/repo"}}
 
 
@@ -432,5 +499,7 @@ if failures:
         print(f"  - {failure}", file=sys.stderr)
     sys.exit(1)
 
-print(f"✓ Job conditions: {len(pages_scenarios)} pages.yml, {len(lint_scenarios)} lint.yml and "
-      f"{len(labeler_scenarios)} labeler.yml scenarios run exactly the expected jobs.")
+print(
+    f"✓ Job conditions: {len(pages_scenarios)} pages.yml, {len(lint_scenarios)} lint.yml and "
+    f"{len(labeler_scenarios)} labeler.yml scenarios run exactly the expected jobs."
+)
