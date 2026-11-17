@@ -30,6 +30,13 @@ if ! mise which biome >/dev/null 2>&1; then
     echo "::warning::Skipping Biome: this repository has JavaScript, TypeScript, JSON or CSS files but doesn't pin biome. To lint them, pin it in .mise.toml (Renovate-managed, e.g. 'mise use biome@<version>') and add a biome.json (config-sync's template is a starting point)."
     exit 0
 fi
+# Multiple reporters and --reporter-file need Biome 2.4.0 or later.
+version="$(mise exec -- biome --version 2>/dev/null || true)"
+version="${version##* }"
+if [ -n "${version}" ] && [ "$(printf '%s\n' 2.4.0 "${version}" | sort -V | head -n 1)" != 2.4.0 ]; then
+    echo "::warning::Skipping Biome: the shared Lint workflow needs Biome 2.4.0 or later, and this repository pins ${version}. Update the biome pin in .mise.toml."
+    exit 0
+fi
 
 # The default reporter shows formatting diffs in the log, the github one
 # annotates the PR. --no-errors-on-unmatched: the config may ignore every file.

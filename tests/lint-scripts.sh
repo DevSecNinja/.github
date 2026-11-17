@@ -31,6 +31,7 @@ which) [[ " ${FAKE_TOOLS} " == *" $2 "* ]] ;;
 exec)
     shift 2
     printf '%s: %s\n' "${PWD}" "$*" >>"${MISE_LOG}"
+    [ -z "${FAKE_STDOUT:-}" ] || echo "${FAKE_STDOUT}"
     [ -z "${FAKE_WRITES:-}" ] || touch "${FAKE_WRITES}"
     exit "${FAKE_EXIT:-0}"
     ;;
@@ -302,6 +303,14 @@ expect_log "${biome_call} --reporter=sarif --reporter-file=${RUNNER_TEMP}/biome.
 run_in "${code}" biome FAKE_EXIT=1
 expect_status 1 "a failing Biome"
 [ -z "${outputs}" ] || fail "Biome must not report a SARIF report it didn't write: ${outputs}"
+# Biome before 2.4.0 lacks multiple reporters: it warns and skips.
+run_in "${code}" biome FAKE_STDOUT="Version: 2.3.11"
+expect_status 0 "Biome 2.3.11"
+expect_out "::warning::Skipping Biome: the shared Lint workflow needs Biome 2.4.0 or later, and this repository pins 2.3.11." \
+    "Biome 2.3.11"
+[[ "${log}" != *"biome ci"* ]] || fail "Biome 2.3.11 must not run: ${log}"
+run_in "${code}" biome FAKE_STDOUT="Version: 2.4.0"
+expect_log "biome ci" "Biome 2.4.0"
 run_in "${code}" biome UPLOAD_SARIF=false
 expect_status 0 "Biome without SARIF"
 expect_log "${biome_call} -- a.json" "Biome without SARIF"
