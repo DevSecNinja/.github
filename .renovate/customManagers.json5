@@ -10,14 +10,18 @@
       // Optional packageName=, versioning=, extractVersion= and registryUrl=
       // follow depName= in that order, like Renovate's own *Versions presets.
       // An image value keeps its `<registry>/<name>:` prefix; only the tag and
-      // digest are tracked. A value that is not a plain literal (`"${X}"`,
-      // `"v1.2-$SUFFIX"`) is not matched. Replaces the truenas-apps-only SOPS
+      // digest are tracked. Three exclusive patterns: double-quoted, single-quoted
+      // and unquoted values; each must end at the quote or a command separator,
+      // so a value that is not a plain literal (`"1.2.3 ${X}"`, `1.2.3$S`)
+      // is not matched. Replaces the truenas-apps-only SOPS
       // manager for scripts/dccd.sh, which this covers.
       customType: "regex",
       description: "Process annotated versions in shell scripts",
       managerFilePatterns: ["/\\.(?:sh|bash|zsh|bats)(?:\\.tmpl)?$/"],
       matchStrings: [
-        "#[ \\t]*renovate:[ \\t]*datasource=(?<datasource>\\S+)[ \\t]+depName=(?<depName>\\S+)(?:[ \\t]+packageName=(?<packageName>\\S+))?(?:[ \\t]+versioning=(?<versioning>\\S+))?(?:[ \\t]+extractVersion=(?<extractVersion>\\S+))?(?:[ \\t]+registryUrl=(?<registryUrl>\\S+))?[ \\t]*\\r?\\n[ \\t]*(?:(?:export|local|readonly|declare(?:[ \\t]+-[a-zA-Z]+)*)[ \\t]+)?[A-Za-z_][A-Za-z0-9_]*=[\"']?(?:[^\\s\"'@$]*/[^\\s\"'@$/]*:|[^\\s\"'@$:/]+:)?(?<currentValue>[A-Za-z0-9][^\\s\"'@$:]*)(?:@(?<currentDigest>sha256:[a-f0-9]{64}))?[\"']?(?:[ \\t;#]|\\r?\\n|$)",
+        "#[ \\t]*renovate:[ \\t]*datasource=(?<datasource>\\S+)[ \\t]+depName=(?<depName>\\S+)(?:[ \\t]+packageName=(?<packageName>\\S+))?(?:[ \\t]+versioning=(?<versioning>\\S+))?(?:[ \\t]+extractVersion=(?<extractVersion>\\S+))?(?:[ \\t]+registryUrl=(?<registryUrl>\\S+))?[ \\t]*\\r?\\n[ \\t]*(?:(?:export|local|readonly|declare(?:[ \\t]+-[a-zA-Z]+)*)[ \\t]+)?[A-Za-z_][A-Za-z0-9_]*=\"(?:[^\\s\"'@$;]*/[^\\s\"'@$;/]*:|[^\\s\"'@$;:/]+:)?(?<currentValue>[A-Za-z0-9][^\\s\"'@$;:]*)(?:@(?<currentDigest>sha256:[a-f0-9]{64}))?\"(?:[ \\t;#&|]|\\r?\\n|$)",
+        "#[ \\t]*renovate:[ \\t]*datasource=(?<datasource>\\S+)[ \\t]+depName=(?<depName>\\S+)(?:[ \\t]+packageName=(?<packageName>\\S+))?(?:[ \\t]+versioning=(?<versioning>\\S+))?(?:[ \\t]+extractVersion=(?<extractVersion>\\S+))?(?:[ \\t]+registryUrl=(?<registryUrl>\\S+))?[ \\t]*\\r?\\n[ \\t]*(?:(?:export|local|readonly|declare(?:[ \\t]+-[a-zA-Z]+)*)[ \\t]+)?[A-Za-z_][A-Za-z0-9_]*='(?:[^\\s\"'@$;]*/[^\\s\"'@$;/]*:|[^\\s\"'@$;:/]+:)?(?<currentValue>[A-Za-z0-9][^\\s\"'@$;:]*)(?:@(?<currentDigest>sha256:[a-f0-9]{64}))?'(?:[ \\t;#&|]|\\r?\\n|$)",
+        "#[ \\t]*renovate:[ \\t]*datasource=(?<datasource>\\S+)[ \\t]+depName=(?<depName>\\S+)(?:[ \\t]+packageName=(?<packageName>\\S+))?(?:[ \\t]+versioning=(?<versioning>\\S+))?(?:[ \\t]+extractVersion=(?<extractVersion>\\S+))?(?:[ \\t]+registryUrl=(?<registryUrl>\\S+))?[ \\t]*\\r?\\n[ \\t]*(?:(?:export|local|readonly|declare(?:[ \\t]+-[a-zA-Z]+)*)[ \\t]+)?[A-Za-z_][A-Za-z0-9_]*=(?:[^\\s\"'@$;&|<>()#]*/[^\\s\"'@$;&|<>()#/]*:|[^\\s\"'@$;&|<>()#:/]+:)?(?<currentValue>[A-Za-z0-9][^\\s\"'@$;&|<>()#:]*)(?:@(?<currentDigest>sha256:[a-f0-9]{64}))?(?:[ \\t;#&|]|\\r?\\n|$)",
       ],
       datasourceTemplate: "{{{datasource}}}",
       versioningTemplate: "{{#if versioning}}{{{versioning}}}{{/if}}",

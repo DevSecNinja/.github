@@ -48,7 +48,7 @@ for m in managers:
         if re.search(r"\(\?<?[=!]", p):
             errors.append(f"{m['description']}: lookaround is not supported by Renovate's RE2 engine")
 
-pattern = compile_js(shell["matchStrings"][0])
+patterns = [compile_js(s) for s in shell["matchStrings"]]
 names = ("datasource", "depName", "currentValue", "currentDigest")
 digest = "sha256:" + "4da1a4828be12604092fa55311276f08f9224a74a62dcb4708bd7439e2a03911"
 gr = "# renovate: datasource=github-releases depName="
@@ -72,7 +72,14 @@ cases = {
     "# renovate: datasource=docker depName=redis\nREDIS_IMAGE=redis:7.4\n": ("docker", "redis", "7.4", None),
     f'# renovate: datasource=docker depName=registry.local:5000/team/app\nAPP="registry.local:5000/team/app:2.0.1@{digest}"\n':
         ("docker", "registry.local:5000/team/app", "2.0.1", digest),
+    # Unquoted values end at a command separator
+    f'{gr}a/b\nA_VERSION=1.2.3;\n': ("github-releases", "a/b", "1.2.3", None),
+    f'{gr}a/b\nA_VERSION=1.2.3 && echo ok\n': ("github-releases", "a/b", "1.2.3", None),
     # Not plain literals, or not annotated: never matched
+    f'{gr}a/b\nA_VERSION="1.2.3 ${{SUFFIX}}"\n': None,
+    f'{gr}a/b\nA_VERSION="1.2.3"$SUFFIX\n': None,
+    f'{gr}a/b\nA_VERSION=1.2.3$SUFFIX\n': None,
+    f"{gr}a/b\nA_VERSION='1.2.3\"\n": None,
     f'{gr}a/b\nA_VERSION="${{OTHER_VERSION}}"\n': None,
     f'{gr}a/b\nA_VERSION="v1.2-$SUFFIX"\n': None,
     f'{gr}a/b\n\nA_VERSION="1.2.3"\n': None,
@@ -80,12 +87,20 @@ cases = {
 }
 for text, want in cases.items():
     for variant, label in ((text, "LF"), (text.replace("\n", "\r\n"), "CRLF")):
-        m = pattern.search(variant)
-        got = None if not m else tuple(m.groupdict().get(n) for n in names)
+        # The quoted and unquoted patterns are exclusive: one line, one dep.
+        matches = [m for m in (p.search(variant) for p in patterns) if m]
+        if len(matches) > 1:
+            errors.append(f"shell manager ({label}): {text!r} matched by {len(matches)} patterns")
+        got = None if not matches else tuple(matches[0].groupdict().get(n) for n in names)
         if got != want:
             errors.append(f"shell manager ({label}): {text!r}: want {want}, got {got}")
 
-m = pattern.search(f"# renovate: datasource=docker depName=app packageName=ghcr.io/o/app versioning=loose registryUrl=https://ghcr.io\nAPP=1.2\n")
+
+def search(text):
+    return next((m for m in (p.search(text) for p in patterns) if m), None)
+
+
+m = search(f"# renovate: datasource=docker depName=app packageName=ghcr.io/o/app versioning=loose registryUrl=https://ghcr.io\nAPP=1.2\n")
 if not m or (m["packageName"], m["versioning"], m["registryUrl"]) != ("ghcr.io/o/app", "loose", "https://ghcr.io"):
     errors.append(f"shell manager: optional annotation fields not captured: {m and m.groupdict()}")
 
