@@ -7,7 +7,7 @@
   },
   "files": {
     "includes": [
-      "**",
+      "**/*.{js,mjs,cjs,jsx,ts,mts,cts,tsx,json,jsonc,css}",
       "!**/node_modules",
       "!apm_modules",
       "!.agents",
@@ -23,7 +23,8 @@
       "!.opencode",
       "!.specify",
       "!.venv*",
-      "!.windsurf"
+      "!.windsurf",
+      "!!config-sync/templates"
     ]
   },
   "formatter": {
