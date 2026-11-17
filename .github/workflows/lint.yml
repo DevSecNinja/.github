@@ -110,6 +110,12 @@ on:
         required: false
         type: string
         default: ""
+      lint-biome-with-eslint:
+        description: "Run Biome in repositories that configure ESLint too (eslint.config.* or .eslintrc*), where it steps
+          aside by default"
+        required: false
+        type: boolean
+        default: false
       lint-config-drift:
         description: "Check local config files match central DevSecNinja/.github repo"
         required: false
@@ -790,6 +796,8 @@ jobs:
       - name: Find JavaScript, TypeScript, JSON and CSS files
         # Repositories without them skip the mise install and Biome.
         id: web-files
+        env:
+          STEP_ASIDE_FOR: ${{ !inputs.lint-biome-with-eslint && 'eslint' || '' }}
         run: bash "${RUNNER_TEMP}/devsecninja-lint/scripts/lint/detect-language.sh" web
 
       - name: Install mise
@@ -948,6 +956,8 @@ jobs:
         # Repositories without them skip Biome (and its mise install).
         id: web-files
         if: ${{ inputs.lint-biome }}
+        env:
+          STEP_ASIDE_FOR: ${{ !inputs.lint-biome-with-eslint && 'eslint' || '' }}
         run: bash "${RUNNER_TEMP}/devsecninja-lint/scripts/lint/detect-language.sh" web
 
       - name: Install mise

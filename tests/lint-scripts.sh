@@ -270,6 +270,17 @@ git -C "${code}" add -f -- a.json b.mjs sub/c.tsx sub/d.css e.md .specify/f.json
 listed="$(cd "${code}" && bash "${scripts}/language-files.sh" web | tr '\0' '\n')"
 [ "${listed}" = $'a.json\nb.mjs\nsub/c.tsx\nsub/d.css' ] ||
     fail "language-files.sh web must list the JavaScript, TypeScript, JSON and CSS files; got: ${listed}"
+# Biome steps aside for ESLint, unless lint-biome-with-eslint clears STEP_ASIDE_FOR.
+touch "${code}/sub/.eslintrc"
+git -C "${code}" add -f -- sub/.eslintrc
+run_in "${code}" "detect-language web" STEP_ASIDE_FOR=eslint
+[ "${outputs}" = found=false ] || fail "Biome must step aside for ESLint; got: ${outputs}"
+expect_out "::notice::The repository has eslint config; skipping the web linter" "a repository with ESLint"
+run_in "${code}" "detect-language web" STEP_ASIDE_FOR=
+[ "${outputs}" = found=true ] || fail "lint-biome-with-eslint must run Biome; got: ${outputs}"
+git -C "${code}" rm -q --cached sub/.eslintrc
+run_in "${code}" "detect-language web" STEP_ASIDE_FOR=eslint
+[ "${outputs}" = found=true ] || fail "Biome must run without ESLint; got: ${outputs}"
 export FAKE_TOOLS="${FAKE_TOOLS} biome"
 biome_call="biome ci --no-errors-on-unmatched --reporter=default --reporter=github"
 run_in "${code}" biome FAKE_WRITES="${RUNNER_TEMP}/biome.sarif"

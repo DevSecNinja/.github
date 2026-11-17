@@ -203,7 +203,9 @@ pinned, findings fail the linter like any other.
   point. Findings are annotated on the PR, and with `upload-sarif` they also go
   to code scanning (category `biome`). `lint-biome-exclude` skips more paths,
   such as a directory with another root Biome config, which Biome rejects.
-  dprint formats only Markdown.
+  Biome steps aside in repositories that configure ESLint (`eslint.config.*`,
+  `.eslintrc*`), which lint in their own CI with their plugins; set
+  `lint-biome-with-eslint` to run both. dprint formats only Markdown.
 
 **Inline scripts.** Code in a `run:` block is out of reach of linters,
 formatters and tests, so a `run:` step may hold exactly one line with one
@@ -261,6 +263,7 @@ runner's system Python, which ships PyYAML (`ubuntu-24.04`).
 | `lint-ruff`                    | Python linting (ruff, see above). Default: `true`. After v4.5.0.       |
 | `lint-biome`                   | JS/TS/JSON/CSS linting (Biome). Default: `true`. After v4.5.0.         |
 | `lint-biome-exclude`           | Bash pattern of paths Biome skips. Default: `""`. After v4.5.0.        |
+| `lint-biome-with-eslint`       | Run Biome next to ESLint. Default: `false`. After v4.5.0.              |
 | `lint-config-drift`            | Config-drift check. Default: `false`.                                  |
 | `lint-inline-scripts`          | Inline-script check (see above). Default: `true`. After v4.4.0.        |
 | `lint-inline-scripts-blocking` | Report inline scripts as errors. Default: `false`. After v4.4.0.       |

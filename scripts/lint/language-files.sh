@@ -18,6 +18,8 @@ web)
     patterns=('**/*.js' '**/*.mjs' '**/*.cjs' '**/*.jsx' '**/*.ts' '**/*.mts' '**/*.cts' '**/*.tsx'
         '**/*.json' '**/*.jsonc' '**/*.css')
     ;;
+# ESLint configs: Biome steps aside for repositories that lint with ESLint.
+eslint) patterns=('**/eslint.config.*' '**/.eslintrc' '**/.eslintrc.*') ;;
 *)
     echo "::error::language-files.sh: unknown language '$1'" >&2
     exit 2
