@@ -233,9 +233,9 @@ expect_out "::notice::No python files found; skipping its linter" "a repository 
 export FAKE_TOOLS="${FAKE_TOOLS} ruff"
 run_in "${code}" ruff
 expect_status 0 "ruff with SARIF"
-expect_log "ruff check --force-exclude --exit-zero --output-format sarif --output-file ${RUNNER_TEMP}/ruff.sarif -- a.py sub/b.pyi" \
+expect_log "ruff check --force-exclude --no-fix --exit-zero --output-format sarif --output-file ${RUNNER_TEMP}/ruff.sarif -- a.py sub/b.pyi" \
     "ruff with SARIF"
-expect_log "ruff check --force-exclude --output-format github -- a.py sub/b.pyi" "ruff with SARIF"
+expect_log "ruff check --force-exclude --no-fix --output-format github -- a.py sub/b.pyi" "ruff with SARIF"
 expect_log "ruff format --force-exclude --diff -- a.py sub/b.pyi" "ruff with SARIF"
 [ "${outputs}" = sarif=true ] || fail "ruff must report its SARIF report; got: ${outputs}"
 run_in "${code}" ruff UPLOAD_SARIF=false FAKE_EXIT=1

@@ -1,7 +1,7 @@
 # Template — adapt per repo. Config for ruff, which the shared Lint workflow
 # (lint-ruff) runs on the repository's Python files: `ruff check` and
-# `ruff format --diff`. Projects that configure ruff in pyproject.toml
-# ([tool.ruff]) don't need this file.
+# `ruff format --diff`. Config-sync doesn't add it to a repo that configures
+# ruff in .ruff.toml or [tool.ruff] of pyproject.toml.
 line-length = 120
 
 # Generated and vendored paths, as in the shared dprint.json. The Lint workflow

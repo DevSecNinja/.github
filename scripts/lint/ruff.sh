@@ -17,14 +17,15 @@ if [ "${#files[@]}" -eq 0 ]; then
     exit 0
 fi
 
-# --force-exclude keeps the config's excludes for the files passed explicitly.
+# --force-exclude keeps the config's excludes for the files passed explicitly,
+# and --no-fix overrides a `fix = true` in it: checks must not edit the files.
 if [ "${UPLOAD_SARIF}" = "true" ]; then
-    mise exec -- ruff check --force-exclude --exit-zero \
+    mise exec -- ruff check --force-exclude --no-fix --exit-zero \
         --output-format sarif --output-file "${RUNNER_TEMP}/ruff.sarif" -- "${files[@]}"
     echo "sarif=true" >>"${GITHUB_OUTPUT}"
 fi
 
 status=0
-mise exec -- ruff check --force-exclude --output-format github -- "${files[@]}" || status=1
+mise exec -- ruff check --force-exclude --no-fix --output-format github -- "${files[@]}" || status=1
 mise exec -- ruff format --force-exclude --diff -- "${files[@]}" || status=1
 exit "${status}"
