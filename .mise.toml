@@ -33,6 +33,7 @@ run = [
   "bash ./tests/release-please-auth-contract.sh",
   "bash ./tests/automation-app-contract.sh",
   "uv run --script ./tests/app-key-confinement.py",
+  "uv run --script ./tests/lint-include.py",
   "bash ./tests/lint-job-modes-contract.sh",
   "bash ./tests/open-pr-push.sh",
   "bash ./tests/open-pr-api-commit.sh",

@@ -114,9 +114,12 @@ on the event (v4.1.0+):
   Internal repositories, whose logs every enterprise member can read, and a
   failed visibility lookup count as public.
   Repositories whose Lint caller runs on pull requests only get the full-history
-  scan from a second caller, after each merge, weekly and on dispatch, with every
-  other linter off (this repository's `secret-scan-caller.yml`). A Lint caller
-  that also runs on push already scans the history there, so drop `push` below.
+  scan from a second caller, after each merge, weekly and on dispatch (this
+  repository's `secret-scan-caller.yml`). It calls the include mode,
+  [`lint-include.yml`](#lint-include-mode-lint-includeyml), with only
+  `lint-gitleaks: true`, so linters added to `lint.yml` later never start
+  running there. A Lint caller that also runs on push already scans the history
+  there, so drop `push` below.
 
 ```yaml
 name: Secret scan
@@ -132,7 +135,7 @@ permissions:
 
 jobs:
   gitleaks:
-    uses: DevSecNinja/.github/.github/workflows/lint.yml@<sha> # v4.1.0
+    uses: DevSecNinja/.github/.github/workflows/lint-include.yml@<sha> # v4.4.0
     permissions:
       contents: read
       security-events: write
@@ -142,16 +145,7 @@ jobs:
       # Findings only report; fail the run if the scan or upload fails.
       lint-fail-on-error: true
       # upload-sarif: false # private repos without GitHub Advanced Security
-      lint-dprint: false
-      lint-yamlfmt: false
-      lint-yamllint: false
-      lint-actionlint: false
-      lint-go: false
-      lint-shellcheck: false
-      lint-shfmt: false
-      lint-checkov: false
-      lint-trivy: false
-      lint-zizmor: false
+      lint-gitleaks: true
 ```
 
 | Input                   | Description                                                            |
@@ -208,6 +202,22 @@ jobs:
       # lint-fail-on-error: true
       # lint-job-mode: auto # single | parallel
 ```
+
+### Lint, include mode (`lint-include.yml`)
+
+`lint.yml` is the exclude mode: every linter runs unless the caller sets
+`lint-<name>: false`. `lint-include.yml` (v4.4.0+) is the include mode: every
+linter is off unless the caller sets `lint-<name>: true`, and linters added to
+`lint.yml` later stay off until a caller enables them. Use it when a caller
+wants a few specific linters, such as the secret-scan caller above, instead of
+keeping a list of linters to turn off.
+
+It takes the same inputs as `lint.yml` with the same defaults, except that
+every `lint-<name>` linter defaults to `false`, and passes them all to the
+`lint.yml` of the same commit (through GitHub's `$/` self-repository syntax),
+so linters behave exactly as described above. Grant the calling job
+`contents: read` and `security-events: write`. `tests/lint-include.py` fails CI
+when `lint.yml` gains an input that `lint-include.yml` doesn't forward.
 
 ### Auto-fix formatting (`autofix.yml`)
 

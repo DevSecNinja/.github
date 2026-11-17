@@ -1,0 +1,160 @@
+---
+name: Reusable — Lint (include mode)
+
+# Include mode of the reusable Lint workflow: every linter is off unless the
+# caller turns it on (`lint-gitleaks: true` runs gitleaks and nothing else).
+# Linters added to lint.yml later stay off here until a caller enables them.
+# lint.yml itself is the exclude mode: every linter on, `lint-<name>: false`
+# turns one off. This file only redeclares lint.yml's inputs, with every
+# `lint-<name>` linter defaulting to false, and passes them all through.
+# tests/lint-include.py fails CI when an input of lint.yml is missing here,
+# isn't passed through unchanged, or a linter doesn't default to false.
+on:
+  workflow_call:
+    inputs:
+      mise-version:
+        description: "mise version to install"
+        required: true
+        type: string
+      golangci-lint-version:
+        description: "golangci-lint version to install (required only when Go linting runs)"
+        required: false
+        type: string
+        default: ""
+      go-version-file:
+        description: "Path to the Go version file"
+        required: false
+        type: string
+        default: "go.mod"
+      lint-config-dir:
+        description: "Directory containing optional linter config files"
+        required: false
+        type: string
+        default: ""
+      lint-fail-on-error:
+        description: "Fail the workflow when a linter fails"
+        required: false
+        type: boolean
+        default: false
+      lint-dprint:
+        description: "Run dprint (Markdown formatting)"
+        required: false
+        type: boolean
+        default: false
+      lint-yamlfmt:
+        description: "Run yamlfmt (YAML formatting)"
+        required: false
+        type: boolean
+        default: false
+      lint-yamllint:
+        description: "Run yamllint (YAML linting)"
+        required: false
+        type: boolean
+        default: false
+      lint-actionlint:
+        description: "Run actionlint (GitHub Actions linting)"
+        required: false
+        type: boolean
+        default: false
+      lint-gitleaks:
+        description: "Run gitleaks (secret scanning)"
+        required: false
+        type: boolean
+        default: false
+      lint-go:
+        description: "Run golangci-lint (Go linting)"
+        required: false
+        type: boolean
+        default: false
+      lint-shellcheck:
+        description: "Run shellcheck (shell linting)"
+        required: false
+        type: boolean
+        default: false
+      lint-shellcheck-exclude:
+        description: "Glob pattern for paths to exclude from shellcheck (passed to find -not -path)"
+        required: false
+        type: string
+        default: ""
+      lint-shfmt:
+        description: "Run shfmt (shell formatting)"
+        required: false
+        type: boolean
+        default: false
+      lint-shfmt-exclude:
+        description: "Glob pattern for paths to exclude from shfmt (passed to find -not -path)"
+        required: false
+        type: string
+        default: ""
+      lint-checkov:
+        description: "Run checkov (IaC security) — uploads SARIF"
+        required: false
+        type: boolean
+        default: false
+      lint-trivy:
+        description: "Run trivy fs (misconfig + secrets) — uploads SARIF"
+        required: false
+        type: boolean
+        default: false
+      lint-zizmor:
+        description: "Run zizmor (Actions security) — uploads SARIF"
+        required: false
+        type: boolean
+        default: false
+      lint-config-drift:
+        description: "Check local config files match central DevSecNinja/.github repo"
+        required: false
+        type: boolean
+        default: false
+      upload-sarif:
+        description: "Upload checkov/trivy/zizmor results to GitHub code scanning (requires GitHub Advanced Security). Set
+          false for private repos without GHAS to gate on exit codes with console output instead."
+        required: false
+        type: boolean
+        default: true
+      lint-job-mode:
+        description: "How linters are scheduled: auto (default), single or parallel. See lint.yml."
+        required: false
+        type: string
+        default: auto
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    # `$/` (self-repository syntax) resolves to this workflow's own repository
+    # at the commit that is running, so a caller pinning lint-include.yml@<sha>
+    # gets lint.yml from that same commit, and this repository's callers test
+    # local changes to both. `./` is workspace-relative, so it isn't
+    # guaranteed to resolve to this repository when another repository calls
+    # this workflow, and an `owner/repo/...@<sha>` pin would lag behind
+    # lint.yml. actionlint doesn't know `$/` yet: .github/actionlint.yaml
+    # ignores that one error (#552).
+    uses: $/.github/workflows/lint.yml
+    permissions:
+      contents: read
+      # checkov, trivy, zizmor and gitleaks history findings go to code scanning.
+      security-events: write
+    with:
+      mise-version: ${{ inputs.mise-version }}
+      golangci-lint-version: ${{ inputs.golangci-lint-version }}
+      go-version-file: ${{ inputs.go-version-file }}
+      lint-config-dir: ${{ inputs.lint-config-dir }}
+      lint-fail-on-error: ${{ inputs.lint-fail-on-error }}
+      lint-dprint: ${{ inputs.lint-dprint }}
+      lint-yamlfmt: ${{ inputs.lint-yamlfmt }}
+      lint-yamllint: ${{ inputs.lint-yamllint }}
+      lint-actionlint: ${{ inputs.lint-actionlint }}
+      lint-gitleaks: ${{ inputs.lint-gitleaks }}
+      lint-go: ${{ inputs.lint-go }}
+      lint-shellcheck: ${{ inputs.lint-shellcheck }}
+      lint-shellcheck-exclude: ${{ inputs.lint-shellcheck-exclude }}
+      lint-shfmt: ${{ inputs.lint-shfmt }}
+      lint-shfmt-exclude: ${{ inputs.lint-shfmt-exclude }}
+      lint-checkov: ${{ inputs.lint-checkov }}
+      lint-trivy: ${{ inputs.lint-trivy }}
+      lint-zizmor: ${{ inputs.lint-zizmor }}
+      lint-config-drift: ${{ inputs.lint-config-drift }}
+      upload-sarif: ${{ inputs.upload-sarif }}
+      lint-job-mode: ${{ inputs.lint-job-mode }}
