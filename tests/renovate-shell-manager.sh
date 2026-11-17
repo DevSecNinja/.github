@@ -68,8 +68,13 @@ cases = {
     f"{gr}a/b\n  local A_VERSION='1.2.3'\n": ("github-releases", "a/b", "1.2.3", None),
     f'{gr}a/b\nreadonly A_VERSION="1.2.3";\n': ("github-releases", "a/b", "1.2.3", None),
     f'{gr}a/b\ndeclare -r A_VERSION="1.2.3"': ("github-releases", "a/b", "1.2.3", None),
-    # Image without a registry path, and a registry with a port
-    "# renovate: datasource=docker depName=redis\nREDIS_IMAGE=redis:7.4\n": ("docker", "redis", "7.4", None),
+    # Debian epochs are kept, in every quoting form
+    f'# renovate: datasource=deb depName=docker-ce\nDOCKER_CE="5:29.6.2-1~debian.13~trixie"\n': ("deb", "docker-ce", "5:29.6.2-1~debian.13~trixie", None),
+    "# renovate: datasource=deb depName=docker-ce\nDOCKER_CE='5:29.6.2-1~debian.13~trixie'\n": ("deb", "docker-ce", "5:29.6.2-1~debian.13~trixie", None),
+    "# renovate: datasource=deb depName=docker-ce\nDOCKER_CE=5:29.6.2-1~debian.13~trixie\n": ("deb", "docker-ce", "5:29.6.2-1~debian.13~trixie", None),
+    # An image needs a path; a registry with a port works
+    "# renovate: datasource=docker depName=redis\nREDIS_IMAGE=redis:7.4\n": None,
+    "# renovate: datasource=docker depName=docker.io/library/redis\nREDIS_IMAGE=docker.io/library/redis:7.4\n": ("docker", "docker.io/library/redis", "7.4", None),
     f'# renovate: datasource=docker depName=registry.local:5000/team/app\nAPP="registry.local:5000/team/app:2.0.1@{digest}"\n':
         ("docker", "registry.local:5000/team/app", "2.0.1", digest),
     # Unquoted values end at a command separator
@@ -78,6 +83,10 @@ cases = {
     # Not plain literals, or not annotated: never matched
     f'{gr}a/b\nA_VERSION="1.2.3 ${{SUFFIX}}"\n': None,
     f'{gr}a/b\nA_VERSION="1.2.3"$SUFFIX\n': None,
+    # Command substitution is not a literal
+    f'# renovate: datasource=docker depName=registry.example/app\nAPP="registry.example/`get_image`:1.2.3"\n': None,
+    f'# renovate: datasource=docker depName=registry.example/app\nAPP=registry.example/`get_image`:1.2.3\n': None,
+    f'{gr}a/b\nA_VERSION="`cat VERSION`"\n': None,
     f'{gr}a/b\nA_VERSION=1.2.3$SUFFIX\n': None,
     f"{gr}a/b\nA_VERSION='1.2.3\"\n": None,
     f'{gr}a/b\nA_VERSION="${{OTHER_VERSION}}"\n': None,

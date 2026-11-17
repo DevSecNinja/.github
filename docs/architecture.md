@@ -1238,8 +1238,10 @@ can still assign Code Owners if an automerge PR cannot merge cleanly.
   `export`, `local`, `readonly` or `declare`. The annotation can add
   `packageName=`, `versioning=`, `extractVersion=` and `registryUrl=`, in that
   order. For an image value (`"docker.io/library/postgres:18.3-alpine@sha256:…"`)
-  only the tag and digest are tracked. Values that aren't plain literals
-  (`"${OTHER}"`) are skipped. Scripts without one of those extensions are not
+  only the tag and digest are tracked; the image needs a registry or namespace
+  path, so write `docker.io/library/redis:7.4` rather than `redis:7.4`. Other
+  values keep a leading Debian epoch (`5:29.6.2-1~…`). Values that aren't plain
+  literals (`"${OTHER}"`, backtick substitutions) are skipped. Scripts without one of those extensions are not
   scanned.
 
 All annotation managers accept CRLF line endings as well as LF.
