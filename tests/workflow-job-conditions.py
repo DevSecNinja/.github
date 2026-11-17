@@ -377,7 +377,7 @@ for name, context, expected in pages_scenarios:
 
 def lint_context(*, mode="auto", private=False, has_repository=True, event_name="pull_request", **toggles):
     inputs = {f"lint-{name}": True for name in ("dprint", "yamlfmt", "yamllint", "actionlint", "gitleaks", "go",
-                                                "shellcheck", "shfmt", "checkov", "trivy", "zizmor")}
+                                                "shellcheck", "shfmt", "checkov", "trivy", "zizmor", "inline-scripts")}
     inputs["lint-config-drift"] = False
     inputs["lint-job-mode"] = mode
     inputs.update({f"lint-{k.replace('_', '-')}": v for k, v in toggles.items()})
@@ -387,7 +387,7 @@ def lint_context(*, mode="auto", private=False, has_repository=True, event_name=
 
 lint = parse_jobs(WORKFLOWS / "lint.yml")
 PER_LINTER = {"dprint", "yamlfmt", "yamllint", "actionlint", "gitleaks", "go", "shellcheck", "shfmt", "checkov",
-              "trivy", "zizmor"}
+              "trivy", "zizmor", "inline-scripts"}
 SINGLE = {"all-linters"}
 lint_scenarios = [
     ("public repo, auto", lint_context(), PER_LINTER),
@@ -399,6 +399,7 @@ lint_scenarios = [
     ("private repo, parallel, go and trivy off", lint_context(mode="parallel", private=True, go=False, trivy=False),
      PER_LINTER - {"go", "trivy"}),
     ("public repo, config drift on", lint_context(config_drift=True), PER_LINTER | {"config-drift"}),
+    ("public repo, inline scripts off", lint_context(inline_scripts=False), PER_LINTER - {"inline-scripts"}),
     ("invalid mode fails loudly in the single job", lint_context(mode="bogus"), SINGLE),
 ]
 for name, context, expected in lint_scenarios:

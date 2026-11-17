@@ -1,0 +1,356 @@
+---
+# Cases for tests/lint-inline-scripts.py. Each case writes `files` (path ->
+# content) into an empty repository and runs scripts/lint-inline-scripts.py on
+# it. `expect` lists one substring per annotation, in output order; an empty
+# list means the case must pass. `blocking: true` runs with --blocking, which
+# turns warnings into errors and the exit code into 1 on findings.
+
+- name: one simple command per run step passes
+  expect: []
+  files:
+    .github/workflows/ok.yml: |-
+      on: push
+      jobs:
+        build:
+          runs-on: ubuntu-24.04
+          steps:
+            - run: ./scripts/build.sh
+            - run: bash .github/scripts/x.sh --flag "a | b; c && d"
+            - run: python scripts/x.py 2>&1 >out.log
+            - run: ./scripts/build.sh >|build.log
+            - run: ./scripts/build.sh ${VALUE:-a|b} ${OTHER:-c;d&&e} <in.txt 2<&0
+            - run: pwsh -File scripts/x.ps1 &>/dev/null
+            - run: npm ci # a trailing comment is fine
+            - run: echo 'no $(substitution) in single quotes'
+            - run: |
+                mise run test
+            - name: Bash with options is still bash
+              shell: bash --noprofile --norc -eo pipefail {0}
+              run: ./x.sh
+            - shell: sh
+              run: ./x.sh
+            - uses: actions/checkout@v6
+
+- name: multiple lines
+  expect:
+    - "line=6,title=Inline script::Job 'build', step 'Two commands': multiple lines."
+  files:
+    .github/workflows/x.yml: |-
+      jobs:
+        build:
+          runs-on: ubuntu-24.04
+          steps:
+            - name: Two commands
+              run: |
+                ./a.sh
+                ./b.sh
+
+- name: pipes and command lists
+  expect:
+    - "step '#1': a pipe (|)."
+    - "step '#2': a command list"
+    - "step '#3': a command list"
+    - "step '#4': a command list"
+    - "step '#5': a command list"
+  files:
+    .github/workflows/x.yml: |-
+      jobs:
+        build:
+          runs-on: ubuntu-24.04
+          steps:
+            - run: ./a.sh | tee out.log
+            - run: ./a.sh && ./b.sh
+            - run: ./a.sh || true
+            - run: ./a.sh; ./b.sh
+            - run: ./server.sh &
+
+- name: escaped characters never hide an operator, and ${...} can't hide a substitution
+  expect:
+    - "step '#1': a pipe (|)."
+    - "step '#2': a command list"
+    - "step '#3': command substitution"
+  files:
+    .github/workflows/x.yml: |-
+      jobs:
+        build:
+          runs-on: ubuntu-24.04
+          steps:
+            - run: printf '%s\n' \>| wc -c
+            - run: ./a.sh \>& ./b.sh
+            - run: ./a.sh ${X:-$(date)}
+
+- name: command substitution, heredocs and here-strings
+  expect:
+    - "step '#1': command substitution"
+    - "step '#2': command substitution"
+    - "step '#3': command substitution"
+    - "step '#4': command substitution"
+    - "step '#5': a heredoc or here-string"
+    - "step '#6': multiple lines, a heredoc or here-string"
+  files:
+    .github/workflows/x.yml: |-
+      jobs:
+        build:
+          runs-on: ubuntu-24.04
+          steps:
+            - run: ./a.sh $(date)
+            - run: ./a.sh "$(date)"
+            - run: ./a.sh `date`
+            - run: diff <(./a.sh) expected.txt
+            - run: grep x <<<"${VALUE}"
+            - run: |
+                cat <<EOF
+                text
+                EOF
+
+- name: shell control flow
+  expect:
+    - "step '#1': a command list (&&, ||, ; or &), shell control flow"
+    - "step '#2': a command list (&&, ||, ; or &), shell control flow"
+    - "step '#3': shell control flow"
+    - "step '#4': multiple lines, a command list (&&, ||, ; or &), shell control flow"
+  files:
+    .github/workflows/x.yml: |-
+      jobs:
+        build:
+          runs-on: ubuntu-24.04
+          steps:
+            - run: if [ -f x ]; then ./x.sh; fi
+            - run: for f in *.sh; do ./lint.sh "$f"; done
+            - run: ( cd sub ./x.sh )
+            - run: |
+                case "${MODE}" in
+                  a) ./a.sh ;;
+                esac
+
+- name: expressions belong in env
+  expect:
+    - "step 'Greet': a ${{ }} expression (pass it through env: instead)."
+  files:
+    .github/workflows/x.yml: |-
+      jobs:
+        build:
+          runs-on: ubuntu-24.04
+          steps:
+            - name: Greet
+              run: ./greet.sh "${{ github.event.pull_request.title }}"
+            - name: Through env
+              env:
+                TITLE: ${{ github.event.pull_request.title }}
+              run: ./greet.sh
+
+- name: inline code for non-bash shells, from the step or the defaults
+  expect:
+    - "Job 'a', step '#1': inline code for shell 'python'."
+    - "Job 'a', step '#2': inline code for shell 'pwsh'."
+    - "Job 'b', step '#1': inline code for shell 'cmd'."
+    - "Job 'b', step '#2': multiple lines, inline code for shell 'cmd'."
+  files:
+    .github/workflows/x.yml: |-
+      defaults:
+        run:
+          shell: pwsh
+      jobs:
+        a:
+          runs-on: ubuntu-24.04
+          steps:
+            - shell: python
+              run: print("hello")
+            - run: ./x.ps1
+            - shell: bash
+              run: ./x.sh
+        b:
+          runs-on: windows-2025
+          defaults:
+            run:
+              shell: cmd
+          steps:
+            - run: x.cmd
+            - run: |
+                echo a
+                echo b
+            - shell: ${{ matrix.shell }}
+              run: ./x
+
+- name: Windows runners default to pwsh unless a shell is set
+  expect:
+    - "Job 'windows', step '#1': inline code for shell 'pwsh'."
+    - "Job 'labels', step '#1': inline code for shell 'pwsh'."
+    - "Job 'group', step '#1': inline code for shell 'pwsh'."
+  files:
+    .github/workflows/x.yml: |-
+      jobs:
+        windows:
+          runs-on: windows-2025
+          steps:
+            - run: Write-Output 'hello'
+            - shell: bash
+              run: pwsh -File scripts/x.ps1
+        labels:
+          runs-on: [self-hosted, Windows, "${{ matrix.arch }}"]
+          steps:
+            - run: ./x.ps1
+        group:
+          runs-on:
+            group: runners
+            labels: windows-latest
+          steps:
+            - run: ./x.ps1
+        matrix:
+          runs-on: ${{ matrix.os }}
+          steps:
+            - run: ./x
+        linux:
+          runs-on: ubuntu-24.04
+          steps:
+            - run: ./x.sh
+
+- name: composite actions are checked, other actions and node_modules are not
+  expect:
+    - "file=.github/workflows/x.yml,line=5,title=Inline script::Job 'build', step '#1': a pipe"
+    - "file=actions/a/action.yml,line=6,title=Inline script::Composite action, step 'Build': multiple lines."
+  files:
+    .github/workflows/x.yml: |-
+      jobs:
+        build:
+          runs-on: ubuntu-24.04
+          steps:
+            - run: ./a.sh | ./b.sh
+    actions/a/action.yml: |-
+      runs:
+        using: composite
+        steps:
+          - name: Build
+            shell: bash
+            run: |
+              ./a.sh
+              ./b.sh
+          - shell: bash
+            run: ${GITHUB_ACTION_PATH}/build.sh
+    actions/b/action.yaml: |-
+      runs:
+        using: node24
+        main: index.js
+    node_modules/dep/action.yml: |-
+      runs:
+        using: composite
+        steps:
+          - shell: bash
+            run: ./a.sh | ./b.sh
+
+- name: opt-outs with a reason, above the step or inside it
+  expect: []
+  opt-outs: 3
+  files:
+    .github/workflows/x.yml: |-
+      jobs:
+        build:
+          runs-on: ubuntu-24.04
+          steps:
+            # Bootstraps the runner before any script is checked out.
+            # lint: allow-inline-script bootstrap before checkout
+            - name: Above
+              run: |
+                ./a.sh
+                ./b.sh
+            - name: Inside
+              run: |
+                # lint: allow-inline-script one-off probe
+                ./a.sh | ./b.sh
+            - name: Same line
+              run: | # lint: allow-inline-script: measured overhead
+                ./a.sh
+                ./b.sh
+
+- name: an opt-out needs a reason and covers only its own step
+  opt-outs: 2
+  expect:
+    - "step 'No reason': multiple lines, an allow-inline-script opt-out without a reason."
+    - "step 'Before': multiple lines."
+    - "step 'After': multiple lines."
+  files:
+    .github/workflows/x.yml: |-
+      jobs:
+        build:
+          runs-on: ubuntu-24.04
+          steps:
+            # lint: allow-inline-script
+            - name: No reason
+              run: |
+                ./a.sh
+                ./b.sh
+            - name: Before
+              run: |
+                ./a.sh
+                ./b.sh
+
+            # lint: allow-inline-script covers the next step only
+            - name: Covered
+              run: |
+                ./a.sh
+                ./b.sh
+            - name: Inner comment
+              run: |
+                ./a.sh
+                # lint: allow-inline-script covers this step, not the next
+            - name: After
+              run: |
+                ./a.sh
+                ./b.sh
+
+- name: opt-out text inside strings does not count
+  expect:
+    - "step 'In a string': multiple lines."
+    - "step '# lint: allow-inline-script in the name': multiple lines."
+    - "step 'In an env value': multiple lines."
+    - "step 'In a multiline quoted argument': multiple lines."
+    - "step 'In a heredoc payload': multiple lines, a heredoc or here-string"
+  files:
+    .github/workflows/x.yml: |-
+      jobs:
+        build:
+          runs-on: ubuntu-24.04
+          steps:
+            - name: In a string
+              run: |
+                echo '# lint: allow-inline-script example' >notes.txt
+                ./b.sh
+            - name: "# lint: allow-inline-script in the name"
+              run: |
+                ./a.sh
+                ./b.sh
+            - name: In an env value
+              env:
+                NOTE: "# lint: allow-inline-script not a comment"
+              run: |
+                ./a.sh
+                ./b.sh
+            - name: In a multiline quoted argument
+              run: |
+                printf '%s\n' 'first
+                # lint: allow-inline-script example'
+            - name: In a heredoc payload
+              run: |
+                cat <<'EOF' >notes.txt
+                # lint: allow-inline-script example
+                EOF
+
+- name: blocking mode reports errors and fails
+  blocking: true
+  expect:
+    - "::error file=.github/workflows/x.yml,line=5,title=Inline script::"
+  files:
+    .github/workflows/x.yml: |-
+      jobs:
+        build:
+          runs-on: ubuntu-24.04
+          steps:
+            - run: ./a.sh && ./b.sh
+
+- name: a file that can't be parsed fails blocking mode
+  blocking: true
+  expect:
+    - "::error file=.github/workflows/bad.yml,title=Inline scripts::Could not parse"
+  files:
+    .github/workflows/bad.yml: |-
+      jobs: [unclosed

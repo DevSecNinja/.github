@@ -106,6 +106,16 @@ on:
         required: false
         type: boolean
         default: false
+      lint-inline-scripts:
+        description: "Report inline scripts in run: steps (scripts/lint-inline-scripts.py). See lint.yml."
+        required: false
+        type: boolean
+        default: false
+      lint-inline-scripts-blocking:
+        description: "Report inline scripts as errors and fail the inline-scripts linter instead of warning"
+        required: false
+        type: boolean
+        default: false
       upload-sarif:
         description: "Upload checkov/trivy/zizmor results to GitHub code scanning (requires GitHub Advanced Security). Set
           false for private repos without GHAS to gate on exit codes with console output instead."
@@ -156,5 +166,7 @@ jobs:
       lint-trivy: ${{ inputs.lint-trivy }}
       lint-zizmor: ${{ inputs.lint-zizmor }}
       lint-config-drift: ${{ inputs.lint-config-drift }}
+      lint-inline-scripts: ${{ inputs.lint-inline-scripts }}
+      lint-inline-scripts-blocking: ${{ inputs.lint-inline-scripts-blocking }}
       upload-sarif: ${{ inputs.upload-sarif }}
       lint-job-mode: ${{ inputs.lint-job-mode }}

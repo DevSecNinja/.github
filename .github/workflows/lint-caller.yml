@@ -28,6 +28,9 @@ jobs:
       # renovate: datasource=github-releases depName=golangci/golangci-lint
       # golangci-lint-version: "v2.12.2"
       lint-config-dir: config-sync/files
+      # Warnings only until this repository's own run: steps are moved into
+      # scripts (#537); the last PR of that stack makes it blocking.
+      lint-inline-scripts-blocking: false
 
   lint-single-job:
     # Exercises `lint-job-mode: single` — the default for private callers —

@@ -98,6 +98,19 @@ on:
         required: false
         type: boolean
         default: false
+      lint-inline-scripts:
+        description: >-
+          Report inline scripts in the `run:` steps of workflows and composite actions: a `run:` may hold one line with
+          one simple command (scripts/lint-inline-scripts.py). Warnings only, unless `lint-inline-scripts-blocking` is
+          true.
+        required: false
+        type: boolean
+        default: true
+      lint-inline-scripts-blocking:
+        description: "Report inline scripts as errors and fail the inline-scripts linter instead of warning"
+        required: false
+        type: boolean
+        default: false
       upload-sarif:
         description: "Upload checkov/trivy/zizmor results to GitHub code scanning (requires GitHub Advanced Security). Set
           false for private repos without GHAS to gate on exit codes with console output instead."
@@ -830,6 +843,37 @@ jobs:
           echo ""
           echo "All config files match the central repository."
 
+  inline-scripts:
+    name: inline scripts
+    if: ${{ inputs.lint-inline-scripts && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
+      }}
+    continue-on-error: ${{ ! inputs.lint-fail-on-error }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Checkout inline-script checker
+        # The checker ships with this reusable workflow: fetch it from the
+        # same commit of DevSecNinja/.github that the caller pinned.
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .lint-inline-scripts
+          sparse-checkout: scripts/lint-inline-scripts.py
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Check for inline scripts
+        env:
+          LINT_INLINE_SCRIPTS_BLOCKING: ${{ inputs.lint-inline-scripts-blocking }}
+        # The runner's system Python ships PyYAML; a caller's mise Python may not.
+        run: /usr/bin/python3 .lint-inline-scripts/scripts/lint-inline-scripts.py
+
   all-linters:
     # Single-job mode (`lint-job-mode: single`, or `auto` on a private
     # repository). Every enabled linter runs as a step of this one job, so a
@@ -1404,6 +1448,28 @@ jobs:
 
           echo ""
           echo "All config files match the central repository."
+
+      - name: Checkout inline-script checker
+        if: ${{ inputs.lint-inline-scripts }}
+        # The checker ships with this reusable workflow: fetch it from the
+        # same commit of DevSecNinja/.github that the caller pinned.
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .lint-inline-scripts
+          sparse-checkout: scripts/lint-inline-scripts.py
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Check for inline scripts
+        id: inline-scripts
+        if: ${{ inputs.lint-inline-scripts }}
+        continue-on-error: true
+        env:
+          LINT_INLINE_SCRIPTS_BLOCKING: ${{ inputs.lint-inline-scripts-blocking }}
+        # The runner's system Python ships PyYAML; a caller's mise Python may not.
+        run: /usr/bin/python3 .lint-inline-scripts/scripts/lint-inline-scripts.py
 
       - name: Report linter results
         if: ${{ !cancelled() }}

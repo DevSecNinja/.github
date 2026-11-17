@@ -56,7 +56,7 @@ comment and supply the required inputs.
 
 ### Lint (`lint.yml`)
 
-Runs up to eleven linters. By default, linter failures are reported without
+Runs up to twelve linters. By default, linter failures are reported without
 failing the workflow; set `lint-fail-on-error` to `true` to make lint failures
 fail the workflow. Toggle individual linters on/off with boolean inputs; all
 linter toggles default to `true`.
@@ -148,27 +148,62 @@ jobs:
       lint-gitleaks: true
 ```
 
-| Input                   | Description                                                            |
-| ----------------------- | ---------------------------------------------------------------------- |
-| `mise-version`          | **Required.** mise version to install.                                 |
-| `golangci-lint-version` | **Required.** golangci-lint version to install.                        |
-| `go-version-file`       | Go version file for setup-go. Default: `go.mod`.                       |
-| `lint-config-dir`       | Optional linter config directory. Default: `""`.                       |
-| `lint-fail-on-error`    | Fail when a linter fails. Default: `false`.                            |
-| `lint-job-mode`         | `auto`, `single`, or `parallel` (see above). Default: `auto`. v3.3.0+. |
-| `upload-sarif`          | Upload checkov/trivy/zizmor SARIF to code scanning. Default: `true`.   |
-| `lint-dprint`           | Markdown formatting (dprint). Default: `true`.                         |
-| `lint-yamlfmt`          | YAML formatting (yamlfmt). Default: `true`.                            |
-| `lint-yamllint`         | YAML linting (yamllint). Default: `true`.                              |
-| `lint-actionlint`       | GitHub Actions linting. Default: `true`.                               |
-| `lint-gitleaks`         | Secret scanning (gitleaks). Default: `true`.                           |
-| `lint-go`               | Go linting (golangci-lint). Default: `true`.                           |
-| `lint-shellcheck`       | Shell linting (shellcheck). Default: `true`.                           |
-| `lint-shfmt`            | Shell formatting (shfmt). Default: `true`.                             |
-| `lint-checkov`          | IaC security scan (checkov). Default: `true`.                          |
-| `lint-trivy`            | Filesystem scan (trivy). Default: `true`.                              |
-| `lint-zizmor`           | Actions security scan (zizmor). Default: `true`.                       |
-| `lint-config-drift`     | Config-drift check. Default: `false`.                                  |
+**Inline scripts.** Code in a `run:` block is out of reach of linters,
+formatters and tests, so a `run:` step may hold exactly one line with one
+simple command, such as `./scripts/build.sh`, `bash .github/scripts/x.sh`,
+`pwsh -File scripts/x.ps1` or `mise run test`. The `inline scripts` linter
+(`scripts/lint-inline-scripts.py`, #537) parses the workflows in
+`.github/workflows/` and every composite action (`action.yml` /
+`action.yaml`) with a YAML parser, and reports each `run:` step that has more
+than one line; a pipe, `&&`, `||`, `;` or `&`; `$(…)`, backticks or `<(…)`; a
+heredoc or here-string; `if`/`for`/`while`/`case`; a `${{ }}` expression (pass
+it through `env:`, which also prevents template injection); or any code under a
+non-bash `shell:` (python, pwsh, cmd, …, including the implicit pwsh of a
+Windows `runs-on`). Move such code into a script under
+`scripts/` or `.github/scripts/` (or the composite action's own directory),
+where shellcheck, shfmt and tests reach it. A step that must stay inline opts
+out with a comment that gives a reason, directly above the step or inside it
+(a YAML comment, or a shell comment in the script; text in strings doesn't
+count):
+
+```yaml
+# lint: allow-inline-script bootstraps the runner before checkout
+- name: Prepare runner
+  run: |
+    ...
+```
+
+Findings are annotated on the file and line of the `run:` key and listed in
+the job summary with the opt-outs. They are warnings by default; set
+`lint-inline-scripts-blocking: true` to report errors and fail the linter
+(a file that can't be parsed then fails it too). A
+later major release makes blocking the default. The linter fetches the checker
+from the DevSecNinja/.github commit the caller pinned and runs it with the
+runner's system Python, which ships PyYAML (`ubuntu-24.04`).
+
+| Input                          | Description                                                            |
+| ------------------------------ | ---------------------------------------------------------------------- |
+| `mise-version`                 | **Required.** mise version to install.                                 |
+| `golangci-lint-version`        | **Required.** golangci-lint version to install.                        |
+| `go-version-file`              | Go version file for setup-go. Default: `go.mod`.                       |
+| `lint-config-dir`              | Optional linter config directory. Default: `""`.                       |
+| `lint-fail-on-error`           | Fail when a linter fails. Default: `false`.                            |
+| `lint-job-mode`                | `auto`, `single`, or `parallel` (see above). Default: `auto`. v3.3.0+. |
+| `upload-sarif`                 | Upload checkov/trivy/zizmor SARIF to code scanning. Default: `true`.   |
+| `lint-dprint`                  | Markdown formatting (dprint). Default: `true`.                         |
+| `lint-yamlfmt`                 | YAML formatting (yamlfmt). Default: `true`.                            |
+| `lint-yamllint`                | YAML linting (yamllint). Default: `true`.                              |
+| `lint-actionlint`              | GitHub Actions linting. Default: `true`.                               |
+| `lint-gitleaks`                | Secret scanning (gitleaks). Default: `true`.                           |
+| `lint-go`                      | Go linting (golangci-lint). Default: `true`.                           |
+| `lint-shellcheck`              | Shell linting (shellcheck). Default: `true`.                           |
+| `lint-shfmt`                   | Shell formatting (shfmt). Default: `true`.                             |
+| `lint-checkov`                 | IaC security scan (checkov). Default: `true`.                          |
+| `lint-trivy`                   | Filesystem scan (trivy). Default: `true`.                              |
+| `lint-zizmor`                  | Actions security scan (zizmor). Default: `true`.                       |
+| `lint-config-drift`            | Config-drift check. Default: `false`.                                  |
+| `lint-inline-scripts`          | Inline-script check (see above). Default: `true`. After v4.4.0.        |
+| `lint-inline-scripts-blocking` | Report inline scripts as errors. Default: `false`. After v4.4.0.       |
 
 **Example caller:**
 

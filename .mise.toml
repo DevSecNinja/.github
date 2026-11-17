@@ -35,6 +35,7 @@ run = [
   "uv run --script ./tests/app-key-confinement.py",
   "uv run --script ./tests/lint-include.py",
   "bash ./tests/lint-job-modes-contract.sh",
+  "uv run --script ./tests/lint-inline-scripts.py",
   "bash ./tests/open-pr-push.sh",
   "bash ./tests/open-pr-api-commit.sh",
   "bash ./tests/open-pr-labels.sh",
