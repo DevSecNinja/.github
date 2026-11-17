@@ -1218,6 +1218,23 @@ can still assign Code Owners if an automerge PR cannot merge cleanly.
   `registryUrl=` and any key, e.g. Debian packages pinned per suite with
   `# renovate: datasource=deb depName=docker-ce registryUrl=https://…`.
 
+### dprint plugins
+
+Renovate has no dprint manager, so `customManagers.json5` tracks the plugin URLs
+in `dprint.json` (also `.dprint.json` and `.jsonc`) itself, with
+`depType: "dprint-plugin"`:
+
+- `https://plugins.dprint.dev/<name>-<version>.wasm` (official plugins):
+  releases of `dprint/dprint-plugin-<name>`, e.g. `markdown-0.21.1.wasm`.
+- `https://plugins.dprint.dev/<owner>/<repo>-v<version>.wasm` (third-party
+  plugins): releases of `<owner>/<repo>`, e.g. `g-plane/malva-v0.16.0.wasm`.
+
+Process plugins (`….json@<checksum>`) are not tracked. The updates follow the
+same soak and weekly batch as other GitHub releases. A plugin update can change
+formatting, which then fails the repository's `lint / dprint` check until the
+Markdown is reformatted with `dprint fmt`. The synced `dprint.json` in
+`config-sync/files/` is bumped here, and config-sync then distributes it.
+
 ### Consuming the preset
 
 Repositories extend `default.json5`, which pulls in `config:recommended` and
