@@ -106,6 +106,18 @@ on:
         required: false
         type: boolean
         default: false
+      lint-biome:
+        description: "Run Biome (JavaScript, TypeScript, JSON and CSS linting and formatting) when the repository has such
+          files — uploads SARIF"
+        required: false
+        type: boolean
+        default: false
+      lint-biome-exclude:
+        description: "Glob pattern for paths to exclude from Biome (a bash pattern on the repository-relative path; * also
+          matches /)"
+        required: false
+        type: string
+        default: ""
       lint-config-drift:
         description: "Check local config files match central DevSecNinja/.github repo"
         required: false
@@ -122,7 +134,7 @@ on:
         type: boolean
         default: false
       upload-sarif:
-        description: "Upload checkov/trivy/zizmor/ruff results to GitHub code scanning (requires GitHub Advanced Security).
+        description: "Upload checkov/trivy/zizmor/ruff/biome results to GitHub code scanning (requires GitHub Advanced Security).
           Set false for private repos without GHAS to gate on exit codes with console output instead."
         required: false
         type: boolean
@@ -171,6 +183,8 @@ jobs:
       lint-trivy: ${{ inputs.lint-trivy }}
       lint-zizmor: ${{ inputs.lint-zizmor }}
       lint-ruff: ${{ inputs.lint-ruff }}
+      lint-biome: ${{ inputs.lint-biome }}
+      lint-biome-exclude: ${{ inputs.lint-biome-exclude }}
       lint-config-drift: ${{ inputs.lint-config-drift }}
       lint-inline-scripts: ${{ inputs.lint-inline-scripts }}
       lint-inline-scripts-blocking: ${{ inputs.lint-inline-scripts-blocking }}

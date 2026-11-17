@@ -66,6 +66,10 @@ jobs:
       # repository has Python files and pins ruff in its mise config (without
       # the pin, ruff is skipped with a warning).
       # lint-ruff: true
+      # Optional: needs a lint.yml release after v4.5.0; runs only when the
+      # repository has JavaScript, TypeScript, JSON or CSS files. Pin biome in
+      # your mise config.
+      # lint-biome: true
       # lint-config-drift: false
       # Optional: report inline scripts in run: steps. Needs a lint.yml release
       # after v4.4.0; bump the pin above before uncommenting.

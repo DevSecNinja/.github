@@ -13,6 +13,11 @@ set -eo pipefail
 
 case "$1" in
 python) patterns=('**/*.py' '**/*.pyi') ;;
+# JavaScript, TypeScript, JSON and CSS: what Biome checks.
+web)
+    patterns=('**/*.js' '**/*.mjs' '**/*.cjs' '**/*.jsx' '**/*.ts' '**/*.mts' '**/*.cts' '**/*.tsx'
+        '**/*.json' '**/*.jsonc' '**/*.css')
+    ;;
 *)
     echo "::error::language-files.sh: unknown language '$1'" >&2
     exit 2

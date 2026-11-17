@@ -86,7 +86,8 @@ apm_owner() {
 
 # A template is not bootstrapped when the repository configures the tool in
 # another file already: ruff.toml would take precedence over [tool.ruff] in
-# pyproject.toml and silently replace its settings.
+# pyproject.toml and silently replace its settings, and biome.json would sit
+# next to the repository's biome.jsonc.
 configured_elsewhere() {
     case "$1" in
     ruff.toml)
@@ -98,6 +99,14 @@ configured_elsewhere() {
             echo "[tool.ruff] in pyproject.toml"
             return 0
         fi
+        ;;
+    biome.json)
+        for config in biome.jsonc .biome.json .biome.jsonc; do
+            if [ -e "${config}" ]; then
+                echo "${config}"
+                return 0
+            fi
+        done
         ;;
     *) ;;
     esac

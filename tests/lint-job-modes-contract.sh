@@ -14,7 +14,7 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 workflow="${repo_root}/.github/workflows/lint.yml"
 combined_job="all-linters"
-linter_jobs=(dprint yamlfmt yamllint actionlint gitleaks go shellcheck shfmt checkov trivy zizmor ruff config-drift inline-scripts)
+linter_jobs=(dprint yamlfmt yamllint actionlint gitleaks go shellcheck shfmt checkov trivy zizmor ruff biome config-drift inline-scripts)
 parallel_guard="(inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))"
 
 fail() {

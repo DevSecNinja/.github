@@ -28,6 +28,9 @@ jobs:
       # renovate: datasource=github-releases depName=golangci/golangci-lint
       # golangci-lint-version: "v2.12.2"
       lint-config-dir: config-sync/files
+      # config-sync/templates holds a root biome.json for other repositories,
+      # which Biome rejects as a second root config in this one.
+      lint-biome-exclude: config-sync/templates/*
       # This repository has no inline scripts (#537), so it keeps it that way.
       lint-inline-scripts-blocking: true
 
@@ -46,6 +49,7 @@ jobs:
       # renovate: datasource=github-releases depName=jdx/mise
       mise-version: "2026.10.19"
       lint-config-dir: config-sync/files
+      lint-biome-exclude: config-sync/templates/* # See the job above.
       lint-job-mode: single
       lint-inline-scripts-blocking: true
       upload-sarif: false
