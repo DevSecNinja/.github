@@ -281,9 +281,13 @@ run_in "${code}" "detect-language web" STEP_ASIDE_FOR=
 git -C "${code}" rm -q --cached sub/.eslintrc
 run_in "${code}" "detect-language web" STEP_ASIDE_FOR=eslint
 [ "${outputs}" = found=true ] || fail "Biome must run without ESLint; got: ${outputs}"
+# Without a biome pin, Biome warns how to opt in and skips instead of failing.
 run_in "${code}" biome FAKE_TOOLS=""
-expect_status 1 "Biome without its tool"
-expect_out "::error::'biome' is not pinned" "Biome without its tool"
+expect_status 0 "Biome without its tool"
+expect_out "::warning::Skipping Biome: this repository has JavaScript, TypeScript, JSON or CSS files but doesn't pin biome." \
+    "Biome without its tool"
+expect_out "pin it in .mise.toml" "Biome without its tool"
+[ -z "${log}${outputs}" ] || fail "Biome without its tool must not run: ${log} ${outputs}"
 # Excluding every file skips Biome before it needs a pin.
 run_in "${code}" biome FAKE_TOOLS="" EXCLUDE_PATTERN="*"
 expect_status 0 "Biome with every file excluded"

@@ -24,8 +24,12 @@ if [ "${#files[@]}" -eq 0 ]; then
     echo "::notice::No JavaScript, TypeScript, JSON or CSS files found; skipping Biome"
     exit 0
 fi
-# After the guard: a repository whose files are all excluded needs no pin.
-bash "${lint_dir}/require-mise-tool.sh" biome
+# Biome is opt-in per repository: without a pin it warns and skips rather than
+# failing. After the guard: a repository whose files are all excluded needs no pin.
+if ! mise which biome >/dev/null 2>&1; then
+    echo "::warning::Skipping Biome: this repository has JavaScript, TypeScript, JSON or CSS files but doesn't pin biome. To lint them, pin it in .mise.toml (Renovate-managed, e.g. 'mise use biome@<version>') and add a biome.json (config-sync's template is a starting point)."
+    exit 0
+fi
 
 # The default reporter shows formatting diffs in the log, the github one
 # annotates the PR. --no-errors-on-unmatched: the config may ignore every file.

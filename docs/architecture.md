@@ -196,8 +196,9 @@ pinned, findings fail the linter like any other.
 - **Biome** (`lint-biome`, JavaScript, TypeScript, JSON and CSS, after v4.5.0)
   runs `biome ci`, which lints and checks formatting and import order without
   writing, on the `*.js`, `*.mjs`, `*.cjs`, `*.jsx`, `*.ts`, `*.mts`, `*.cts`,
-  `*.tsx`, `*.json`, `*.jsonc` and `*.css` files. Pin `biome` in the
-  repository's mise config. Biome reads the repository's own `biome.json` or
+  `*.tsx`, `*.json`, `*.jsonc` and `*.css` files. Biome runs once `biome` is
+  pinned in the repository's mise config; until then it warns how to opt in and
+  skips. Biome reads the repository's own `biome.json` or
   `biome.jsonc`; config-sync's
   [`biome.json` template](../config-sync/templates/biome.json) is a starting
   point. Findings are annotated on the PR, and with `upload-sarif` they also go
