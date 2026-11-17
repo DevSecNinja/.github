@@ -114,5 +114,38 @@
       datasourceTemplate: "github-releases",
       extractVersionTemplate: "^v(?<version>.+)$",
     },
+    {
+      // dprint plugin URLs in dprint.json, e.g.
+      //   "https://plugins.dprint.dev/markdown-0.21.1.wasm"
+      // Renovate has no dprint manager. Official plugins are released as
+      // dprint/dprint-plugin-<name> with bare tags (0.21.1). Same approach as
+      // kachick/renovate-config-dprint, kept here so the fleet doesn't depend
+      // on a third-party preset. Process plugins (`.json@<checksum>`) are not
+      // matched.
+      customType: "regex",
+      description: "Update official dprint plugin URLs in dprint.json",
+      managerFilePatterns: ["/(^|/)\\.?dprint\\.jsonc?$/"],
+      matchStrings: [
+        "\"https://plugins\\.dprint\\.dev/(?<plugin>[a-z0-9_]+)-(?<currentValue>\\d+\\.\\d+\\.\\d+)\\.wasm\"",
+      ],
+      depNameTemplate: "dprint/dprint-plugin-{{{plugin}}}",
+      datasourceTemplate: "github-releases",
+      depTypeTemplate: "dprint-plugin",
+    },
+    {
+      // Third-party dprint plugins are served under the author's name and
+      // released from the GitHub repository of the same name with v-prefixed
+      // tags, e.g.
+      //   "https://plugins.dprint.dev/g-plane/malva-v0.16.0.wasm"  (g-plane/malva v0.16.0)
+      customType: "regex",
+      description: "Update third-party dprint plugin URLs in dprint.json",
+      managerFilePatterns: ["/(^|/)\\.?dprint\\.jsonc?$/"],
+      matchStrings: [
+        "\"https://plugins\\.dprint\\.dev/(?<owner>[A-Za-z0-9-]+)/(?<repo>[A-Za-z0-9_.-]+?)-(?<currentValue>v\\d+\\.\\d+\\.\\d+)\\.wasm\"",
+      ],
+      depNameTemplate: "{{{owner}}}/{{{repo}}}",
+      datasourceTemplate: "github-releases",
+      depTypeTemplate: "dprint-plugin",
+    },
   ],
 }

@@ -202,6 +202,17 @@
       matchCurrentValue: "/^version-/",
     },
     {
+      // A dprint plugin update can change how Markdown is formatted, which
+      // fails the repository's `lint / dprint` check until the files are
+      // reformatted (markdown 0.21.1 -> 0.29.0 reformats files in four repos,
+      // DevSecNinja/.github#560). In the weekly batch that would block every
+      // other non-major update, so each plugin gets its own PR. It keeps the
+      // github-releases soak and automerge.
+      description: "dprint plugin updates (customManagers.json5) get their own PR so a formatting change cannot block the weekly batch",
+      matchDepTypes: ["dprint-plugin"],
+      groupName: null,
+    },
+    {
       // A pin only records the exact version or digest of what the repository
       // already uses (`v4` -> `v4.4.0`, `^6.12.0` -> `6.12.0`, `@main` ->
       // `@<sha> # main`), so there is no new code to soak. With the soak, a
