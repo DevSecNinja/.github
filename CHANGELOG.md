@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.4.1](https://github.com/DevSecNinja/.github/compare/v4.4.0...v4.4.1) (2026-11-17)
+
+
+### 🐛 Bug Fixes
+
+* **config-sync:** exclude Python virtualenvs in the synced dprint and yamllint configs ([#556](https://github.com/DevSecNinja/.github/issues/556)) ([c236f60](https://github.com/DevSecNinja/.github/commit/c236f60495d8575c7d70d5511909aa97b950c93c))
+
 ## [4.4.0](https://github.com/DevSecNinja/.github/compare/v4.3.0...v4.4.0) (2026-11-17)
 
 
