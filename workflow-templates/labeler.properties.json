@@ -1,5 +1,5 @@
 {
-    "name": "Labeler",
-    "description": "Auto-label pull requests based on changed file paths and issues based on body content.",
-    "categories": ["Utilities"]
+  "name": "Labeler",
+  "description": "Auto-label pull requests based on changed file paths and issues based on body content.",
+  "categories": ["Utilities"]
 }

@@ -3,6 +3,7 @@ min_version = "2026.10.19"
 
 [tools]
 actionlint = "1.7.12"
+biome = "2.6.8"
 cocogitto = "7.0.0"
 dprint = "0.64.3"
 gitleaks = "8.30.1"
