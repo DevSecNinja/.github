@@ -129,7 +129,9 @@ It does **not** apply to:
 
 ## Compliance
 
-- `lint.yml` — `mise-version` and `golangci-lint-version` required ✅
+- `lint.yml` — `mise-version` and `golangci-lint-version` required ✅;
+  `psscriptanalyzer-version` has no default and is required when PowerShell
+  files exist ✅
 - `release.yml` — `mise-version` required ✅
 - `autofix.yml` — `mise-version` required ✅
 - `config-sync.yml`, `label-sync.yml`, `labeler.yml`, `todo-to-issue.yml` —

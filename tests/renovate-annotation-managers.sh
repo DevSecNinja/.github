@@ -3,8 +3,9 @@
 # Checks the annotation-driven Renovate custom managers in
 # .renovate/customManagers.json5:
 #
-# - "Process tool versions in GitHub Actions workflows": depName= is optional
-#   and a single-element matrix list (`python-version: [3.14]`) is tracked;
+# - "Process tool versions in GitHub Actions workflows": depName= and
+#   registryUrl= are optional and a single-element matrix list
+#   (`python-version: [3.14]`) is tracked;
 # - "Process versions in Ansible inventory YAML files": any datasource, an
 #   optional registryUrl and any key on the annotated line.
 #
@@ -85,6 +86,18 @@ workflow_cases = {
 }
 for text, want in workflow_cases.items():
     got = fields(workflow.search(text), names)
+    if got != want:
+        errors.append(f"workflow manager: {text!r}: want {want}, got {got}")
+
+# An optional registryUrl, e.g. the PowerShell Gallery for a module.
+psgallery = "https://www.powershellgallery.com/api/v2/"
+for text, want in {
+    f'      # renovate: datasource=nuget depName=PSScriptAnalyzer registryUrl={psgallery}\n      psscriptanalyzer-version: "1.25.0"':
+        ("nuget", "PSScriptAnalyzer", "1.25.0", psgallery),
+    '      # renovate: datasource=github-releases depName=jdx/mise\n      mise-version: "2026.10.19"':
+        ("github-releases", "jdx/mise", "2026.10.19", None),
+}.items():
+    got = fields(workflow.search(text), names + ("registryUrl",))
     if got != want:
         errors.append(f"workflow manager: {text!r}: want {want}, got {got}")
 

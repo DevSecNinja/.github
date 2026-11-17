@@ -20,6 +20,7 @@ web)
     ;;
 # ESLint configs: Biome steps aside for repositories that lint with ESLint.
 eslint) patterns=('**/eslint.config.*' '**/.eslintrc' '**/.eslintrc.*') ;;
+powershell) patterns=('**/*.ps1' '**/*.psm1' '**/*.psd1') ;;
 *)
     echo "::error::language-files.sh: unknown language '$1'" >&2
     exit 2

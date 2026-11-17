@@ -118,3 +118,16 @@ usual template header. Config-sync doesn't add it to a repo that has
 `biome.jsonc`. The `customManagers:biomeVersions` Renovate preset, part of the
 shared Renovate config, keeps its `$schema` version in step with the pinned
 Biome.
+
+## PSScriptAnalyzerSettings.psd1
+
+Settings for PSScriptAnalyzer, which the shared Lint workflow runs when the
+repo has `*.ps1`, `*.psm1` or `*.psd1` files (`lint-psscriptanalyzer`, with the
+`psscriptanalyzer-version` input). It starts from DevSecNinja/windows-iso-maker's
+settings: every default rule plus approved verbs, comment-based help on
+exported functions, no aliases, `ShouldProcess` for state changes and syntax
+that runs on Windows PowerShell 5.1 and PowerShell 7. It skips the BOM rule
+(files are UTF-8 without a BOM) and `PSUseCorrectCasing`, which crashes whole
+runs until
+[PowerShell/PSScriptAnalyzer#1708](https://github.com/PowerShell/PSScriptAnalyzer/issues/1708)
+is fixed.

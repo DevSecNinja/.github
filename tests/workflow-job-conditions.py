@@ -422,6 +422,7 @@ def lint_context(*, mode="auto", private=False, has_repository=True, event_name=
             "zizmor",
             "ruff",
             "biome",
+            "psscriptanalyzer",
             "inline-scripts",
         )
     }
@@ -447,6 +448,7 @@ PER_LINTER = {
     "zizmor",
     "ruff",
     "biome",
+    "psscriptanalyzer",
     "inline-scripts",
 }
 SINGLE = {"all-linters"}

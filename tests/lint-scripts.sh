@@ -322,6 +322,44 @@ expect_status 0 "Biome without its files"
 expect_out "::notice::No JavaScript, TypeScript, JSON or CSS files found; skipping Biome" "Biome without its files"
 [ -z "${log}" ] || fail "Biome must not run without its files: ${log}"
 
+# PSScriptAnalyzer runs psscriptanalyzer.ps1 with pwsh, which is not a mise
+# tool. The stand-in pwsh logs its arguments and the files of -PathList.
+cat >"${tmp_dir}/bin/pwsh" <<'EOF'
+#!/usr/bin/env bash
+printf 'pwsh %s\n' "${*##*/scripts/lint/}" >>"${MISE_LOG}"
+while [ "$#" -gt 0 ]; do
+    [ "$1" != -PathList ] || printf 'files: %s\n' "$(tr '\0' ' ' <"$2")" >>"${MISE_LOG}"
+    shift
+done
+[ -z "${FAKE_WRITES:-}" ] || touch "${FAKE_WRITES}"
+exit "${FAKE_EXIT:-0}"
+EOF
+chmod +x "${tmp_dir}/bin/pwsh"
+touch "${code}/a.ps1" "${code}/sub/b.psm1" "${code}/sub/c.psd1" "${code}/.specify/d.ps1"
+git -C "${code}" add -f -- a.ps1 sub/b.psm1 sub/c.psd1 .specify/d.ps1
+run_in "${code}" psscriptanalyzer
+expect_status 1 "PowerShell files without psscriptanalyzer-version"
+expect_out "::error::PowerShell linting is required (PowerShell files found) but no psscriptanalyzer-version input" \
+    "PowerShell files without psscriptanalyzer-version"
+[ -z "${log}" ] || fail "PSScriptAnalyzer must not run without a version: ${log}"
+export PSSCRIPTANALYZER_VERSION=1.25.0
+pssa_call="pwsh -NoProfile -NonInteractive -File psscriptanalyzer.ps1 -Version 1.25.0"
+pssa_call+=" -PathList ${RUNNER_TEMP}/psscriptanalyzer-files"
+run_in "${code}" psscriptanalyzer FAKE_WRITES="${RUNNER_TEMP}/psscriptanalyzer.sarif"
+expect_status 0 "PSScriptAnalyzer with SARIF"
+expect_log "${pssa_call} -SarifFile ${RUNNER_TEMP}/psscriptanalyzer.sarif" "PSScriptAnalyzer with SARIF"
+expect_log "files: a.ps1 sub/b.psm1 sub/c.psd1 " "PSScriptAnalyzer must get the PowerShell files, minus the excludes"
+[ "${outputs}" = sarif=true ] || fail "PSScriptAnalyzer must report its SARIF report; got: ${outputs}"
+run_in "${code}" psscriptanalyzer FAKE_EXIT=1 UPLOAD_SARIF=false
+expect_status 1 "a failing PSScriptAnalyzer"
+[[ "${log}" == "${pssa_call}"$'\n'* ]] || fail "PSScriptAnalyzer without SARIF: ${log}"
+[ -z "${outputs}" ] || fail "PSScriptAnalyzer must not report a SARIF report it didn't write: ${outputs}"
+git -C "${code}" rm -q --cached a.ps1 sub/b.psm1 sub/c.psd1
+run_in "${code}" psscriptanalyzer PSSCRIPTANALYZER_VERSION=
+expect_status 0 "PSScriptAnalyzer without PowerShell files"
+expect_out "::notice::No PowerShell files found; skipping PSScriptAnalyzer" "PSScriptAnalyzer without PowerShell files"
+[ -z "${log}" ] || fail "PSScriptAnalyzer must not run without PowerShell files: ${log}"
+
 # The SARIF filter drops checkov's skipped checks (level none) and tolerates a
 # missing report.
 run checkov-sarif-filter
