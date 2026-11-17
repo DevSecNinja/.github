@@ -5,6 +5,7 @@ Needs only git + Python 3.8+. Merge commits and bot automation are excluded.
 Outputs in --out: ai-commits.svg, ai-commits.json (Shields endpoint),
 ai-commits-stats.json and ai-commits-card.svg (auto light/dark).
 """
+
 import argparse
 import json
 import re
@@ -34,8 +35,21 @@ SEGMENTS = [
 ]
 PURPLE, GREY = "#8250df", "#8c959f"
 SPARKLE = "M5 0 6.2 3.8 10 5 6.2 6.2 5 10 3.8 6.2 0 5 3.8 3.8Z"
-VERDANA = {" ": 3.9, "%": 11.9, "/": 4.7, "I": 4.6, "A": 7.5, "i": 3.1, "m": 10.7, "t": 4.3,
-           "s": 5.7, "c": 5.7, "o": 6.7, "n": 7.0, "a": 6.6}
+VERDANA = {
+    " ": 3.9,
+    "%": 11.9,
+    "/": 4.7,
+    "I": 4.6,
+    "A": 7.5,
+    "i": 3.1,
+    "m": 10.7,
+    "t": 4.3,
+    "s": 5.7,
+    "c": 5.7,
+    "o": 6.7,
+    "n": 7.0,
+    "a": 6.6,
+}
 
 
 def text_width(s):
@@ -57,8 +71,11 @@ def ai_tool(identity):
 
 def git(repo_dir, *args):
     return subprocess.run(
-        ["git", "-C", str(repo_dir), *args], check=True,
-        capture_output=True, text=True, encoding="utf-8",
+        ["git", "-C", str(repo_dir), *args],
+        check=True,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
     ).stdout
 
 
@@ -114,10 +131,12 @@ def tooltip(st, name):
         return f"{name}: no commits to measure"
     window = f" since {st['since']}" if st["since"] else ""
     by_tool = ", ".join(f"{t} {n}" for t, n in st["tools"].items()) or "none"
-    return (f"{name}: {st['ai_commits']:,} of {st['commits']:,} commits{window} ({message(st)}) involved AI: "
-            f"{st['agent']:,} by an AI agent, {st['coauthored']:,} co-authored with AI, "
-            f"{st['unattributed']:,} {NO_ATTRIBUTION}. "
-            f"By tool: {by_tool}. Excludes merges and {st['excluded_automation']:,} bot-automation commits.")
+    return (
+        f"{name}: {st['ai_commits']:,} of {st['commits']:,} commits{window} ({message(st)}) involved AI: "
+        f"{st['agent']:,} by an AI agent, {st['coauthored']:,} co-authored with AI, "
+        f"{st['unattributed']:,} {NO_ATTRIBUTION}. "
+        f"By tool: {by_tool}. Excludes merges and {st['excluded_automation']:,} bot-automation commits."
+    )
 
 
 def badge_svg(st, name, label="AI commits"):
@@ -135,10 +154,12 @@ def badge_svg(st, name, label="AI commits"):
 
     def txt(cx, t):
         tl = text_width(t) * 10
-        return (f'<text x="{cx * 10:.0f}" y="135" fill="#010101" fill-opacity=".3" transform="scale(.1)" '
-                f'textLength="{tl:.0f}">{escape(t)}</text>'
-                f'<text x="{cx * 10:.0f}" y="125" transform="scale(.1)" fill="#fff" '
-                f'textLength="{tl:.0f}">{escape(t)}</text>')
+        return (
+            f'<text x="{cx * 10:.0f}" y="135" fill="#010101" fill-opacity=".3" transform="scale(.1)" '
+            f'textLength="{tl:.0f}">{escape(t)}</text>'
+            f'<text x="{cx * 10:.0f}" y="125" transform="scale(.1)" fill="#fff" '
+            f'textLength="{tl:.0f}">{escape(t)}</text>'
+        )
 
     return (
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="20" role="img" aria-label="{title}">'
@@ -202,9 +223,11 @@ def card_svg(st, name, theme="auto"):
             x += w
         share = f"{100 * st[key] / n:.0f}%" if n else "0%"
         lx = 24 + i * 144
-        legend.append(f'<circle cx="{lx + 5}" cy="117" r="5" fill="{colour}"/>'
-                      f'<text x="{lx + 15}" y="121" font-size="12" class="t">{legend_label(key, share)} '
-                      f'<tspan font-weight="600">{share}</tspan></text>')
+        legend.append(
+            f'<circle cx="{lx + 5}" cy="117" r="5" fill="{colour}"/>'
+            f'<text x="{lx + 15}" y="121" font-size="12" class="t">{legend_label(key, share)} '
+            f'<tspan font-weight="600">{share}</tspan></text>'
+        )
     title = escape(tooltip(st, name))
     return (
         f'<svg xmlns="http://www.w3.org/2000/svg" width="480" height="190" viewBox="0 0 480 190" role="img" '
@@ -214,12 +237,12 @@ def card_svg(st, name, theme="auto"):
         '<text x="46" y="34" font-size="15" font-weight="600" class="t">Who wrote the commits?</text>'
         '<clipPath id="name"><rect x="256" y="18" width="200" height="24"/></clipPath>'
         f'<text x="456" y="34" font-size="12" text-anchor="end" class="m" clip-path="url(#name)">'
-        f'{escape(shown_name)}</text>'
+        f"{escape(shown_name)}</text>"
         f'<text x="24" y="74"><tspan font-size="28" font-weight="700" fill="{PURPLE if n else GREY}">'
         f'{escape(message(st))}</tspan><tspan dx="10" font-size="13" class="m">{escape(sub)}</tspan></text>'
         '<clipPath id="bar"><rect x="24" y="88" width="432" height="10" rx="5"/></clipPath>'
         f'<g clip-path="url(#bar)"><rect x="24" y="88" width="432" height="10" fill="{GREY}" opacity=".25"/>'
-        f'{"".join(bar)}</g>{"".join(legend)}'
+        f"{''.join(bar)}</g>{''.join(legend)}"
         f'<text x="24" y="149" font-size="12" class="m">{escape(tools_line(st["tools"]))}</text>'
         '<text x="24" y="172" font-size="11" class="m">Commit authors + Co-authored-by trailers · bots excluded</text>'
         f'<text x="456" y="172" font-size="11" text-anchor="end" class="m">{st["generated_at"][:10]}</text>'
@@ -229,8 +252,13 @@ def card_svg(st, name, theme="auto"):
 
 def endpoint_json(st, label="AI commits"):
     logo = f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><path d="{SPARKLE}" fill="#fff"/></svg>'
-    return {"schemaVersion": 1, "label": label, "message": message(st),
-            "color": PURPLE.lstrip("#") if st["commits"] else "lightgrey", "logoSvg": logo}
+    return {
+        "schemaVersion": 1,
+        "label": label,
+        "message": message(st),
+        "color": PURPLE.lstrip("#") if st["commits"] else "lightgrey",
+        "logoSvg": logo,
+    }
 
 
 def main():
@@ -241,8 +269,9 @@ def main():
     ap.add_argument("--name", default="this repository", help="owner/repo shown in the tooltip")
     ap.add_argument("--label", default="AI commits")
     ap.add_argument("--out", default="badges")
-    ap.add_argument("--themes", action="store_true",
-                    help="also write ai-commits-card-light.svg / -dark.svg for <picture> tags")
+    ap.add_argument(
+        "--themes", action="store_true", help="also write ai-commits-card-light.svg / -dark.svg for <picture> tags"
+    )
     ap.add_argument("--github-output", help="append numeric step outputs to this file")
     args = ap.parse_args()
     try:
@@ -265,7 +294,15 @@ def main():
         (out / filename).write_bytes((content + "\n").encode("utf-8"))
     if args.github_output:
         with Path(args.github_output).open("a", encoding="utf-8", newline="\n") as output:
-            for key in ("ai_percent", "commits", "ai_commits", "agent", "coauthored", "unattributed", "excluded_automation"):
+            for key in (
+                "ai_percent",
+                "commits",
+                "ai_commits",
+                "agent",
+                "coauthored",
+                "unattributed",
+                "excluded_automation",
+            ):
                 value = "n/a" if st[key] is None else st[key]
                 output.write(f"{key.replace('_', '-')}={value}\n")
     print(json.dumps(st, indent=2))

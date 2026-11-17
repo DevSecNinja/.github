@@ -9,8 +9,9 @@ unterminated comment.
 """
 
 import sys
+from pathlib import Path
 
-text = open("renovate.json5", encoding="utf-8").read()
+text = Path("renovate.json5").read_text(encoding="utf-8")
 tokens, i, n = [], 0, len(text)
 while i < n:
     c = text[i]
@@ -27,7 +28,7 @@ while i < n:
         while j < n and text[j] != c:
             if text[j] == "\\":
                 j += 1
-            value.append(text[j:j + 1])
+            value.append(text[j : j + 1])
             j += 1
         tokens.append(("str", "".join(value)))
         i = j + 1
@@ -49,9 +50,9 @@ for k, (kind, value) in enumerate(tokens):
         depth += 1
     elif kind in ("}", "]"):
         depth -= 1
-    elif depth == 1 and value == "extends" and [t[0] for t in tokens[k + 1:k + 3]] == [":", "["]:
+    elif depth == 1 and value == "extends" and [t[0] for t in tokens[k + 1 : k + 3]] == [":", "["]:
         extends, nested = [], 0
-        for kind2, value2 in tokens[k + 3:]:
+        for kind2, value2 in tokens[k + 3 :]:
             if kind2 in ("{", "["):
                 nested += 1
             elif kind2 in ("}", "]"):

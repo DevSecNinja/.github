@@ -81,7 +81,7 @@ def check_job(file: str, job_id: str, job: dict) -> tuple[list[str], int]:
         return [], 0
     if len(uses) > 1:
         return [f"{name}: runs scripts of several kinds {sorted(uses)}; fetch one kind per job"], 0
-    (kind, used), = uses.items()
+    ((kind, used),) = uses.items()
     start = 0
     while start < len(steps) and preamble(file, job_id, steps[start]):
         start += 1
@@ -97,8 +97,10 @@ def check_job(file: str, job_id: str, job: dict) -> tuple[list[str], int]:
         "persist-credentials": False,
     }
     if not CHECKOUT.match(str(fetch.get("uses") or "")):
-        errors.append(f"{name}: the first step (after harden-runner and App-key preflights) must be "
-                      f"actions/checkout pinned to a full SHA")
+        errors.append(
+            f"{name}: the first step (after harden-runner and App-key preflights) must be "
+            f"actions/checkout pinned to a full SHA"
+        )
     with_ = fetch.get("with") or {}
     for key, value in expected_with.items():
         if with_.get(key) != value:
@@ -137,8 +139,10 @@ def main() -> int:
             for step in job.get("steps") or []:
                 local = LOCAL_SCRIPT_REF.match(str(step.get("run") or "").strip())
                 if local and not (ROOT / local.group(1)).is_file():
-                    errors.append(f"{file.name} job {job_id}: step {step.get('name')!r} runs {local.group(1)}, "
-                                  f"which does not exist")
+                    errors.append(
+                        f"{file.name} job {job_id}: step {step.get('name')!r} runs {local.group(1)}, "
+                        f"which does not exist"
+                    )
     for name in sorted(EXPECTED - set(fetching)):
         errors.append(f"{name}: expected jobs that run fetched scripts, found none")
     if errors:

@@ -93,11 +93,7 @@ def expand_braces(glob: str) -> list[str]:
     if not match:
         return [glob]
     head, tail = glob[: match.start()], glob[match.end() :]
-    return [
-        expanded
-        for option in match.group(1).split(",")
-        for expanded in expand_braces(head + option + tail)
-    ]
+    return [expanded for option in match.group(1).split(",") for expanded in expand_braces(head + option + tail)]
 
 
 def segment_regex(segment: str) -> str:
@@ -154,7 +150,7 @@ def load_rules() -> dict[str, list[tuple[str, list[str]]]]:
             for item in entry["changed-files"]:
                 if not isinstance(item, dict) or len(item) != 1:
                     fail(f"label {label!r}: each `changed-files` item needs one operator")
-                (operator, globs), = item.items()
+                ((operator, globs),) = item.items()
                 if operator not in OPERATORS:
                     fail(f"label {label!r}: unknown operator {operator!r}")
                 globs = globs if isinstance(globs, list) else [globs]

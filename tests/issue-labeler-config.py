@@ -93,10 +93,7 @@ def load_rules() -> dict[str, tuple[str, str]]:
         if isinstance(entries, str):
             entries = [entries]
         if not isinstance(entries, list) or len(entries) != 1:
-            fail(
-                f"label {label!r} must have exactly one pattern: "
-                "github/issue-labeler ANDs the entries under a label"
-            )
+            fail(f"label {label!r} must have exactly one pattern: github/issue-labeler ANDs the entries under a label")
         entry = entries[0]
         if not isinstance(entry, str):
             fail(f"label {label!r}: pattern must be a string")
@@ -105,10 +102,7 @@ def load_rules() -> dict[str, tuple[str, str]]:
         if not set(flags) <= JS_FLAGS:
             fail(f"label {label!r}: unsupported RegExp flags {flags!r}")
         if INLINE_FLAG_GROUP.search(pattern):
-            fail(
-                f"label {label!r}: inline flags are invalid in JavaScript; "
-                f"use '/pattern/i' instead of {entry!r}"
-            )
+            fail(f"label {label!r}: inline flags are invalid in JavaScript; use '/pattern/i' instead of {entry!r}")
         rules[label] = (pattern, flags)
     return rules
 

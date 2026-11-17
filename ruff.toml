@@ -1,0 +1,8 @@
+# ruff config for this repository's Python scripts and tests, which the Lint
+# workflow (lint-ruff) checks. config-sync/templates/ruff.toml is the starting
+# point for other repositories.
+line-length = 120
+# The ai-commits-badge action supports Python 3.8.
+target-version = "py38"
+
+extend-exclude = [".agents"]

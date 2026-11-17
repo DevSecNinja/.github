@@ -116,8 +116,10 @@ def main() -> int:
         print(f"✗ {counts.group(2)} opt-out(s) reported, but {len(rows)} parsed from the step summary")
     if opt_outs != preflights:
         failed += 1
-        print(f"✗ only the App-key preflights may opt out: unexpected {sorted(opt_outs - preflights)}, "
-              f"missing {sorted(preflights - opt_outs)}")
+        print(
+            f"✗ only the App-key preflights may opt out: unexpected {sorted(opt_outs - preflights)}, "
+            f"missing {sorted(preflights - opt_outs)}"
+        )
     if failed:
         print(f"{failed} lint-inline-scripts case(s) failed.")
         return 1

@@ -92,9 +92,8 @@ def scan_script(script: str) -> tuple[set[str], list[str]]:
                 body.pop(0)
             continue
         words = line.split()
-        if quote is None and not braces and words:
-            if words[0] in CONTROL_WORDS or words[0][0] in "({":
-                found.add(CONTROL)
+        if quote is None and not braces and words and (words[0] in CONTROL_WORDS or words[0][0] in "({"):
+            found.add(CONTROL)
         i, n = 0, len(line)
         while i < n:
             c = line[i]
@@ -172,9 +171,8 @@ def run_problems(script: str, shell: str | None, found: set[str]) -> list[str]:
     ordered = [reason for reason in REASON_ORDER if reason in problems]
     words = (shell or "").split()
     # A shell given by an expression can't be resolved statically.
-    if words and "${{" not in shell:
-        if words[0].rsplit("/", 1)[-1] not in BASH_SHELLS:
-            ordered.append(f"inline code for shell '{words[0]}'")
+    if words and "${{" not in shell and words[0].rsplit("/", 1)[-1] not in BASH_SHELLS:
+        ordered.append(f"inline code for shell '{words[0]}'")
     return ordered
 
 
@@ -235,10 +233,13 @@ def step_comments(lines: list[str], step: yaml.MappingNode, shell_comments: list
     while k < len(lines) and (k == start or not lines[k].strip() or indent(lines[k]) > base):
         line = lines[k]
         for col, c in enumerate(line):
-            if c == "#" and (col == 0 or line[col - 1] in " \t"):
-                if not any(begin <= (k, col) < end for begin, end in spans):
-                    comments.append(line[col:])
-                    break
+            if (
+                c == "#"
+                and (col == 0 or line[col - 1] in " \t")
+                and not any(begin <= (k, col) < end for begin, end in spans)
+            ):
+                comments.append(line[col:])
+                break
         k += 1
     return comments + shell_comments
 
@@ -369,17 +370,11 @@ def discover(root: Path) -> list[tuple[Path, bool]]:
     workflows = root / ".github" / "workflows"
     if workflows.is_dir():
         found += [
-            (path, False)
-            for path in sorted(workflows.iterdir())
-            if path.is_file() and path.suffix in (".yml", ".yaml")
+            (path, False) for path in sorted(workflows.iterdir()) if path.is_file() and path.suffix in (".yml", ".yaml")
         ]
     for directory, dirnames, filenames in os.walk(root):
         dirnames[:] = sorted(name for name in dirnames if name not in SKIP_DIRS)
-        found += [
-            (Path(directory) / name, True)
-            for name in sorted(filenames)
-            if name in ("action.yml", "action.yaml")
-        ]
+        found += [(Path(directory) / name, True) for name in sorted(filenames) if name in ("action.yml", "action.yaml")]
     return found
 
 
