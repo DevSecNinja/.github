@@ -7,7 +7,8 @@
     # Start from the full built-in rule set, then tighten a few rules.
     IncludeDefaultRules = $true
 
-    Severity = @('Error', 'Warning', 'Information')
+    # ParseError must stay listed: without it, a script that doesn't parse passes.
+    Severity = @('ParseError', 'Error', 'Warning', 'Information')
 
     ExcludeRules = @(
         # Files are UTF-8 without a BOM (.editorconfig), the same on Linux and

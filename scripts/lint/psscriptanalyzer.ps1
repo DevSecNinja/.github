@@ -38,7 +38,10 @@ $analyzerArgs = @{}
 if (Test-Path -LiteralPath PSScriptAnalyzerSettings.psd1) {
     $analyzerArgs.Settings = (Resolve-Path -LiteralPath PSScriptAnalyzerSettings.psd1).Path
 }
-$findings = @(foreach ($file in $Path) { Invoke-ScriptAnalyzer -Path $file @analyzerArgs })
+# -Path expands wildcards: escape them, so deploy[1].ps1 means that file.
+$findings = @(foreach ($file in $Path) {
+        Invoke-ScriptAnalyzer -Path ([WildcardPattern]::Escape($file)) @analyzerArgs
+    })
 
 # SARIF levels by PSScriptAnalyzer severity, and workflow commands by level.
 $levels = @{ ParseError = 'error'; Error = 'error'; Warning = 'warning'; Information = 'note' }

@@ -20,6 +20,8 @@ fail() {
 }
 
 command -v jq >/dev/null 2>&1 || fail "jq is not installed"
+# The real pwsh, before the stand-ins below shadow it.
+real_pwsh="$(command -v pwsh || true)"
 
 # `mise which <tool>` succeeds for the tools in $FAKE_TOOLS. `mise exec -- <cmd>`
 # records the working directory and command in $MISE_LOG, and exits $FAKE_EXIT.
@@ -359,6 +361,46 @@ run_in "${code}" psscriptanalyzer PSSCRIPTANALYZER_VERSION=
 expect_status 0 "PSScriptAnalyzer without PowerShell files"
 expect_out "::notice::No PowerShell files found; skipping PSScriptAnalyzer" "PSScriptAnalyzer without PowerShell files"
 [ -z "${log}" ] || fail "PSScriptAnalyzer must not run without PowerShell files: ${log}"
+
+# The real psscriptanalyzer.ps1, when pwsh and PSScriptAnalyzer are installed
+# (ubuntu-24.04 runners ship both): it analyzes file names with wildcard
+# characters literally, and the template's settings keep parse errors.
+pssa_version=""
+if [ -n "${real_pwsh}" ]; then
+    pssa_version="$("${real_pwsh}" -NoProfile -Command \
+        '(Get-Module -ListAvailable PSScriptAnalyzer | Sort-Object Version | Select-Object -Last 1).Version.ToString()' |
+        tr -d '\r')" || true
+fi
+if [ -z "${pssa_version}" ]; then
+    echo "::notice::pwsh or PSScriptAnalyzer is not installed; skipping the psscriptanalyzer.ps1 run"
+else
+    ps_dir="${tmp_dir}/powershell"
+    mkdir -p "${ps_dir}"
+    printf 'gci\n' >"${ps_dir}/deploy[1].ps1"
+    printf 'Get-ChildItem\n' >"${ps_dir}/deploy1.ps1"
+    printf 'function Get-X {\n' >"${ps_dir}/broken.ps1"
+    cp "${repo_root}/config-sync/templates/PSScriptAnalyzerSettings.psd1" "${ps_dir}/"
+    ps1="${scripts}/psscriptanalyzer.ps1"
+    if command -v cygpath >/dev/null 2>&1; then ps1="$(cygpath -w "${ps1}")"; fi
+    # Analyzes the files $@ of ${ps_dir}; sets status and out.
+    run_pssa() {
+        printf '%s\0' "$@" >"${ps_dir}/files"
+        status=0
+        out="$(cd "${ps_dir}" &&
+            "${real_pwsh}" -NoProfile -NonInteractive -File "${ps1}" -Version "${pssa_version}" -PathList files 2>&1)" ||
+            status=$?
+        out="${out//$'\r'/}"
+    }
+    run_pssa 'deploy[1].ps1' deploy1.ps1
+    expect_status 1 "PSScriptAnalyzer on deploy[1].ps1"
+    expect_out "::warning file=deploy[1].ps1,line=1,col=1,title=PSAvoidUsingCmdletAliases::" \
+        "deploy[1].ps1 must be analyzed, not deploy1.ps1 twice"
+    run_pssa deploy1.ps1
+    expect_status 0 "PSScriptAnalyzer on a clean file"
+    run_pssa broken.ps1
+    expect_status 1 "a script that doesn't parse, with the template settings"
+    expect_out "::error file=broken.ps1," "a script that doesn't parse, with the template settings"
+fi
 
 # The SARIF filter drops checkov's skipped checks (level none) and tolerates a
 # missing report.
