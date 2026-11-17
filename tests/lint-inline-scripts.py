@@ -9,7 +9,8 @@ Every case in tests/fixtures/lint-inline-scripts-cases.yml is written into a
 temporary repository and checked. The case passes when the annotations match
 `expect` one to one and in order, the opt-out count matches `opt-outs`, and the
 exit code is 1 only for a blocking run with findings. A final run checks this
-repository itself, which must parse cleanly in warning mode.
+repository itself, which must parse cleanly in warning mode, and the files in
+CLEAN, whose inline scripts have moved into scripts/, must pass a blocking run.
 """
 
 from __future__ import annotations
@@ -26,6 +27,9 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 CHECKER = ROOT / "scripts" / "lint-inline-scripts.py"
 CASES = ROOT / "tests" / "fixtures" / "lint-inline-scripts-cases.yml"
+# Files of this repository without inline scripts; each layer of #537 adds the
+# ones it cleans up, until the whole repository passes.
+CLEAN = [".github/workflows/lint.yml"]
 SUMMARY = re.compile(r"; (\d+) to move into a script, (\d+) opted out\.$", re.MULTILINE)
 
 
@@ -92,10 +96,18 @@ def main() -> int:
     if result.returncode != 0 or "Could not parse" in result.stdout or not SUMMARY.search(result.stdout):
         failed += 1
         print(f"✗ this repository must parse cleanly in warning mode:\n{result.stdout}{result.stderr}")
+    with tempfile.TemporaryDirectory() as tmp:
+        result = run(["--blocking", *(str(ROOT / path) for path in CLEAN)], ROOT, Path(tmp) / "summary.md")
+    if result.returncode != 0:
+        failed += 1
+        print(f"✗ {', '.join(CLEAN)} must have no inline scripts:\n{result.stdout}{result.stderr}")
     if failed:
         print(f"{failed} lint-inline-scripts case(s) failed.")
         return 1
-    print(f"✓ lint-inline-scripts: {len(cases)} cases pass, and this repository parses in warning mode.")
+    print(
+        f"✓ lint-inline-scripts: {len(cases)} cases pass, this repository parses in warning mode, "
+        f"and {len(CLEAN)} file(s) have no inline scripts."
+    )
     return 0
 
 

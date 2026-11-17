@@ -44,6 +44,7 @@ run = [
   "bash ./tests/config-sync-renovate-stub.sh",
   "bash ./tests/gitleaks-config.sh",
   "bash ./tests/lint-gitleaks-report.sh",
+  "bash ./tests/lint-scripts.sh",
   "uv run --script ./tests/issue-labeler-config.py",
   "python3 ./tests/workflow-job-conditions.py",
   "python3 ./tests/ai-commits-badge.py",

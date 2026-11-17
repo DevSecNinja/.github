@@ -9,8 +9,7 @@
 # public repositories go only to a SARIF file for code scanning: the public
 # log shows a count.
 #
-# Both scripts are extracted from the parallel `gitleaks` job (the contract test
-# keeps the single-job copies identical) and run against scratch repositories
+# Both steps run scripts in scripts/lint/, here against scratch repositories
 # holding obviously fake GitHub tokens. The tokens are generated at test time
 # so no committed fixture trips the repository's own secret scan.
 
@@ -29,24 +28,17 @@ fail() {
 command -v gitleaks >/dev/null 2>&1 || fail "gitleaks is not installed; run 'mise install'"
 command -v jq >/dev/null 2>&1 || fail "jq is not installed"
 
-# Body of the `run: |-` block of step $1 in the `gitleaks` job, dedented.
-extract_run() {
-    awk -v step="$1" '
-        /^  [A-Za-z0-9_-]+:[[:space:]]*$/ { in_job = ($0 == "  gitleaks:"); next }
-        in_job && /^      - / { if (in_run) exit; in_step = ($0 == "      - name: " step); next }
-        in_job && in_step && /^        run: \|-$/ { in_run = 1; next }
-        in_run {
-            if ($0 !~ /^          / && $0 !~ /^[[:space:]]*$/) exit
-            sub(/^          /, "")
-            print
-        }
-    ' "${workflow}"
-}
-
-run_script="$(extract_run "Run gitleaks")"
-report_script="$(extract_run "Report gitleaks findings")"
-grep -Fq -- '--redact' <<<"${run_script}" || fail "'Run gitleaks' must keep --redact"
-[ -n "${report_script}" ] || fail "the gitleaks job has no 'Report gitleaks findings' step"
+# Both lint modes run the same two scripts; the contract test keeps their
+# `run:` lines identical.
+run_script="${repo_root}/scripts/lint/gitleaks.sh"
+report_script="${repo_root}/scripts/lint/gitleaks-report.sh"
+grep -Fq -- '--redact' "${run_script}" || fail "'Run gitleaks' must keep --redact"
+for step in "Run gitleaks|gitleaks" "Report gitleaks findings|gitleaks-report"; do
+    # shellcheck disable=SC2016 # literal workflow text
+    calls="$(grep -A15 -Fx "      - name: ${step%|*}" "${workflow}" |
+        grep -Fxc "        run: bash \"\${RUNNER_TEMP}/devsecninja-lint/scripts/lint/${step#*|}.sh\"" || true)"
+    [ "${calls}" -eq 2 ] || fail "both lint modes must run scripts/lint/${step#*|}.sh in '${step%|*}' (found ${calls})"
+done
 
 # Stand-ins for mise (`mise which`, `mise exec --`) and for the visibility
 # lookup `gh api repos/<repo> --jq .visibility`, answered from $FAKE_VISIBILITY.
@@ -104,10 +96,10 @@ scan() {
     : >"${tmp_dir}/$1-output"
     status=0
     (cd "${repo}" && PATH="${tmp_dir}/bin:${PATH}" RUNNER_TEMP="${temp}" GITHUB_OUTPUT="${tmp_dir}/$1-output" \
-        GITHUB_REPOSITORY=owner/repo bash -eo pipefail -c "${run_script}") >"${tmp_dir}/$1.out" 2>&1 || status=$?
+        GITHUB_REPOSITORY=owner/repo bash "${run_script}") >"${tmp_dir}/$1.out" 2>&1 || status=$?
     mode="$(sed -n 's/^mode=//p' "${tmp_dir}/$1-output")"
     (cd "${repo}" && RUNNER_TEMP="${temp}" GITHUB_STEP_SUMMARY="${tmp_dir}/$1-summary.md" SCAN_MODE="${mode}" \
-        FINDINGS_ARTIFACT=gitleaks-findings-42 bash -eo pipefail -c "${report_script}") >>"${tmp_dir}/$1.out" 2>&1 ||
+        FINDINGS_ARTIFACT=gitleaks-findings-42 bash "${report_script}") >>"${tmp_dir}/$1.out" 2>&1 ||
         fail "'Report gitleaks findings' failed on $1: $(cat "${tmp_dir}/$1.out")"
     out="$(cat "${tmp_dir}/$1.out")"
     summary="$(cat "${tmp_dir}/$1-summary.md")"

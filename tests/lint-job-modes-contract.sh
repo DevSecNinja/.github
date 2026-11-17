@@ -3,9 +3,11 @@
 # Contract test for the two lint scheduling modes in .github/workflows/lint.yml.
 #
 # `lint-job-mode: parallel` runs one job per linter; `single` runs every linter
-# as a step of the `all-linters` job (ADR 0010). The linter scripts therefore
-# exist twice. This test keeps the copies identical and the job guards
-# mutually exclusive, so a fix made to one mode cannot silently miss the other.
+# as a step of the `all-linters` job (ADR 0010). Both modes run the same scripts
+# from scripts/lint/ (#537). This test keeps the two `run:` lines of each linter
+# identical and the job guards mutually exclusive, so a fix made to one mode
+# cannot silently miss the other, and checks that every job fetches the scripts
+# it runs.
 
 set -euo pipefail
 
@@ -160,6 +162,75 @@ for job in "${linter_jobs[@]}"; do
 done
 [ "${compared}" -ge "${#linter_jobs[@]}" ] || fail "expected at least ${#linter_jobs[@]} run steps, compared ${compared}"
 
+# The linter scripts live in scripts/ of this repository (#537). lint.yml runs
+# in the caller's checkout, so every job that runs one first checks the scripts
+# out from the caller's pinned commit of DevSecNinja/.github and moves them out
+# of the workspace, with identical steps in every job.
+fetch_step="Checkout lint scripts"
+move_step="Move lint scripts out of the workspace"
+
+# The text of step $2 of job $1, from its `- name:` line to the next step.
+step_block() {
+    awk -v job="$1" -v step="$2" '
+        /^  [A-Za-z0-9_-]+:[[:space:]]*$/ { if (in_step) exit; in_job = ($0 == "  " job ":"); next }
+        in_job && /^      - / { if (in_step) exit; in_step = ($0 == "      - name: " step) }
+        in_step && !/^[[:space:]]*$/ { print }
+    ' "${workflow}"
+}
+
+# "job|first step|second step" for every job that runs a fetched script.
+script_jobs="$(
+    awk '
+        function flush() { if (job != "" && uses) print job "|" first "|" second }
+        /^  [A-Za-z0-9_-]+:[[:space:]]*$/ {
+            flush()
+            job = $0
+            sub(/^  /, "", job)
+            sub(/:[[:space:]]*$/, "", job)
+            steps = 0; first = ""; second = ""; uses = 0
+            next
+        }
+        /^      - name: / {
+            steps++
+            name = $0
+            sub(/^      - name: /, "", name)
+            if (steps == 1) first = name
+            if (steps == 2) second = name
+        }
+        /^        run: .*\$\{RUNNER_TEMP\}\/devsecninja-lint\// { uses = 1 }
+        END { flush() }
+    ' "${workflow}"
+)"
+reference_fetch="$(step_block "${combined_job}" "${fetch_step}")"
+# shellcheck disable=SC2016 # literal workflow expression
+grep -Fq 'ref: ${{ job.workflow_sha }}' <<<"${reference_fetch}" ||
+    fail "'${fetch_step}' must check out job.workflow_sha, the commit the caller pinned"
+script_job_count=0
+while IFS='|' read -r job first second; do
+    [ -n "${job}" ] || continue
+    [ "${first}|${second}" = "${fetch_step}|${move_step}" ] ||
+        fail "job ${job} runs lint scripts, so its first steps must be '${fetch_step}' and '${move_step}' (found '${first}', '${second}')"
+    [ "$(step_block "${job}" "${fetch_step}")" = "${reference_fetch}" ] ||
+        fail "job ${job}: '${fetch_step}' differs from the one in ${combined_job}; keep them identical"
+    script_job_count=$((script_job_count + 1))
+done <<<"${script_jobs}"
+for job in "${linter_jobs[@]}" "${combined_job}"; do
+    [ "${job}" = actionlint ] && continue
+    grep -q "^${job}|" <<<"${script_jobs}" || fail "job ${job} runs no script from scripts/"
+done
+
+# Every fetched script exists, and the sparse checkout includes it.
+script_count=0
+while IFS= read -r script; do
+    [ -f "${repo_root}/${script}" ] || fail "lint.yml runs ${script}, which does not exist"
+    grep -Eq "^            ${script%/*}/$|^            ${script}$" <<<"${reference_fetch}" ||
+        fail "'${fetch_step}' does not check out ${script}"
+    script_count=$((script_count + 1))
+done < <(
+    grep -oE '^        run: .*"\$\{RUNNER_TEMP\}/devsecninja-lint/[^"]+"' "${workflow}" |
+        sed -E 's|.*/devsecninja-lint/||; s|"$||' | sort -u
+)
+
 # Every linter toggle gates a step of the combined job.
 combined_block="$(sed -n "/^  ${combined_job}:/,\$p" "${workflow}")"
 for job in "${linter_jobs[@]}"; do
@@ -207,4 +278,5 @@ for job in yamllint checkov "${combined_job}"; do
 done
 
 echo "✓ lint.yml: ${#linter_jobs[@]} linters, ${compared} run scripts identical across parallel and single-job modes."
+echo "✓ lint.yml: ${script_job_count} jobs fetch the ${script_count} scripts they run from the caller's pinned commit."
 echo "✓ lint.yml: ${mise_count} mise-action steps install the caller's full toolset (pipx tools get their Python)."
