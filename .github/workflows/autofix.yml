@@ -42,6 +42,24 @@ jobs:
     name: auto-fix formatting
     runs-on: ubuntu-24.04
     steps:
+      - name: Checkout autofix scripts
+        # The autofix scripts ship with this reusable workflow: fetch them from
+        # the same commit of DevSecNinja/.github that the caller pinned.
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .devsecninja-autofix
+          sparse-checkout: |-
+            scripts/autofix/
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Move autofix scripts out of the workspace
+        # Outside the workspace the formatters don't touch them and the commit
+        # doesn't pick them up, and a code checkout doesn't delete them.
+        run: mv .devsecninja-autofix "${RUNNER_TEMP}/devsecninja-autofix"
+
       - name: Checkout code
         # zizmor: ignore[artipacked]
         # Persisted credentials are required: the final step commits the
@@ -62,42 +80,19 @@ jobs:
         if: ${{ inputs.autofix-dprint }}
         env:
           CONFIG_DIR: ${{ inputs.autofix-config-dir }}
-        run: |-
-          if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/dprint.json" ]; then
-            mise exec -- dprint fmt \
-              --config "${CONFIG_DIR}/dprint.json" \
-              --config-discovery=false
-          else
-            mise exec -- dprint fmt
-          fi
+        run: bash "${RUNNER_TEMP}/devsecninja-autofix/scripts/autofix/dprint.sh"
 
       - name: Auto-fix with yamlfmt
         if: ${{ inputs.autofix-yamlfmt }}
         env:
           CONFIG_DIR: ${{ inputs.autofix-config-dir }}
-        run: |-
-          if [ -n "${CONFIG_DIR}" ] && [ -f "${CONFIG_DIR}/.yamlfmt.yaml" ]; then
-            find . \( -name '*.yaml' -o -name '*.yml' \) -print0 |
-              xargs -0 mise exec -- yamlfmt -conf "${CONFIG_DIR}/.yamlfmt.yaml"
-          else
-            find . \( -name '*.yaml' -o -name '*.yml' \) -print0 |
-              xargs -0 mise exec -- yamlfmt
-          fi
+        run: bash "${RUNNER_TEMP}/devsecninja-autofix/scripts/autofix/yamlfmt.sh"
 
       - name: Auto-fix with shfmt
         if: ${{ inputs.autofix-shfmt }}
-        run: find . -name '*.sh' -print0 | xargs -0 mise exec -- shfmt --write
+        run: bash "${RUNNER_TEMP}/devsecninja-autofix/scripts/autofix/shfmt.sh"
 
       - name: Commit and push auto-fix changes
         env:
           COMMIT_MESSAGE: ${{ inputs.commit-message }}
-        run: |-
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          if git diff --quiet; then
-            echo "No formatting changes to commit."
-          else
-            git add .
-            git commit -m "${COMMIT_MESSAGE}"
-            git push
-          fi
+        run: bash "${RUNNER_TEMP}/devsecninja-autofix/scripts/autofix/commit-and-push.sh"

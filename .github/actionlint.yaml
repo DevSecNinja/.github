@@ -1,6 +1,15 @@
 ---
 # actionlint configuration: https://github.com/rhysd/actionlint/blob/main/docs/config.md
 paths:
+  .github/workflows/apm-sync.yml:
+    ignore:
+      - 'property "workflow_(repository|sha)" is not defined in object type'
+  .github/workflows/autofix.yml:
+    ignore:
+      - 'property "workflow_(repository|sha)" is not defined in object type'
+  .github/workflows/config-sync.yml:
+    ignore:
+      - 'property "workflow_(repository|sha)" is not defined in object type'
   .github/workflows/label-sync.yml:
     ignore:
       # Same job.workflow_* gap as lint.yml below.
@@ -20,4 +29,7 @@ paths:
   .github/workflows/pages.yml:
     ignore:
       # Same job.workflow_* gap as lint.yml above.
+      - 'property "workflow_(repository|sha)" is not defined in object type'
+  .github/workflows/vendored-file-sync.yml:
+    ignore:
       - 'property "workflow_(repository|sha)" is not defined in object type'

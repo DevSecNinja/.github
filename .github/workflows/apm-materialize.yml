@@ -74,31 +74,18 @@ jobs:
 
       - name: Check for apm.yml
         id: precheck
-        run: |
-          if [ ! -f apm.yml ]; then
-            echo "::notice::No apm.yml in this repo; nothing to materialize."
-            echo "skip=true" >> "${GITHUB_OUTPUT}"
-          else
-            echo "skip=false" >> "${GITHUB_OUTPUT}"
-          fi
+        run: bash scripts/apm-materialize/check-manifest.sh
 
       - name: Install apm CLI
         if: steps.precheck.outputs.skip != 'true'
         env:
           # renovate: datasource=pypi depName=apm-cli
           apm_cli_version: "0.35.0"
-        run: |
-          set -euo pipefail
-          # ubuntu-24.04 ships python3 + pip; install the pinned apm-cli for this user.
-          python3 -m pip install --user "apm-cli==${apm_cli_version}"
-          echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+        run: bash scripts/apm-materialize/install-apm.sh
 
       - name: Materialize primitives (apm install)
         if: steps.precheck.outputs.skip != 'true'
-        run: |
-          set -euo pipefail
-          apm --version
-          apm install
+        run: bash scripts/apm-materialize/install.sh
 
       - name: Refresh config-sync copies of the ai-toolkit instructions
         # Keeps config-sync/files/.github/instructions/ in step with the

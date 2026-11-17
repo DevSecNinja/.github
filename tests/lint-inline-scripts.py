@@ -30,11 +30,16 @@ CASES = ROOT / "tests" / "fixtures" / "lint-inline-scripts-cases.yml"
 # Files of this repository without inline scripts; each layer of #537 adds the
 # ones it cleans up, until the whole repository passes.
 CLEAN = [
+    ".github/workflows/apm-materialize.yml",
+    ".github/workflows/apm-sync.yml",
+    ".github/workflows/autofix.yml",
+    ".github/workflows/config-sync.yml",
     ".github/workflows/label-sync.yml",
     ".github/workflows/lint.yml",
     ".github/workflows/pages.yml",
     ".github/workflows/release-please.yml",
     ".github/workflows/release.yml",
+    ".github/workflows/vendored-file-sync.yml",
 ]
 SUMMARY = re.compile(r"; (\d+) to move into a script, (\d+) opted out\.$", re.MULTILINE)
 

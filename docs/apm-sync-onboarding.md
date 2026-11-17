@@ -95,7 +95,8 @@ for the details, including what to delete before the first `apm install`.
 
 ## Per-repo adoption
 
-Copy the materialize workflow into the consuming repo and pin the action SHAs.
+Copy the materialize workflow and its scripts (`scripts/apm-materialize/`) into
+the consuming repo and pin the action SHAs.
 The reference implementation lives in `DevSecNinja/.github` at
 [`.github/workflows/apm-materialize.yml`](../.github/workflows/apm-materialize.yml).
 

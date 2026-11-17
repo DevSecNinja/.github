@@ -67,7 +67,10 @@ where a code checkout doesn't delete it and the caller's linters don't scan it.
 the Automation App key are the exception: they stay inline, opted out with
 `# lint: allow-inline-script`, because `tests/app-key-confinement.py` pins their
 `run:` by hash and allows no earlier step (see
-[`automation-app.md`](automation-app.md)).
+[`automation-app.md`](automation-app.md)). In `config-sync.yml` and
+`apm-sync.yml` the script fetch therefore follows the preflight.
+`apm-materialize.yml` runs in this repository rather than as a reusable
+workflow, so it calls `scripts/apm-materialize/` from its own checkout.
 
 ### Lint (`lint.yml`)
 

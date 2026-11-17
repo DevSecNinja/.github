@@ -5,14 +5,15 @@
 # 1. The stub template extends the central .renovate/default.json5 preset, and
 #    that preset extends every shared .renovate preset (except opt-in ones) in
 #    the same order as this repository's own renovate.json5.
-# 2. The config-sync workflow creates renovate.json5 only when it is missing,
+# 2. The config-sync sync script creates renovate.json5 only when it is missing,
 #    even without sync-templates, never overwrites it, and warns when it does
 #    not extend the central preset.
 
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-workflow="${repo_root}/.github/workflows/config-sync.yml"
+# The sync step of .github/workflows/config-sync.yml (#537).
+script="${repo_root}/scripts/config-sync/sync-files.sh"
 template="${repo_root}/config-sync/templates/renovate.json5"
 preset_prefix="github>DevSecNinja/.github//.renovate/"
 default_preset="${preset_prefix}default.json5"
@@ -65,17 +66,6 @@ done
     fail ".renovate/default.json5 must extend the shared presets in the same order as renovate.json5"
 
 # 2. The sync step bootstraps the stub and checks it.
-script="${tmp_dir}/sync.sh"
-awk '
-    $0 == "      - name: Sync config files from central repo" { in_step = 1; next }
-    in_step && $0 ~ /^        run: [|]/ { in_run = 1; next }
-    in_run {
-        if ($0 ~ /^      - name:/) exit
-        sub(/^          /, "")
-        print
-    }
-' "${workflow}" >"${script}"
-[ -s "${script}" ] || fail "could not extract the sync script from ${workflow}"
 
 consumer="${tmp_dir}/consumer"
 log="${tmp_dir}/log"
