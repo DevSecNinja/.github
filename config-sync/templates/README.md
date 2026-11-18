@@ -44,8 +44,37 @@ ai-toolkit; see
 These files are **starting points** for repos that need them.
 They are only copied when `sync-templates: true` is set on the caller,
 and only if the target path does not already exist — local edits are
-never overwritten. `renovate.json5` is the exception to the first rule:
-it is bootstrapped even without `sync-templates`.
+never overwritten. `renovate.json5` and `.gitattributes` are the
+exceptions to the first rule: they are bootstrapped even without
+`sync-templates`.
+
+## .gitattributes
+
+LF line endings for every text file, in the repository and in every
+checkout, on every OS: `* text=auto eol=lf`, plus `binary` for common
+binary types, LF for shell scripts and CRLF checkouts for `*.bat`/`*.cmd`
+(cmd.exe misreads labels in LF batch files). It starts from the shared
+`~/.gitattributes` in
+[DevSecNinja/dotfiles](https://github.com/DevSecNinja/dotfiles/blob/main/home/dot_gitattributes).
+
+Config-sync creates it when the repo has no `.gitattributes` and never
+overwrites it, so the repo owns the file. Give a path that needs CRLF its own
+rule at the end, where later lines win:
+
+```gitattributes
+# CRLF in the checkout, LF in the repository (e.g. Authenticode-signed scripts).
+*.ps1 text eol=crlf
+# Stored byte for byte: iCalendar (RFC 5545) requires CRLF.
+*.ics -text
+```
+
+Each sync run warns when an existing `.gitattributes` has no LF default (the
+last `*` line that sets `eol` must set `eol=lf`). A repo that deliberately
+uses another default lists `.gitattributes` in `.github/.config-sync-ignore`,
+which also skips that warning.
+
+Adding the file doesn't convert files already committed with CRLF; run
+`git add --renormalize .` and commit the result.
 
 ## renovate.json5
 

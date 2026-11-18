@@ -81,6 +81,7 @@ run_sync() {
     echo "central" >"${source}/config-sync/files/.editorconfig"
     # Already in sync, so renovate.json5 is the only file that can change.
     echo "central" >"${consumer}/.editorconfig"
+    cp "${repo_root}/config-sync/templates/.gitattributes" "${consumer}/.gitattributes"
     git -C "${source}" init --quiet
     git -C "${source}" -c user.name=t -c user.email=t@t \
         -c commit.gpgsign=false commit --quiet --allow-empty -m init

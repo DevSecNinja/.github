@@ -187,11 +187,27 @@ if [ "${SYNC_TEMPLATES}" = "true" ]; then
     echo "=== Syncing template files (new files only) ==="
     sync_tree templates
 else
-    # The Renovate stub carries the org defaults, so every repo
-    # gets one even without sync-templates.
+    # The Renovate stub carries the org defaults and .gitattributes the
+    # LF line endings, so every repo gets both even without
+    # sync-templates.
     echo ""
-    echo "=== Bootstrapping renovate.json5 (new file only) ==="
+    echo "=== Bootstrapping renovate.json5 and .gitattributes (new files only) ==="
     sync_tree templates renovate.json5
+    sync_tree templates .gitattributes
+fi
+
+# .gitattributes is repo-owned as well; only check that LF stays the
+# default line ending: the last `*` line that sets `eol` sets `eol=lf`.
+# A repository that needs another default lists .gitattributes in
+# its ignore file, which also skips this check. Exit 0: LF default.
+lf_default() {
+    awk '{ sub(/\r$/, "") }
+        $1 == "*" { for (i = 2; i <= NF; i++) if ($i ~ /^eol=/) eol = substr($i, 5) }
+        END { exit eol != "lf" }' "$1"
+}
+# shellcheck disable=SC2310 # is_ignored and lf_default only test; their status is the answer.
+if [ -f .gitattributes ] && ! is_ignored .gitattributes && ! lf_default .gitattributes; then
+    echo "::warning file=.gitattributes,title=.gitattributes has no LF default::Add \"* text=auto eol=lf\" above the repo-specific rules, so every text file is stored and checked out with LF. Give a path that needs CRLF its own rule (\"eol=crlf\" or \"-text\"). See https://github.com/DevSecNinja/.github/blob/main/config-sync/templates/README.md#gitattributes"
 fi
 
 # renovate.json5 is repo-owned; only check that its top-level
