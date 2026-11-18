@@ -53,22 +53,27 @@ for preset in wanted:
         errors.append(f"{preset} must be extended by customManagers.json5 only, found in {owners}")
 
 
-def resolve(config, seen=()):
-    """Every preset name reachable from config's extends, following the
-    central files, and every preset they exclude with ignorePresets."""
-    found, ignored = [], list(config.get("ignorePresets", []))
+def resolve(config, inherited=(), seen=()):
+    """Every preset name config's extends loads, following the central files.
+
+    Like Renovate's resolveConfigPresets, a non-empty ignorePresets list is
+    passed down the branch it is set on; otherwise each config's own list
+    applies. Ignored names are neither counted nor followed.
+    """
+    own = config.get("ignorePresets", [])
+    ignored = list(inherited) or ([own] if isinstance(own, str) else list(own))
+    found = []
     for name in config.get("extends", []):
+        if name in ignored:
+            continue
         found.append(name)
         if name.startswith(local_prefix):
             file = name[len(local_prefix):]
             if file not in presets:
                 errors.append(f"unknown central preset {name}")
             elif file not in seen:
-                more, more_ignored = resolve(presets[file], seen + (file,))
-                found += more
-                ignored += more_ignored
-    return found, ignored
-
+                found += resolve(presets[file], ignored, seen + (file,))
+    return found
 
 # Snapshot of DevSecNinja/config-sidecar's renovate.json5 (2026-11-18), the
 # shape of 41 of the 43 fleet configs.
@@ -84,12 +89,10 @@ configs = {
     "renovate.json5": json.loads(os.environ["ROOT"]),
 }
 for label, config in configs.items():
-    resolved, ignored = resolve(config)
+    resolved = resolve(config)
     for preset in wanted:
         if resolved.count(preset) != 1:
             errors.append(f"{label} resolves to {preset} {resolved.count(preset)} times, want 1")
-        if preset in ignored or local_prefix + "customManagers.json5" in ignored:
-            errors.append(f"{label} excludes {preset} with ignorePresets")
 
 def compile_js(pattern):
     return re.compile(pattern.replace("(?<", "(?P<"))
