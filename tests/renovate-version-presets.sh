@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 #
-# Contract test for Renovate's first-party version presets in
-# .renovate/default.json5:
+# Contract test for Renovate's first-party version presets
+# (githubActionsVersions, biomeVersions, makefileVersions):
 #
-# - githubActionsVersions, biomeVersions and makefileVersions are extended;
+# - .renovate/customManagers.json5 extends them, once, so they reach every
+#   repository: most fleet configs extend the individual presets rather than
+#   default.json5. The extends chain of a legacy fleet config (snapshot of
+#   DevSecNinja/config-sidecar's renovate.json5), the config-sync stub template
+#   and this repository's renovate.json5 must each resolve to all three;
 # - githubActionsVersions and customManagers.json5's workflow manager never
 #   extract the same line: the preset takes upper-case `<NAME>_VERSION:` keys,
 #   the central manager lower-case `…version:` keys (LF and CRLF);
@@ -18,22 +22,69 @@ if ! command -v pyjson5 >/dev/null 2>&1; then
     exit 1
 fi
 
-DEFAULT="$(pyjson5 --as-json "${repo_root}/.renovate/default.json5" | tr -d '\r')" \
-MANAGERS="$(pyjson5 --as-json "${repo_root}/.renovate/customManagers.json5" | tr -d '\r')" \
+to_json() {
+    pyjson5 --as-json "$1" | tr -d '\r'
+}
+
+presets="{"
+for file in "${repo_root}"/.renovate/*.json5; do
+    presets+="\"$(basename "${file}")\": $(to_json "${file}"),"
+done
+presets="${presets%,}}"
+
+PRESETS="${presets}" \
+    TEMPLATE="$(to_json "${repo_root}/config-sync/templates/renovate.json5")" \
+    ROOT="$(to_json "${repo_root}/renovate.json5")" \
     python3 - <<'PY'
 import json
 import os
 import re
 import sys
 
-extends = json.loads(os.environ["DEFAULT"])["extends"]
-managers = json.loads(os.environ["MANAGERS"])["customManagers"]
+presets = json.loads(os.environ["PRESETS"])
+managers = presets["customManagers.json5"]["customManagers"]
 errors = []
+wanted = ("customManagers:githubActionsVersions", "customManagers:biomeVersions", "customManagers:makefileVersions")
+local_prefix = "github>DevSecNinja/.github//.renovate/"
 
-for preset in ("customManagers:githubActionsVersions", "customManagers:biomeVersions", "customManagers:makefileVersions"):
-    if preset not in extends:
-        errors.append(f".renovate/default.json5 must extend {preset}")
+for preset in wanted:
+    owners = [name for name, cfg in presets.items() if preset in cfg.get("extends", [])]
+    if owners != ["customManagers.json5"]:
+        errors.append(f"{preset} must be extended by customManagers.json5 only, found in {owners}")
 
+
+def resolve(extends, seen=()):
+    """Every preset name reachable from extends, following the central files."""
+    found = []
+    for name in extends:
+        found.append(name)
+        if name.startswith(local_prefix):
+            file = name[len(local_prefix):]
+            if file not in presets:
+                errors.append(f"unknown central preset {name}")
+            elif file not in seen:
+                found += resolve(presets[file].get("extends", []), seen + (file,))
+    return found
+
+
+# Snapshot of DevSecNinja/config-sidecar's renovate.json5 (2026-11-18), the
+# shape of 41 of the 43 fleet configs.
+legacy = [
+    "config:recommended",
+    "helpers:pinGitHubActionDigests",
+    ":dependencyDashboard",
+    ":semanticCommits",
+] + [local_prefix + f for f in ("autoMerge.json5", "base.json5", "customManagers.json5", "groups.json5", "labels.json5", "packageRules.json5", "semanticCommits.json5")]
+configs = {
+    "legacy fleet config (config-sidecar)": legacy,
+    "config-sync stub template": json.loads(os.environ["TEMPLATE"])["extends"],
+    "renovate.json5": json.loads(os.environ["ROOT"])["extends"],
+}
+for label, extends in configs.items():
+    resolved = resolve(extends)
+    for preset in wanted:
+        if resolved.count(preset) != 1:
+            errors.append(f"{label} resolves to {preset} {resolved.count(preset)} times, want 1")
 
 def compile_js(pattern):
     return re.compile(pattern.replace("(?<", "(?P<"))
