@@ -155,13 +155,14 @@ for text in (
     f"# renovate: datasource=docker depName=docker.io/library/postgres\nPOSTGRES_IMAGE='docker.io/library/postgres:18.3-alpine@{digest}'\n",
     f"# renovate: datasource=docker depName=docker.io/library/postgres\nPOSTGRES_IMAGE=docker.io/library/postgres:18.3-alpine@{digest}\n",
 ):
-    m = search(text.replace("\n", "\r\n"))
-    if not m or versioning_of(m) != "docker":
-        errors.append(f"shell manager: {text.splitlines()[1]!r} must use docker versioning, got {m and versioning_of(m)}")
-        continue
-    proposed = [t for t in tags if docker_compatible(m["currentValue"], t)]
-    if proposed != ["18.4-alpine", "18.6-alpine"]:
-        errors.append(f"shell manager: {m['currentValue']} would update to {proposed}, want only -alpine tags")
+    for variant, label in ((text, "LF"), (text.replace("\n", "\r\n"), "CRLF")):
+        m = search(variant)
+        if not m or versioning_of(m) != "docker":
+            errors.append(f"shell manager ({label}): {text.splitlines()[1]!r} must use docker versioning, got {m and versioning_of(m)}")
+            continue
+        proposed = [t for t in tags if docker_compatible(m["currentValue"], t)]
+        if proposed != ["18.4-alpine", "18.6-alpine"]:
+            errors.append(f"shell manager ({label}): {m['currentValue']} would update to {proposed}, want only -alpine tags")
 for text, want in {
     f"# renovate: datasource=docker depName=app versioning=loose\nAPP=registry.example/app:1.2\n": "loose",
     f"{gr}a/b\nA_VERSION=1.2.3\n": "semver-coerced",
