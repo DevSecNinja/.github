@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.8.0](https://github.com/DevSecNinja/.github/compare/v4.7.0...v4.8.0) (2026-11-18)
+
+
+### 🚀 Features
+
+* **config-sync:** bootstrap a .gitattributes with LF line endings ([#579](https://github.com/DevSecNinja/.github/issues/579)) ([6a14626](https://github.com/DevSecNinja/.github/commit/6a14626fc42d8aedd34a9b4b9c4ce54199a9e291))
+* **lint:** fail on text files committed with CRLF line endings ([#584](https://github.com/DevSecNinja/.github/issues/584)) ([537ed6e](https://github.com/DevSecNinja/.github/commit/537ed6ef933b7058a4b8052e065423d560b4c308))
+
+
+### 🐛 Bug Fixes
+
+* **config-sync:** drop two optional shellcheck checks from .shellcheckrc ([#586](https://github.com/DevSecNinja/.github/issues/586)) ([76258ab](https://github.com/DevSecNinja/.github/commit/76258ab42c46a6e48a1582b9e85a1ea9de2b3bb2))
+* **lint:** disable the zizmor self-repository audit in a shared config ([#591](https://github.com/DevSecNinja/.github/issues/591)) ([04e9b95](https://github.com/DevSecNinja/.github/commit/04e9b9546c104f96084a4b8453b7415029f9449f))
+
 ## [4.7.0](https://github.com/DevSecNinja/.github/compare/v4.6.0...v4.7.0) (2026-11-18)
 
 
