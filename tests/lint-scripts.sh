@@ -194,11 +194,20 @@ expect_status 1 "trivy without SARIF"
 expect_log "trivy fs --scanners misconfig,secret --exit-code 1 ." "trivy without SARIF"
 run zizmor
 expect_status 0 "zizmor with SARIF"
-expect_log "zizmor --format sarif ." "zizmor with SARIF"
+expect_log "zizmor --config ${scripts}/zizmor.yml --format sarif ." "zizmor with SARIF"
 [ -f "${RUNNER_TEMP}/zizmor.sarif" ] || fail "zizmor must write ${RUNNER_TEMP}/zizmor.sarif"
 run zizmor UPLOAD_SARIF=false FAKE_EXIT=1
 expect_status 1 "zizmor without SARIF"
-expect_log "${repo}: zizmor ." "zizmor without SARIF"
+expect_log "${repo}: zizmor --config ${scripts}/zizmor.yml ." "zizmor without SARIF"
+# A repo's own zizmor config replaces the shared one (zizmor loads one config).
+for own in .github/zizmor.yml zizmor.yaml; do
+    own_repo="${tmp_dir}/zizmor-own-${own//[\/.]/-}"
+    mkdir -p "${own_repo}/.github"
+    touch "${own_repo}/${own}"
+    run_in "${own_repo}" zizmor UPLOAD_SARIF=false
+    expect_status 0 "zizmor with its own ${own}"
+    expect_log "${own_repo}: zizmor ." "zizmor with its own ${own}"
+done
 
 # The language linters see the tracked files of their language, minus every
 # path the shared dprint.json excludes (vendored and generated files).
