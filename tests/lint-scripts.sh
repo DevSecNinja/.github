@@ -473,4 +473,44 @@ expect_status 1 "drifted config"
 expect_out "::error::.yamllint.yaml has drifted from central config" "drifted config"
 expect_out "+central" "drifted config"
 
+# line-endings fails on text files committed with CRLF or mixed line endings.
+# -text and binary paths are stored byte for byte and skipped; eol=crlf paths
+# pass, because git stores them with LF.
+eol="${tmp_dir}/eol"
+mkdir -p "${eol}/sub"
+git -C "${eol}" init -q
+printf 'a\nb\n' >"${eol}/lf.txt"
+printf 'a\r\nb\r\n' >"${eol}/feed.ics"
+printf 'a\r\n' >"${eol}/asset.dat"
+printf 'a\0\r\n' >"${eol}/blob"
+printf 'a\r\n' >"${eol}/run.bat"
+printf '* text=auto eol=lf\n*.ics -text\n*.dat binary\n*.bat text eol=crlf\n' >"${eol}/.gitattributes"
+git -C "${eol}" -c core.autocrlf=false add -A
+run_in "${eol}" line-endings
+expect_status 0 "LF, -text, binary and eol=crlf files"
+expect_out "✓ No text file is committed with CRLF line endings (6 files checked)." "LF, -text, binary and eol=crlf files"
+
+# Files committed with CRLF before the .gitattributes rule, staged as is.
+stage_raw() {
+    local sha
+    printf '%b' "$2" >"${eol}/$1"
+    sha="$(git -C "${eol}" hash-object -w --no-filters -- "$1")"
+    git -C "${eol}" update-index --add --cacheinfo "100644,${sha},$1"
+}
+stage_raw sub/crlf.txt 'a\r\nb\r\n'
+stage_raw mixed.md 'a\nb\r\n'
+stage_raw 'odd,name%.txt' 'a\r\n'
+run_in "${eol}" line-endings
+expect_status 1 "CRLF files"
+expect_out "::error file=sub/crlf.txt,title=CRLF line endings::sub/crlf.txt is committed with CRLF line endings." "CRLF files"
+expect_out "::error file=mixed.md,title=CRLF line endings::" "mixed line endings"
+expect_out "::error file=odd%2Cname%25.txt,title=CRLF line endings::odd,name%25.txt is committed" "an escaped path"
+expect_out "3 text file(s) are committed with CRLF line endings" "CRLF files"
+! grep -Fq "feed.ics" <<<"${out}" || fail "a -text path must not be reported: ${out}"
+run_in "${eol}" line-endings LINT_LINE_ENDINGS_BLOCKING=false
+expect_status 0 "CRLF files without blocking"
+expect_out "::warning file=sub/crlf.txt,title=CRLF line endings::" "CRLF files without blocking"
+run_in "${eol}" line-endings LINT_LINE_ENDINGS_BLOCKING=bogus
+expect_status 2 "an invalid blocking value"
+
 echo "lint scripts: OK"

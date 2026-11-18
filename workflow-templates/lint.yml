@@ -82,3 +82,7 @@ jobs:
       # after v4.4.0; bump the pin above before uncommenting.
       # lint-inline-scripts: true
       # lint-inline-scripts-blocking: false # true: errors instead of warnings
+      # Optional: report text files committed with CRLF line endings. Needs a
+      # lint.yml release after v4.7.0; bump the pin above before uncommenting.
+      # lint-line-endings: true
+      # lint-line-endings-blocking: true # false: warnings instead of errors

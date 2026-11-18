@@ -9,6 +9,8 @@
 # CRLF gets its own rule below, for example:
 #   *.ps1 text eol=crlf   CRLF in the checkout, LF in the repository
 #   *.ics -text           stored byte for byte (RFC 5545 calendars need CRLF)
+# The shared Lint workflow (lint-line-endings) fails on text files committed
+# with CRLF, except -text paths.
 * text=auto eol=lf
 
 # Scripts stay LF even when a repository changes the default above.
