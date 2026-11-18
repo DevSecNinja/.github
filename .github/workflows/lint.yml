@@ -1063,6 +1063,16 @@ jobs:
           fetch-depth: ${{ !inputs.lint-gitleaks && 1 || 0 }}
           persist-credentials: false
 
+      - name: Check line endings
+        # Needs only git: runs before the tool setup, so a failed mise
+        # install doesn't skip it.
+        id: line-endings
+        if: ${{ inputs.lint-line-endings }}
+        continue-on-error: true
+        env:
+          LINT_LINE_ENDINGS_BLOCKING: ${{ inputs.lint-line-endings-blocking }}
+        run: bash "${RUNNER_TEMP}/devsecninja-lint/scripts/lint/line-endings.sh"
+
       - name: Find Python files
         # Repositories without Python skip ruff (and its mise install).
         id: python-files
@@ -1338,14 +1348,6 @@ jobs:
           LINT_INLINE_SCRIPTS_BLOCKING: ${{ inputs.lint-inline-scripts-blocking }}
         # The runner's system Python ships PyYAML; a caller's mise Python may not.
         run: /usr/bin/python3 "${RUNNER_TEMP}/devsecninja-lint/scripts/lint-inline-scripts.py"
-
-      - name: Check line endings
-        id: line-endings
-        if: ${{ inputs.lint-line-endings }}
-        continue-on-error: true
-        env:
-          LINT_LINE_ENDINGS_BLOCKING: ${{ inputs.lint-line-endings-blocking }}
-        run: bash "${RUNNER_TEMP}/devsecninja-lint/scripts/lint/line-endings.sh"
 
       - name: Report linter results
         if: ${{ !cancelled() }}

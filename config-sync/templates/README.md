@@ -74,9 +74,9 @@ uses another default lists `.gitattributes` in `.github/.config-sync-ignore`,
 which also skips that warning.
 
 Adding the file doesn't convert files already committed with CRLF; run
-`git add --renormalize .` and commit the result. The shared Lint workflow's
-`lint-line-endings` check fails on text files committed with CRLF or mixed
-line endings, except `-text` paths (see
+`git add .gitattributes` and `git add --renormalize .`, and commit both. The
+shared Lint workflow's `lint-line-endings` check fails on text files committed
+with CRLF or mixed line endings, except `-text` paths (see
 [docs/architecture.md](../../docs/architecture.md#lint-lintyml)).
 
 ## renovate.json5

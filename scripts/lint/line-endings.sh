@@ -3,12 +3,16 @@
 # Fails when a tracked text file is committed with CRLF (or mixed) line
 # endings, using git's own attribute resolution (`git ls-files --eol`):
 # a path whose .gitattributes rule unsets `text` (`-text`, or `binary`) is
-# stored byte for byte and skipped, and an `eol=crlf` path is fine, because
-# git stores it with LF and only checks it out with CRLF.
+# stored byte for byte and skipped. An `eol=crlf` path passes once git
+# stores it with LF (it only checks it out with CRLF); one still stored
+# with CRLF is reported, like any other, until `git add --renormalize`.
 # A step of .github/workflows/lint.yml, run the same way in both lint modes.
 # Env: LINT_LINE_ENDINGS_BLOCKING (true: errors, fail; false: warnings only).
 
 set -euo pipefail
+# Bytes, not characters: in a UTF-8 locale `read -d ''` can swallow the NUL
+# after a path that ends in an incomplete multibyte sequence.
+export LC_ALL=C
 
 blocking="${LINT_LINE_ENDINGS_BLOCKING:-true}"
 case "${blocking}" in
@@ -73,5 +77,5 @@ for path in "${found[@]:0:${max_annotations}}"; do
 done
 [ "${#found[@]}" -le "${max_annotations}" ] ||
     echo "… and $((${#found[@]} - max_annotations)) more file(s)."
-echo "::${level} title=CRLF line endings::${#found[@]} text file(s) are committed with CRLF line endings. Store them with LF: with \"* text=auto eol=lf\" in .gitattributes, run \"git add --renormalize .\" and commit. A file that needs CRLF gets its own .gitattributes rule: \"eol=crlf\" (CRLF in the checkout, LF in the repository) or \"-text\" (stored byte for byte)."
+echo "::${level} title=CRLF line endings::${#found[@]} text file(s) are committed with CRLF line endings. Store them with LF: put \"* text=auto eol=lf\" in .gitattributes, run \"git add .gitattributes\" and \"git add --renormalize .\", and commit both. A file that needs CRLF gets its own .gitattributes rule: \"eol=crlf\" (CRLF in the checkout, LF in the repository) or \"-text\" (stored byte for byte)."
 [ "${blocking}" = false ] || exit 1
