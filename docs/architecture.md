@@ -1183,8 +1183,8 @@ CI), Renovate batches its work
 - **Rebasing:** `rebaseWhen: "auto"` (Renovate's default,
   [ADR 0013](design-decisions/0013-rebase-automerge-branches-when-behind.md)).
   An automerge PR that falls behind `main` — or any PR in a repository that
-  requires up-to-date branches — is rebased on Renovate's next run inside the
-  window. Only where branches must be up to date (the standard for public
+  requires up-to-date branches — is rebased on Renovate's next run, also
+  outside the window (`updateNotScheduled: true`). Only where branches must be up to date (the standard for public
   repositories) is every automerged update guaranteed to be tested against
   the latest `main`; elsewhere GitHub's native automerge can merge a
   behind-base PR before Renovate rebases it. No per-repository override is
