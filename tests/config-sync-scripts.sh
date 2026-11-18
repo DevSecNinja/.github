@@ -93,8 +93,8 @@ echo "✓ config-sync: sync-files.sh keeps the ruff.toml and biome.json template
 gitattributes_template="${repo_root}/config-sync/templates/.gitattributes"
 
 # Runs the sync without sync-templates in a fresh consumer checkout. $1 is the
-# content of its .gitattributes (empty: no file, printed with %b), $2 of its
-# .config-sync-ignore.
+# content of its .gitattributes (empty: no file, @symlink: a dangling symlink,
+# otherwise printed with %b), $2 of its .config-sync-ignore.
 sync_bootstrap() {
     rm -rf "${consumer}" "${tmp_dir}/output"
     mkdir -p "${consumer}/.config-sync-source/config-sync" "${consumer}/.github"
@@ -104,7 +104,12 @@ sync_bootstrap() {
         -c commit.gpgsign=false commit --quiet --allow-empty -m init
     # Already present, so .gitattributes is the only file that can change.
     printf '{ extends: ["github>DevSecNinja/.github//.renovate/default.json5"] }\n' >"${consumer}/renovate.json5"
-    [ -z "$1" ] || printf '%b' "$1" >"${consumer}/.gitattributes"
+    if [ "$1" = "@symlink" ]; then
+        # Where the file system allows symlinks: a dangling one.
+        ln -s missing/target "${consumer}/.gitattributes" 2>/dev/null || true
+    elif [ -n "$1" ]; then
+        printf '%b' "$1" >"${consumer}/.gitattributes"
+    fi
     [ -z "$2" ] || printf '%s\n' "$2" >"${consumer}/.github/.config-sync-ignore"
     (
         cd "${consumer}"
@@ -134,6 +139,7 @@ lf_cases=(
     '# Defaults\n*   text=auto   eol=lf\n*.bat text eol=crlf\n'
     '* text=auto eol=crlf\n* eol=lf\n'
     '* text=auto eol=lf\n* !eol\n* eol=lf\n'
+    '"*" text=auto eol=lf\n'
 )
 no_lf_cases=(
     '* text=auto\n*.ps1 text eol=crlf\n'
@@ -156,5 +162,13 @@ sync_bootstrap "" ".gitattributes"
 [ ! -e "${consumer}/.gitattributes" ] || fail "an ignored .gitattributes must not be bootstrapped"
 sync_bootstrap '* text=auto eol=crlf\n' ".gitattributes"
 ! lf_warned || fail "an ignored .gitattributes must not warn"
+
+# A .gitattributes symlink is the repository's, even when it dangles.
+sync_bootstrap "@symlink" ""
+if [ -L "${consumer}/.gitattributes" ]; then
+    [ ! -e "${consumer}/missing" ] ||
+        fail "a dangling .gitattributes symlink must not be written through: $(cat "${tmp_dir}/log")"
+    grep -Fxq updated=0 "${tmp_dir}/output" || fail "a .gitattributes symlink must not open a sync PR"
+fi
 
 echo "✓ config-sync: sync-files.sh bootstraps .gitattributes without overwriting it and warns when it has no LF default."

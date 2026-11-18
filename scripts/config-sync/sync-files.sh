@@ -151,7 +151,9 @@ sync_tree() {
             continue
         fi
 
-        if [ "${kind}" = "templates" ] && [ -e "${dest}" ]; then
+        # A symlink counts as existing even when it dangles: cp would write
+        # the template through it.
+        if [ "${kind}" = "templates" ] && { [ -e "${dest}" ] || [ -L "${dest}" ]; }; then
             echo "  ✔ ${dest} already exists (templates are not overwritten)"
             continue
         fi
@@ -197,13 +199,14 @@ else
 fi
 
 # .gitattributes is repo-owned as well; only check that LF stays the
-# default line ending: the last `*` line that sets or resets `eol` sets
-# `eol=lf` (`-eol`, `!eol` and a bare `eol` drop an earlier LF default).
-# A repository that needs another default lists .gitattributes in
-# its ignore file, which also skips this check. Exit 0: LF default.
+# default line ending: the last catch-all (`*`, or the quoted `"*"`) that
+# sets or resets `eol` sets `eol=lf` (`-eol`, `!eol` and a bare `eol` drop
+# an earlier LF default). A repository that needs another default lists
+# .gitattributes in its ignore file, which also skips this check. Exit 0:
+# LF default.
 lf_default() {
     awk '{ sub(/\r$/, "") }
-        $1 == "*" {
+        $1 == "*" || $1 == "\"*\"" {
             for (i = 2; i <= NF; i++) {
                 if ($i ~ /^eol=/) eol = substr($i, 5)
                 else if ($i == "eol" || $i == "-eol" || $i == "!eol") eol = ""
@@ -213,7 +216,7 @@ lf_default() {
 }
 # shellcheck disable=SC2310 # is_ignored and lf_default only test; their status is the answer.
 if [ -f .gitattributes ] && ! is_ignored .gitattributes && ! lf_default .gitattributes; then
-    echo "::warning file=.gitattributes,title=.gitattributes has no LF default::Add \"* text=auto eol=lf\" above the repo-specific rules, so every text file is stored and checked out with LF. Give a path that needs CRLF its own rule (\"eol=crlf\" or \"-text\"). See https://github.com/DevSecNinja/.github/blob/main/config-sync/templates/README.md#gitattributes"
+    echo "::warning file=.gitattributes,title=.gitattributes has no LF default::Make \"* text=auto eol=lf\" the last catch-all rule, before the path-specific rules: replace a catch-all that sets another eol (e.g. \"* text=auto eol=crlf\") instead of adding one above it. Every text file is then stored and checked out with LF. Give a path that needs CRLF its own rule (\"eol=crlf\" or \"-text\"). See https://github.com/DevSecNinja/.github/blob/main/config-sync/templates/README.md#gitattributes"
 fi
 
 # renovate.json5 is repo-owned; only check that its top-level
