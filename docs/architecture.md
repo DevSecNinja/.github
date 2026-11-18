@@ -1233,6 +1233,19 @@ can still assign Code Owners if an automerge PR cannot merge cleanly.
 - **Ansible inventory** (`ansible/inventory/`): any datasource, an optional
   `registryUrl=` and any key, e.g. Debian packages pinned per suite with
   `# renovate: datasource=deb depName=docker-ce registryUrl=https://…`.
+- **Shell scripts** (`.sh`, `.bash`, `.zsh`, `.bats`, and their chezmoi
+  `.tmpl` copies): the next line is a `NAME=value` assignment, optionally after
+  `export`, `local`, `readonly` or `declare`. The annotation can add
+  `packageName=`, `versioning=`, `extractVersion=` and `registryUrl=`, in that
+  order. For an image value (`"docker.io/library/postgres:18.3-alpine@sha256:…"`)
+  only the tag and digest are tracked; the image needs a registry or namespace
+  path, so write `docker.io/library/redis:7.4` rather than `redis:7.4`. Other
+  values keep a leading Debian epoch (`5:29.6.2-1~…`). Values that aren't plain
+  literals (`"${OTHER}"`, backtick substitutions, backslash escapes) are
+  skipped. Scripts without one of those extensions are not
+  scanned.
+
+All annotation managers accept CRLF line endings as well as LF.
 
 Renovate's first-party presets, extended in `default.json5`, cover three more shapes:
 `customManagers:githubActionsVersions` (`# renovate:` above an upper-case
