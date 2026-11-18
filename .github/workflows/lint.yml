@@ -146,6 +146,19 @@ on:
         required: false
         type: boolean
         default: false
+      lint-line-endings:
+        description: >-
+          Report text files committed with CRLF or mixed line endings (scripts/lint/line-endings.sh, git ls-files --eol).
+          A path that needs CRLF gets its own .gitattributes rule: `eol=crlf` (stored with LF) or `-text` (stored byte
+          for byte).
+        required: false
+        type: boolean
+        default: true
+      lint-line-endings-blocking:
+        description: "Report CRLF line endings as errors and fail the line-endings linter; false reports warnings only"
+        required: false
+        type: boolean
+        default: true
       upload-sarif:
         description: "Upload checkov/trivy/zizmor/ruff/biome/psscriptanalyzer results to GitHub code scanning (requires GitHub
           Advanced Security). Set false for private repos without GHAS to gate on exit codes with console output instead."
@@ -962,6 +975,43 @@ jobs:
         # The runner's system Python ships PyYAML; a caller's mise Python may not.
         run: /usr/bin/python3 "${RUNNER_TEMP}/devsecninja-lint/scripts/lint-inline-scripts.py"
 
+  line-endings:
+    name: line endings
+    if: ${{ inputs.lint-line-endings && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
+      }}
+    continue-on-error: ${{ ! inputs.lint-fail-on-error }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout lint scripts
+        # The linter scripts ship with this reusable workflow: fetch them from
+        # the same commit of DevSecNinja/.github that the caller pinned.
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .devsecninja-lint
+          sparse-checkout: |-
+            scripts/lint/
+            scripts/lint-inline-scripts.py
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Move lint scripts out of the workspace
+        # Outside the workspace the caller's linters don't scan them, and the
+        # code checkout doesn't delete them.
+        run: mv .devsecninja-lint "${RUNNER_TEMP}/devsecninja-lint"
+
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check line endings
+        env:
+          LINT_LINE_ENDINGS_BLOCKING: ${{ inputs.lint-line-endings-blocking }}
+        run: bash "${RUNNER_TEMP}/devsecninja-lint/scripts/lint/line-endings.sh"
+
   all-linters:
     # Single-job mode (`lint-job-mode: single`, or `auto` on a private
     # repository). Every enabled linter runs as a step of this one job, so a
@@ -1288,6 +1338,14 @@ jobs:
           LINT_INLINE_SCRIPTS_BLOCKING: ${{ inputs.lint-inline-scripts-blocking }}
         # The runner's system Python ships PyYAML; a caller's mise Python may not.
         run: /usr/bin/python3 "${RUNNER_TEMP}/devsecninja-lint/scripts/lint-inline-scripts.py"
+
+      - name: Check line endings
+        id: line-endings
+        if: ${{ inputs.lint-line-endings }}
+        continue-on-error: true
+        env:
+          LINT_LINE_ENDINGS_BLOCKING: ${{ inputs.lint-line-endings-blocking }}
+        run: bash "${RUNNER_TEMP}/devsecninja-lint/scripts/lint/line-endings.sh"
 
       - name: Report linter results
         if: ${{ !cancelled() }}

@@ -254,6 +254,17 @@ runs it blocking. A
 later major release makes blocking the default. The checker runs with the
 runner's system Python, which ships PyYAML (`ubuntu-24.04`).
 
+The `line endings` linter (`scripts/lint/line-endings.sh`) reports every text
+file committed with CRLF or mixed line endings. It reads `git ls-files --eol`,
+so git's own `.gitattributes` resolution decides: a path with `-text` (or
+`binary`) is stored byte for byte and skipped, and an `eol=crlf` path passes,
+because git stores it with LF and only checks it out with CRLF. Those rules are
+the only way to keep CRLF; the linter has no exclude input. Findings are errors
+that fail the linter; `lint-line-endings-blocking: false` reports them as
+warnings. Fix them with `git add --renormalize .` once `.gitattributes` has
+`* text=auto eol=lf`, which config-sync bootstraps (see
+[Templates](#templates-config-synctemplates)). The linter needs only git.
+
 | Input                          | Description                                                            |
 | ------------------------------ | ---------------------------------------------------------------------- |
 | `mise-version`                 | **Required.** mise version to install.                                 |
@@ -283,6 +294,8 @@ runner's system Python, which ships PyYAML (`ubuntu-24.04`).
 | `lint-config-drift`            | Config-drift check. Default: `false`.                                  |
 | `lint-inline-scripts`          | Inline-script check (see above). Default: `true`. After v4.4.0.        |
 | `lint-inline-scripts-blocking` | Report inline scripts as errors. Default: `false`. After v4.4.0.       |
+| `lint-line-endings`            | CRLF line-endings check (see above). Default: `true`. After v4.7.0.    |
+| `lint-line-endings-blocking`   | Report CRLF as errors and fail. Default: `true`. After v4.7.0.         |
 
 **Example caller:**
 
