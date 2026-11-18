@@ -33,15 +33,12 @@ concurrency:
 jobs:
   release-please:
     # Self-reference pinned to a released central workflow.
-    uses: DevSecNinja/.github/.github/workflows/release-please.yml@a9e3a11178ccd6e76115d3d7b31616631305991f # v3.4.0
+    uses: DevSecNinja/.github/.github/workflows/release-please.yml@231c380d4f75486e159ed2e3d806bc76ff193a43 # v4.7.0
     permissions:
       contents: write
       pull-requests: write
-    # Legacy names of the same DevSecNinja Automation App, passed explicitly
-    # (explicit values win over AUTOMATION_APP_*). Replace with
-    # `AUTOMATION_APP_PRIVATE_KEY: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}`
-    # once this repository is provisioned; see docs/automation-app.md.
-    with:
-      app-id: ${{ vars.RELEASE_PLEASE_APP_ID }}
+    # The App ID is read from the AUTOMATION_APP_ID variable; pass the key by
+    # name (it lives in the `production` environment, see
+    # docs/automation-app.md).
     secrets:
-      app-private-key: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
+      AUTOMATION_APP_PRIVATE_KEY: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
