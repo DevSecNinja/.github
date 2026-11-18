@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.6.0](https://github.com/DevSecNinja/.github/compare/v4.5.0...v4.6.0) (2026-11-18)
+
+
+### 🚀 Features
+
+* **lint:** run ruff when the repository has Python files ([#562](https://github.com/DevSecNinja/.github/issues/562)) ([e416a44](https://github.com/DevSecNinja/.github/commit/e416a443e5990d9d1e40b0216271b3c004af5d35))
+* **renovate:** enable Renovate's version presets for workflows, biome and Makefiles ([#572](https://github.com/DevSecNinja/.github/issues/572)) ([a8e54fc](https://github.com/DevSecNinja/.github/commit/a8e54fceda871fba41ab1131b0855e3fc3e32ede))
+* **renovate:** track shell-script version annotations and CRLF files ([#570](https://github.com/DevSecNinja/.github/issues/570)) ([cc6881e](https://github.com/DevSecNinja/.github/commit/cc6881e75e7122ec9808ae6cdcbf4935a55dafeb))
+* **renovate:** update dprint plugin URLs in dprint.json ([#561](https://github.com/DevSecNinja/.github/issues/561)) ([b6c5949](https://github.com/DevSecNinja/.github/commit/b6c5949ac9ff192031b3c876dbba2062142376c5))
+
+
+### 🐛 Bug Fixes
+
+* **lint:** skip ruff with a warning when the repository doesn't pin it ([#568](https://github.com/DevSecNinja/.github/issues/568)) ([c305c10](https://github.com/DevSecNinja/.github/commit/c305c109d95f94d4585716912c903f7931b9a199))
+* **renovate:** extend version presets from customManagers.json5 so they reach the fleet ([#574](https://github.com/DevSecNinja/.github/issues/574)) ([864eadc](https://github.com/DevSecNinja/.github/commit/864eadce3207662039031cadc80a61a63951571b))
+
 ## [4.5.0](https://github.com/DevSecNinja/.github/compare/v4.4.1...v4.5.0) (2026-11-17)
 
 
