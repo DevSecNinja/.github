@@ -1197,9 +1197,10 @@ CI), Renovate batches its work
   [ADR 0005](design-decisions/0005-pr-age-cooldown-for-untrusted-timestamps.md)
   cooldown keeps working), and the dotfiles devcontainer image (branch
   automerge at any time).
-- **Schedule:** one window, Saturday 00:00–07:59 (Europe/Amsterdam), and
-  `updateNotScheduled: false`, so open PRs are not pushed (and their CI is
-  not re-run) outside it either; manual rebase requests still work.
+- **Schedule:** one window, Saturday 00:00–07:59 (Europe/Amsterdam), for
+  creating branches and PRs. With `updateNotScheduled: true` (Renovate's
+  default), open PRs are still rebased and updated outside it, so a PR that
+  falls behind or conflicts mid-week is fixed without waiting for Saturday.
   Automerge is not tied to the window — GitHub merges as soon as the
   required checks pass.
 - **Lock file maintenance:** monthly, on the first day of the month (its
@@ -1207,8 +1208,8 @@ CI), Renovate batches its work
 - **Rebasing:** `rebaseWhen: "auto"` (Renovate's default,
   [ADR 0013](design-decisions/0013-rebase-automerge-branches-when-behind.md)).
   An automerge PR that falls behind `main` — or any PR in a repository that
-  requires up-to-date branches — is rebased on Renovate's next run inside the
-  window. Only where branches must be up to date (the standard for public
+  requires up-to-date branches — is rebased on Renovate's next run, also
+  outside the window (`updateNotScheduled: true`). Only where branches must be up to date (the standard for public
   repositories) is every automerged update guaranteed to be tested against
   the latest `main`; elsewhere GitHub's native automerge can merge a
   behind-base PR before Renovate rebases it. No per-repository override is

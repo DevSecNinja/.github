@@ -72,7 +72,9 @@ bumping a pin (workflows) or automatically (Renovate presets are read from
   inside the schedule but keeps _updating_ open ones at any time, which would
   still push to the weekly PR mid-week. Manual rebase requests are still
   honoured. Automerge is unaffected: GitHub merges once checks pass, whenever
-  that is.
+  that is. _Reversed later: `updateNotScheduled` is `true` again, so open PRs
+  stay rebased and up to date between windows. Only new branches wait for the
+  window._
 - **Monthly lock-file maintenance** (`* 0-7 1 * *`) instead of Renovate's
   weekly default. It keeps `updateNotScheduled: true`, because its branch
   automerge is performed by Renovate and would otherwise wait a month when
@@ -161,7 +163,7 @@ and no TODO-to-issue runs for Renovate's automerge pushes.
   their automerge PRs stall behind the base branch. At the time of writing
   that applies to `home-assistant-win-companion` and `net-worth-calculator`.
   Because of `updateNotScheduled: false`, those rebases also happen only in
-  the Saturday window. _No longer applies since
+  the Saturday window (`updateNotScheduled` is `true` again since). _No longer applies since
   [ADR 0013](0013-rebase-automerge-branches-when-behind.md): the global
   `rebaseWhen: "auto"` already resolves to `behind-base-branch` in those
   repositories, so no override is needed._

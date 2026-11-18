@@ -38,7 +38,8 @@ DevSecNinja repositories are owned by a personal account.
 Meanwhile the CI cost of rebasing is already bounded by other ADR 0010
 settings: one weekly `all-non-major` PR instead of one per dependency, a
 Saturday-only schedule, and `updateNotScheduled: false` (Renovate does not push
-to open branches outside the window).
+to open branches outside the window). _`updateNotScheduled` was later set back
+to `true`, so open branches are also rebased between windows._
 
 ## Decision
 

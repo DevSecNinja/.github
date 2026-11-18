@@ -19,20 +19,21 @@
   labels: ["dependencies"],
   osvVulnerabilityAlerts: true,
   timezone: 'Europe/Amsterdam',
-  // One weekly window. Every Renovate run inside the window may push to an
-  // open branch, and every push re-runs the repo's CI, so a single short
-  // window (instead of Friday + the whole weekend) keeps the number of pushes
-  // per week low. Automerge itself is not limited by this schedule: GitHub
+  // One weekly window for new branches. Every new branch and every push
+  // re-runs the repo's CI, so a single short window (instead of Friday + the
+  // whole weekend) keeps the number of new PRs per week low; open PRs are kept
+  // up to date outside it (updateNotScheduled below). Automerge itself is not limited by this schedule: GitHub
   // merges as soon as the required checks pass. See
   // docs/design-decisions/0010-batch-renovate-updates-to-save-actions-minutes.md.
   schedule: [
     '* 0-7 * * 6',
   ],
-  // Renovate only creates branches inside the schedule but, by default, keeps
-  // updating existing ones at any time — an open weekly PR would still be
-  // pushed (and its CI re-run) whenever a newer version clears the soak.
-  // Manual rebase requests (PR checkbox, dashboard) are still honoured.
-  updateNotScheduled: false,
+  // Renovate only creates branches inside the schedule, but keeps existing
+  // ones rebased and up to date at any time (Renovate's default, stated
+  // explicitly): an open PR that falls behind or conflicts mid-week is fixed
+  // without waiting for Saturday. This costs a CI run per push to an open
+  // branch outside the window; the weekly batch keeps those few.
+  updateNotScheduled: true,
   // Renovate's default, stated explicitly (ADR 0013). `auto` rebases a branch
   // that is behind the base branch only when that is needed for a safe merge:
   // automerge PRs, and repos that require branches to be up to date. In those
@@ -43,8 +44,8 @@
   // dotfiles devcontainer) from falling back to a PR when the base moves.
   // `conflicted` is "not recommended if you have enabled Renovate automerge"
   // (Renovate docs). The CI cost of rebasing is bounded by the weekly
-  // all-non-major group, the Saturday-only schedule and
-  // updateNotScheduled: false above, not by this setting. docker-gated
+  // all-non-major group and the Saturday-only schedule, not by this
+  // setting. docker-gated
   // dependencies keep `conflicted` (packageRules.json5) for their cooldown.
   rebaseWhen: "auto",
   ignorePaths: [
@@ -72,8 +73,9 @@
     // a lock refresh rarely matters week to week, and each one costs a CI run.
     schedule: ["* 0-7 1 * *"],
     // Branch automerge is done by Renovate itself and is skipped outside the
-    // schedule when updateNotScheduled is false; allow it here so a branch
-    // whose checks finish after the window does not wait a month to merge.
+    // schedule when updateNotScheduled is false; keep it true here, whatever
+    // the global setting, so a branch whose checks finish after the window does
+    // not wait a month to merge.
     updateNotScheduled: true,
   },
   registryAliases: {

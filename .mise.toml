@@ -36,6 +36,7 @@ run = [
   "bash ./tests/renovate-annotation-managers.sh",
   "bash ./tests/renovate-version-presets.sh",
   "bash ./tests/renovate-commit-types.sh",
+  "bash ./tests/renovate-update-not-scheduled.sh",
   "bash ./tests/renovate-shell-manager.sh",
   "bash ./tests/renovate-dprint-plugins.sh",
   "bash ./tests/renovate-batching-contract.sh",
