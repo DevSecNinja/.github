@@ -151,6 +151,16 @@ on:
         required: false
         type: boolean
         default: false
+      lint-line-endings:
+        description: "Report text files committed with CRLF line endings (scripts/lint/line-endings.sh). See lint.yml."
+        required: false
+        type: boolean
+        default: false
+      lint-line-endings-blocking:
+        description: "Report CRLF line endings as errors and fail the line-endings linter; false reports warnings only"
+        required: false
+        type: boolean
+        default: true
       upload-sarif:
         description: "Upload checkov/trivy/zizmor/ruff/biome/psscriptanalyzer results to GitHub code scanning (requires GitHub
           Advanced Security). Set false for private repos without GHAS to gate on exit codes with console output instead."
@@ -209,5 +219,7 @@ jobs:
       lint-config-drift: ${{ inputs.lint-config-drift }}
       lint-inline-scripts: ${{ inputs.lint-inline-scripts }}
       lint-inline-scripts-blocking: ${{ inputs.lint-inline-scripts-blocking }}
+      lint-line-endings: ${{ inputs.lint-line-endings }}
+      lint-line-endings-blocking: ${{ inputs.lint-line-endings-blocking }}
       upload-sarif: ${{ inputs.upload-sarif }}
       lint-job-mode: ${{ inputs.lint-job-mode }}
