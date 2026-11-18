@@ -1234,6 +1234,13 @@ can still assign Code Owners if an automerge PR cannot merge cleanly.
   `registryUrl=` and any key, e.g. Debian packages pinned per suite with
   `# renovate: datasource=deb depName=docker-ce registryUrl=https://…`.
 
+Renovate's first-party presets, extended in `default.json5`, cover three more shapes:
+`customManagers:githubActionsVersions` (`# renovate:` above an upper-case
+`<NAME>_VERSION:` key in workflows and `action.yml`),
+`customManagers:biomeVersions` (the `$schema` version in `biome.json`) and
+`customManagers:makefileVersions` (`# renovate:` above `<NAME>_VERSION ?=` in
+Makefiles). Each one acts only on repositories with those files.
+
 ### dprint plugins
 
 Renovate has no dprint manager, so `customManagers.json5` tracks the plugin URLs

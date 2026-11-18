@@ -7,6 +7,16 @@
     ":dependencyDashboard",
     ":semanticCommits",
     ":semanticCommitTypeAll(build)",
+    // Renovate's first-party annotation and schema managers; each one only
+    // acts on repositories that have the files it targets:
+    // - githubActionsVersions: `# renovate:` above an upper-case
+    //   `<NAME>_VERSION:` key in workflows and action.yml (the lower-case
+    //   `…version:` keys are customManagers.json5's workflow manager);
+    // - biomeVersions: the `$schema` version in biome.json(c);
+    // - makefileVersions: `# renovate:` above `<NAME>_VERSION ?=` in Makefiles.
+    "customManagers:githubActionsVersions",
+    "customManagers:biomeVersions",
+    "customManagers:makefileVersions",
     "github>DevSecNinja/.github//.renovate/autoMerge.json5",
     "github>DevSecNinja/.github//.renovate/base.json5",
     "github>DevSecNinja/.github//.renovate/customManagers.json5",
