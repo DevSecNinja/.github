@@ -1213,10 +1213,10 @@ CI), Renovate batches its work
   repositories) is every automerged update guaranteed to be tested against
   the latest `main`; elsewhere GitHub's native automerge can merge a
   behind-base PR before Renovate rebases it. No per-repository override is
-  needed. `docker-gated-` PRs keep `rebaseWhen: "conflicted"`, because a
-  rebase restarts their cooldown clock; repositories that require
-  `pr-cooldown` therefore keep "require branches to be up to date" off for
-  now.
+  needed. `docker-gated-` PRs keep `rebaseWhen: "conflicted"` to save CI runs
+  while they soak (a Renovate rebase no longer restarts their cooldown clock,
+  but "Update branch" does); repositories that require `pr-cooldown`
+  therefore keep "require branches to be up to date" off for now.
 
 ### Auto-merge strategy
 
