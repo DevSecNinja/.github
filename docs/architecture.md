@@ -1131,7 +1131,9 @@ These are **starting-point** files. Config-sync copies them only when the
 caller sets `sync-templates: true` and the file does not exist yet; it never
 overwrites them. `renovate.json5` is always bootstrapped: it is a stub that
 extends [`.renovate/default.json5`](#consuming-the-preset) and holds the
-repository's own Renovate rules. See
+repository's own Renovate rules. `.gitattributes` is always bootstrapped too:
+it makes LF the line ending of every text file, and each sync warns when an
+existing `.gitattributes` has no LF default. See
 [`config-sync/templates/README.md`](../config-sync/templates/README.md) for
 details.
 

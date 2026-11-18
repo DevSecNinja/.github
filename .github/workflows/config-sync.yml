@@ -13,7 +13,9 @@ name: Reusable — Config Sync
 # template is always bootstrapped: it is a stub that extends the central
 # `.renovate/default.json5` preset and holds the repo's own Renovate
 # rules, so it is never overwritten. The sync warns when an existing
-# `renovate.json5` does not extend that preset.
+# `renovate.json5` does not extend that preset. The `.gitattributes`
+# template (LF line endings) is always bootstrapped as well, and the
+# sync warns when an existing `.gitattributes` has no LF default.
 #
 # Per-repo opt-out: list paths (one per line, relative to repo root)
 # in `.github/.config-sync-ignore` to skip them during sync. Blank
@@ -52,7 +54,7 @@ on:
     inputs:
       sync-templates:
         description: "Also sync template files (only copies if file does not exist locally — will not overwrite customized
-          files). renovate.json5 is bootstrapped regardless."
+          files). renovate.json5 and .gitattributes are bootstrapped regardless."
         required: false
         type: boolean
         default: false
