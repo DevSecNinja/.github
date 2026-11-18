@@ -53,18 +53,21 @@ for preset in wanted:
         errors.append(f"{preset} must be extended by customManagers.json5 only, found in {owners}")
 
 
-def resolve(extends, seen=()):
-    """Every preset name reachable from extends, following the central files."""
-    found = []
-    for name in extends:
+def resolve(config, seen=()):
+    """Every preset name reachable from config's extends, following the
+    central files, and every preset they exclude with ignorePresets."""
+    found, ignored = [], list(config.get("ignorePresets", []))
+    for name in config.get("extends", []):
         found.append(name)
         if name.startswith(local_prefix):
             file = name[len(local_prefix):]
             if file not in presets:
                 errors.append(f"unknown central preset {name}")
             elif file not in seen:
-                found += resolve(presets[file].get("extends", []), seen + (file,))
-    return found
+                more, more_ignored = resolve(presets[file], seen + (file,))
+                found += more
+                ignored += more_ignored
+    return found, ignored
 
 
 # Snapshot of DevSecNinja/config-sidecar's renovate.json5 (2026-11-18), the
@@ -76,15 +79,17 @@ legacy = [
     ":semanticCommits",
 ] + [local_prefix + f for f in ("autoMerge.json5", "base.json5", "customManagers.json5", "groups.json5", "labels.json5", "packageRules.json5", "semanticCommits.json5")]
 configs = {
-    "legacy fleet config (config-sidecar)": legacy,
-    "config-sync stub template": json.loads(os.environ["TEMPLATE"])["extends"],
-    "renovate.json5": json.loads(os.environ["ROOT"])["extends"],
+    "legacy fleet config (config-sidecar)": {"extends": legacy},
+    "config-sync stub template": json.loads(os.environ["TEMPLATE"]),
+    "renovate.json5": json.loads(os.environ["ROOT"]),
 }
-for label, extends in configs.items():
-    resolved = resolve(extends)
+for label, config in configs.items():
+    resolved, ignored = resolve(config)
     for preset in wanted:
         if resolved.count(preset) != 1:
             errors.append(f"{label} resolves to {preset} {resolved.count(preset)} times, want 1")
+        if preset in ignored or local_prefix + "customManagers.json5" in ignored:
+            errors.append(f"{label} excludes {preset} with ignorePresets")
 
 def compile_js(pattern):
     return re.compile(pattern.replace("(?<", "(?P<"))
