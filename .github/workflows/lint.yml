@@ -99,8 +99,8 @@ on:
         type: boolean
         default: true
       lint-biome:
-        description: "Run Biome (JavaScript, TypeScript, JSON and CSS linting and formatting) when the repository has such
-          files — uploads SARIF"
+        description: "Run Biome (JS/TS/JSON/CSS lint and format) when the repo has such files, no ESLint config and pins biome
+          — uploads SARIF"
         required: false
         type: boolean
         default: true

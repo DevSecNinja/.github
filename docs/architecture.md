@@ -193,12 +193,12 @@ pinned, findings fail the linter like any other.
   [`ruff.toml` template](../config-sync/templates/ruff.toml) is a starting
   point. Findings are annotated on the PR, and with `upload-sarif` they also go
   to code scanning (category `ruff`).
-- **Biome** (`lint-biome`, JavaScript, TypeScript, JSON and CSS, after v4.5.0)
+- **Biome** (`lint-biome`, JavaScript, TypeScript, JSON and CSS, after v4.6.0)
   runs `biome ci`, which lints and checks formatting and import order without
   writing, on the `*.js`, `*.mjs`, `*.cjs`, `*.jsx`, `*.ts`, `*.mts`, `*.cts`,
-  `*.tsx`, `*.json`, `*.jsonc` and `*.css` files. Biome runs once `biome` 2.4.0 or
-  later is pinned in the repository's mise config; until then it warns how to opt
-  in and skips. Biome reads the repository's own `biome.json` or
+  `*.tsx`, `*.json`, `*.jsonc` and `*.css` files once `biome` 2.4.0 or later is
+  pinned in the repository's mise config (an older pin is skipped with a warning,
+  like a missing one). Biome reads the repository's own `biome.json` or
   `biome.jsonc`; config-sync's
   [`biome.json` template](../config-sync/templates/biome.json) is a starting
   point. Findings are annotated on the PR, and with `upload-sarif` they also go
@@ -262,9 +262,9 @@ runner's system Python, which ships PyYAML (`ubuntu-24.04`).
 | `lint-trivy`                   | Filesystem scan (trivy). Default: `true`.                              |
 | `lint-zizmor`                  | Actions security scan (zizmor). Default: `true`.                       |
 | `lint-ruff`                    | Python linting (ruff, see above). Default: `true`. After v4.5.0.       |
-| `lint-biome`                   | JS/TS/JSON/CSS linting (Biome). Default: `true`. After v4.5.0.         |
-| `lint-biome-exclude`           | Bash pattern of paths Biome skips. Default: `""`. After v4.5.0.        |
-| `lint-biome-with-eslint`       | Run Biome next to ESLint. Default: `false`. After v4.5.0.              |
+| `lint-biome`                   | JS/TS/JSON/CSS linting (Biome). Default: `true`. After v4.6.0.         |
+| `lint-biome-exclude`           | Bash pattern of paths Biome skips. Default: `""`. After v4.6.0.        |
+| `lint-biome-with-eslint`       | Run Biome next to ESLint. Default: `false`. After v4.6.0.              |
 | `lint-config-drift`            | Config-drift check. Default: `false`.                                  |
 | `lint-inline-scripts`          | Inline-script check (see above). Default: `true`. After v4.4.0.        |
 | `lint-inline-scripts-blocking` | Report inline scripts as errors. Default: `false`. After v4.4.0.       |
