@@ -1241,7 +1241,8 @@ can still assign Code Owners if an automerge PR cannot merge cleanly.
   only the tag and digest are tracked; the image needs a registry or namespace
   path, so write `docker.io/library/redis:7.4` rather than `redis:7.4`. Other
   values keep a leading Debian epoch (`5:29.6.2-1~…`). Values that aren't plain
-  literals (`"${OTHER}"`, backtick substitutions) are skipped. Scripts without one of those extensions are not
+  literals (`"${OTHER}"`, backtick substitutions, backslash escapes) are
+  skipped. Scripts without one of those extensions are not
   scanned.
 
 All annotation managers accept CRLF line endings as well as LF.

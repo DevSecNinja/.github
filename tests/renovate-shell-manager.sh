@@ -88,6 +88,10 @@ cases = {
     f"{gr}a/b\nA_VERSION='1.2.3'#${{SUFFIX}}\n": None,
     f'{gr}a/b\nA_VERSION=1.2.3#${{SUFFIX}}\n': None,
     f'{gr}a/b\nA_VERSION=1.2.3 # pinned\n': ("github-releases", "a/b", "1.2.3", None),
+    # A backslash escape continues the word (`1.2.3\ rc1` is `1.2.3 rc1`)
+    f'{gr}a/b\nA_VERSION=1.2.3\\ rc1\n': None,
+    f'{gr}a/b\nA_VERSION="1.2.3\\$X"\n': None,
+    f"{gr}a/b\nA_VERSION='1.2.3\\'\n": ("github-releases", "a/b", "1.2.3\\", None),
     # Command substitution is not a literal
     f'# renovate: datasource=docker depName=registry.example/app\nAPP="registry.example/`get_image`:1.2.3"\n': None,
     f'# renovate: datasource=docker depName=registry.example/app\nAPP=registry.example/`get_image`:1.2.3\n': None,
