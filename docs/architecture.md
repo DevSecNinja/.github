@@ -254,6 +254,16 @@ runs it blocking. A
 later major release makes blocking the default. The checker runs with the
 runner's system Python, which ships PyYAML (`ubuntu-24.04`).
 
+**zizmor config.** After v4.7.0, zizmor runs with the shared
+[`scripts/lint/zizmor.yml`](../scripts/lint/zizmor.yml), which ships with
+`lint.yml` at the commit the caller pinned, unless the repository has its own
+`.github/zizmor.yml` or `zizmor.yml` (or `.yaml`). zizmor loads one config only,
+so a repository config replaces the shared one and has to repeat its rules. The
+shared config disables the `self-repository` audit (zizmor 1.30+), which asks
+to rewrite every workspace-relative `uses: ./...` as `uses: $/...`. We pick the
+form per workflow instead: `$/` where a reusable workflow must call a sibling at
+its own commit (`lint-include.yml` calling `lint.yml`), `./` in callers.
+
 | Input                          | Description                                                            |
 | ------------------------------ | ---------------------------------------------------------------------- |
 | `mise-version`                 | **Required.** mise version to install.                                 |
