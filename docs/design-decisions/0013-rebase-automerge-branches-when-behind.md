@@ -79,9 +79,12 @@ to `true`, so open branches are also rebased between windows._
 
 ## Consequences
 
-- An open automerge PR that falls behind `main` is rebased (and its CI re-run)
-  on Renovate's next run inside the Saturday window. With the weekly group
-  that is usually one PR, so the extra cost is small and bounded by the window.
+- An open automerge PR that falls behind `main` may be rebased (and its CI
+  re-run) on Renovate's next run, unless GitHub merges it first (see below).
+  Since `updateNotScheduled` is `true` again, that can be mid-week, so a moving
+  `main` can cause extra CI runs (one per Renovate run that rebases, however
+  often `main` moved in between). With the weekly group that is usually one
+  PR, so the extra cost stays small.
 - Lock-file maintenance and the dotfiles devcontainer image are rebased and
   branch-merged again instead of turning into PRs.
 - In repositories that require up-to-date branches, automerged updates are
