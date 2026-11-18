@@ -113,8 +113,8 @@ inherits_conflicted="$(
     fail "docker branch-automerge rules after the docker-gated rule must set rebaseWhen (not conflicted) themselves:
 ${inherits_conflicted}"
 jq -e '.schedule | length == 1' <<<"${base}" >/dev/null || fail "base.json5 must use a single weekly schedule window"
-jq -e '.updateNotScheduled == false' <<<"${base}" >/dev/null ||
-    fail "base.json5 must set updateNotScheduled: false so open PRs are not pushed outside the window"
+jq -e '.updateNotScheduled == true' <<<"${base}" >/dev/null ||
+    fail "base.json5 must set updateNotScheduled: true so open PRs stay rebased between schedule windows"
 jq -e '.lockFileMaintenance.updateNotScheduled == true' <<<"${base}" >/dev/null ||
     fail "lockFileMaintenance must keep updateNotScheduled: true so its branch automerge is not stranded"
 jq -e '.lockFileMaintenance.schedule | length > 0' <<<"${base}" >/dev/null ||
