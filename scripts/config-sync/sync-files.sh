@@ -197,12 +197,18 @@ else
 fi
 
 # .gitattributes is repo-owned as well; only check that LF stays the
-# default line ending: the last `*` line that sets `eol` sets `eol=lf`.
+# default line ending: the last `*` line that sets or resets `eol` sets
+# `eol=lf` (`-eol`, `!eol` and a bare `eol` drop an earlier LF default).
 # A repository that needs another default lists .gitattributes in
 # its ignore file, which also skips this check. Exit 0: LF default.
 lf_default() {
     awk '{ sub(/\r$/, "") }
-        $1 == "*" { for (i = 2; i <= NF; i++) if ($i ~ /^eol=/) eol = substr($i, 5) }
+        $1 == "*" {
+            for (i = 2; i <= NF; i++) {
+                if ($i ~ /^eol=/) eol = substr($i, 5)
+                else if ($i == "eol" || $i == "-eol" || $i == "!eol") eol = ""
+            }
+        }
         END { exit eol != "lf" }' "$1"
 }
 # shellcheck disable=SC2310 # is_ignored and lf_default only test; their status is the answer.

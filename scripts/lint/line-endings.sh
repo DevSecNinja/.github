@@ -40,9 +40,17 @@ escape_property() {
 max_annotations=50
 checked=0
 found=()
-# Each record is "i/<index eol> w/<worktree eol> attr/<attributes>\t<path>".
-while IFS=$'\t' read -r -d '' info path; do
+# A file, not a process substitution: `set -e` then stops on a failing
+# `git ls-files` (no repository, dubious ownership) instead of passing.
+listing="$(mktemp)"
+trap 'rm -f "${listing}"' EXIT
+git ls-files --eol -z >"${listing}"
+# Each record is "i/<index eol> w/<worktree eol> attr/<attributes>\t<path>";
+# split at the first tab only, so a path keeps its own tabs.
+while IFS= read -r -d '' record; do
     checked=$((checked + 1))
+    info="${record%%$'\t'*}"
+    path="${record#*$'\t'}"
     case "${info%% *}" in
     i/crlf | i/mixed) ;;
     *) continue ;;
@@ -53,7 +61,7 @@ while IFS=$'\t' read -r -d '' info path; do
     *) ;;
     esac
     found+=("${path}")
-done < <(git ls-files --eol -z)
+done <"${listing}"
 
 if [ "${#found[@]}" -eq 0 ]; then
     echo "✓ No text file is committed with CRLF line endings (${checked} files checked)."

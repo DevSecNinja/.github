@@ -500,17 +500,26 @@ stage_raw() {
 stage_raw sub/crlf.txt 'a\r\nb\r\n'
 stage_raw mixed.md 'a\nb\r\n'
 stage_raw 'odd,name%.txt' 'a\r\n'
+# A path with leading and trailing tabs (index only: not every file system allows them).
+tab_sha="$(printf 'a\r\n' | git -C "${eol}" hash-object -w --no-filters --stdin)"
+git -C "${eol}" -c core.protectNTFS=false update-index --add --cacheinfo "100644,${tab_sha},"$'\ttabs.txt\t'
 run_in "${eol}" line-endings
 expect_status 1 "CRLF files"
 expect_out "::error file=sub/crlf.txt,title=CRLF line endings::sub/crlf.txt is committed with CRLF line endings." "CRLF files"
 expect_out "::error file=mixed.md,title=CRLF line endings::" "mixed line endings"
 expect_out "::error file=odd%2Cname%25.txt,title=CRLF line endings::odd,name%25.txt is committed" "an escaped path"
-expect_out "3 text file(s) are committed with CRLF line endings" "CRLF files"
+expect_out "::error file="$'\ttabs.txt\t'",title=CRLF line endings::" "a path with tabs"
+expect_out "4 text file(s) are committed with CRLF line endings" "CRLF files"
 ! grep -Fq "feed.ics" <<<"${out}" || fail "a -text path must not be reported: ${out}"
 run_in "${eol}" line-endings LINT_LINE_ENDINGS_BLOCKING=false
 expect_status 0 "CRLF files without blocking"
 expect_out "::warning file=sub/crlf.txt,title=CRLF line endings::" "CRLF files without blocking"
 run_in "${eol}" line-endings LINT_LINE_ENDINGS_BLOCKING=bogus
 expect_status 2 "an invalid blocking value"
+# A failing scan fails the linter instead of reporting no CRLF.
+mkdir -p "${tmp_dir}/not-a-repo"
+run_in "${tmp_dir}/not-a-repo" line-endings GIT_CEILING_DIRECTORIES="${tmp_dir}"
+expect_failure "outside a git repository"
+! grep -Fq "No text file is committed" <<<"${out}" || fail "a failed scan must not report success: ${out}"
 
 echo "lint scripts: OK"
