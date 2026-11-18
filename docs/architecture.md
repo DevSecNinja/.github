@@ -1247,7 +1247,10 @@ can still assign Code Owners if an automerge PR cannot merge cleanly.
 
 All annotation managers accept CRLF line endings as well as LF.
 
-Renovate's first-party presets, extended in `default.json5`, cover three more shapes:
+Renovate's first-party presets, extended in `customManagers.json5`, cover three
+more shapes in every repository whose `extends` chain reaches that file: the
+`default.json5` stub, or a config that lists the individual presets including
+`customManagers.json5`. They are:
 `customManagers:githubActionsVersions` (`# renovate:` above an upper-case
 `<NAME>_VERSION:` key in workflows and `action.yml`),
 `customManagers:biomeVersions` (the `$schema` version in `biome.json`) and

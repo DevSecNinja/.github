@@ -1,5 +1,18 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  // Renovate's first-party annotation and schema managers. They live here, not
+  // in default.json5, because most repositories still extend the individual
+  // presets; each one only acts on repositories that have the files it targets:
+  // - githubActionsVersions: `# renovate:` above an upper-case
+  //   `<NAME>_VERSION:` key in workflows and action.yml (the lower-case
+  //   `…version:` keys are the workflow manager below);
+  // - biomeVersions: the `$schema` version in biome.json(c);
+  // - makefileVersions: `# renovate:` above `<NAME>_VERSION ?=` in Makefiles.
+  extends: [
+    "customManagers:githubActionsVersions",
+    "customManagers:biomeVersions",
+    "customManagers:makefileVersions",
+  ],
   customManagers: [
     {
       // Annotated versions in shell scripts (and chezmoi .tmpl copies), e.g.
