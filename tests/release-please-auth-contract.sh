@@ -75,12 +75,14 @@ assert_contains "${workflow}" "permission-pull-requests: write"
 grep -Fq "issues:" <<<"${job_permissions}" &&
     fail "release job must not request issues permission"
 
-# This repository's caller still maps the legacy names explicitly (the
-# backwards-compatible override path); new repositories use the template,
-# which passes only the standard secret.
-assert_contains "${caller}" 'app-id: ${{ vars.RELEASE_PLEASE_APP_ID }}'
-assert_contains "${caller}" 'app-private-key: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}'
+# This repository's caller and the template both pass only the standard
+# secret; the App ID resolves from the AUTOMATION_APP_ID variable.
+assert_contains "${caller}" 'AUTOMATION_APP_PRIVATE_KEY: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}'
 assert_contains "${template}" 'AUTOMATION_APP_PRIVATE_KEY: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}'
+grep -Eq '^[[:space:]]+(app-id|app-private-key):' "${caller}" &&
+    fail "${caller} must not map the App credentials explicitly"
+grep -Fq 'RELEASE_PLEASE_APP' "${caller}" &&
+    fail "${caller} must use the standard AUTOMATION_APP_* names"
 grep -Fq 'RELEASE_PLEASE_APP' "${template}" &&
     fail "${template} must use the standard AUTOMATION_APP_* names"
 
