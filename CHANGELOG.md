@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.7.0](https://github.com/DevSecNinja/.github/compare/v4.6.0...v4.7.0) (2026-11-18)
+
+
+### 🚀 Features
+
+* **lint:** run Biome when the repository has JavaScript, TypeScript, JSON or CSS files ([#563](https://github.com/DevSecNinja/.github/issues/563)) ([bfbfe7b](https://github.com/DevSecNinja/.github/commit/bfbfe7b3a0c221da1817a6deb1c3f63ca71ec942))
+* **lint:** run PSScriptAnalyzer when the repository has PowerShell files ([#564](https://github.com/DevSecNinja/.github/issues/564)) ([e5ff289](https://github.com/DevSecNinja/.github/commit/e5ff2896c39209ad6e598b79c181cfdfc14c094f))
+
+
+### 🐛 Bug Fixes
+
+* **renovate:** use the datasource's default versioning in the shell annotation manager ([#576](https://github.com/DevSecNinja/.github/issues/576)) ([bdae305](https://github.com/DevSecNinja/.github/commit/bdae3053c0657fe0f3dbfc402ee10c75382142c7))
+
 ## [4.6.0](https://github.com/DevSecNinja/.github/compare/v4.5.0...v4.6.0) (2026-11-18)
 
 
