@@ -40,7 +40,10 @@
         "#[ \\t]*renovate:[ \\t]*datasource=(?<datasource>\\S+)[ \\t]+depName=(?<depName>\\S+)(?:[ \\t]+packageName=(?<packageName>\\S+))?(?:[ \\t]+versioning=(?<versioning>\\S+))?(?:[ \\t]+extractVersion=(?<extractVersion>\\S+))?(?:[ \\t]+registryUrl=(?<registryUrl>\\S+))?[ \\t]*\\r?\\n[ \\t]*(?:(?:export|local|readonly|declare(?:[ \\t]+-[a-zA-Z]+)*)[ \\t]+)?[A-Za-z_][A-Za-z0-9_]*=(?:[^\\s\"'@$;`&|<>()#\\\\]*/[^\\s\"'@$;`&|<>()#\\\\/]*:)?(?<currentValue>(?:[0-9]+:)?[A-Za-z0-9][^\\s\"'@$;`&|<>()#\\\\:/]*)(?:@(?<currentDigest>sha256:[a-f0-9]{64}))?(?:[ \\t;&|]|\\r?\\n|$)",
       ],
       datasourceTemplate: "{{{datasource}}}",
-      versioningTemplate: "{{#if versioning}}{{{versioning}}}{{/if}}",
+      // No versioningTemplate: Renovate then takes `versioning=` from the
+      // annotation, or the datasource's default (`docker` for images, which
+      // keeps a `-alpine` suffix). A template that renders empty would force
+      // semver-coerced instead.
     },
     {
       customType: "regex",

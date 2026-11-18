@@ -122,6 +122,55 @@ m = search(f"# renovate: datasource=docker depName=app packageName=ghcr.io/o/app
 if not m or (m["packageName"], m["versioning"], m["registryUrl"]) != ("ghcr.io/o/app", "loose", "https://ghcr.io"):
     errors.append(f"shell manager: optional annotation fields not captured: {m and m.groupdict()}")
 
+# Versioning. Renovate's regex manager sets a dependency's versioning from
+# versioningTemplate when there is one, even when it renders empty, and an
+# empty value means semver-coerced, which drops a tag suffix
+# (postgres 18.3-alpine -> 18.4, truenas-apps#985). Only an unset value falls
+# back to the datasource default, so a manager with a `datasource` capture
+# must leave versioningTemplate unset: the `versioning` capture, or the
+# datasource default, applies.
+for m in managers:
+    if "versioningTemplate" in m and any("(?<datasource>" in s for s in m.get("matchStrings", [])):
+        errors.append(f"{m['description']}: drop versioningTemplate so the datasource default versioning applies")
+DEFAULT_VERSIONING = {"docker": "docker", "deb": "deb", "npm": "npm", "pypi": "pep440"}
+
+
+def versioning_of(match):
+    if "versioningTemplate" in shell:
+        return None
+    return match["versioning"] or DEFAULT_VERSIONING.get(match["datasource"], "semver-coerced")
+
+
+def docker_compatible(current, candidate):
+    # Renovate's docker versioning: a candidate tag is compatible when it has
+    # the same suffix and the same number of release parts.
+    parse = re.compile(r"^v?(\d+(?:\.\d+)*)(.*)$")
+    a, b = parse.match(current), parse.match(candidate)
+    return bool(a and b) and a[2] == b[2] and a[1].count(".") == b[1].count(".")
+
+
+tags = ["18.4", "18.4-alpine", "18.6-alpine", "18.6-alpine3.22", "18.6-bookworm", "19-alpine", "19.0"]
+for text in (
+    f'# renovate: datasource=docker depName=docker.io/library/postgres\nPOSTGRES_IMAGE="docker.io/library/postgres:18.3-alpine@{digest}"\n',
+    f"# renovate: datasource=docker depName=docker.io/library/postgres\nPOSTGRES_IMAGE='docker.io/library/postgres:18.3-alpine@{digest}'\n",
+    f"# renovate: datasource=docker depName=docker.io/library/postgres\nPOSTGRES_IMAGE=docker.io/library/postgres:18.3-alpine@{digest}\n",
+):
+    for variant, label in ((text, "LF"), (text.replace("\n", "\r\n"), "CRLF")):
+        m = search(variant)
+        if not m or versioning_of(m) != "docker":
+            errors.append(f"shell manager ({label}): {text.splitlines()[1]!r} must use docker versioning, got {m and versioning_of(m)}")
+            continue
+        proposed = [t for t in tags if docker_compatible(m["currentValue"], t)]
+        if proposed != ["18.4-alpine", "18.6-alpine"]:
+            errors.append(f"shell manager ({label}): {m['currentValue']} would update to {proposed}, want only -alpine tags")
+for text, want in {
+    f"# renovate: datasource=docker depName=app versioning=loose\nAPP=registry.example/app:1.2\n": "loose",
+    f"{gr}a/b\nA_VERSION=1.2.3\n": "semver-coerced",
+    "# renovate: datasource=deb depName=docker-ce\nDOCKER_CE=5:29.6.2-1~debian.13~trixie\n": "deb",
+}.items():
+    m = search(text)
+    if not m or versioning_of(m) != want:
+        errors.append(f"shell manager: {text.splitlines()[1]!r} must use {want} versioning, got {m and versioning_of(m)}")
 file_patterns = [compile_js(p.strip("/")) for p in shell["managerFilePatterns"]]
 for path, want in {
     "tests/setup_libs.sh": True,
