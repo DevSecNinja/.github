@@ -411,7 +411,7 @@ jobs:
 
       - name: Upload gitleaks history to code scanning
         if: ${{ !cancelled() && inputs.upload-sarif && steps.gitleaks.outputs.sarif == 'true' }}
-        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           sarif_file: ${{ runner.temp }}/gitleaks-history.sarif
           category: gitleaks/history
@@ -609,7 +609,7 @@ jobs:
         run: bash "${RUNNER_TEMP}/devsecninja-lint/scripts/lint/checkov-sarif-filter.sh"
 
       - name: Upload SARIF report
-        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         if: ${{ always() && inputs.upload-sarif }}
         with:
           sarif_file: ${{ runner.temp }}/results_sarif.sarif
@@ -663,7 +663,7 @@ jobs:
         run: bash "${RUNNER_TEMP}/devsecninja-lint/scripts/lint/trivy.sh"
 
       - name: Upload SARIF report
-        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         if: ${{ inputs.upload-sarif }}
         with:
           sarif_file: ${{ runner.temp }}/trivy.sarif
@@ -716,7 +716,7 @@ jobs:
         run: bash "${RUNNER_TEMP}/devsecninja-lint/scripts/lint/zizmor.sh"
 
       - name: Upload SARIF report
-        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         if: ${{ always() && inputs.upload-sarif }}
         with:
           sarif_file: ${{ runner.temp }}/zizmor.sarif
@@ -778,7 +778,7 @@ jobs:
 
       - name: Upload SARIF report
         if: ${{ !cancelled() && steps.ruff.outputs.sarif == 'true' }}
-        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           sarif_file: ${{ runner.temp }}/ruff.sarif
           category: ruff
@@ -842,7 +842,7 @@ jobs:
 
       - name: Upload SARIF report
         if: ${{ !cancelled() && steps.biome.outputs.sarif == 'true' }}
-        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           sarif_file: ${{ runner.temp }}/biome.sarif
           category: biome
@@ -897,7 +897,7 @@ jobs:
 
       - name: Upload SARIF report
         if: ${{ !cancelled() && steps.psscriptanalyzer.outputs.sarif == 'true' }}
-        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           sarif_file: ${{ runner.temp }}/psscriptanalyzer.sarif
           category: psscriptanalyzer
@@ -1171,7 +1171,7 @@ jobs:
         if: ${{ !cancelled() && inputs.upload-sarif && steps.gitleaks.outputs.sarif == 'true' }}
         # Let the remaining linters run; the last step reports the failure.
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           sarif_file: ${{ runner.temp }}/gitleaks-history.sarif
           category: gitleaks/history
@@ -1241,7 +1241,7 @@ jobs:
         id: checkov-sarif
         if: ${{ inputs.lint-checkov && inputs.upload-sarif }}
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           sarif_file: ${{ runner.temp }}/results_sarif.sarif
           category: checkov
@@ -1259,7 +1259,7 @@ jobs:
         id: trivy-sarif
         if: ${{ inputs.lint-trivy && inputs.upload-sarif }}
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           sarif_file: ${{ runner.temp }}/trivy.sarif
           category: trivy
@@ -1276,7 +1276,7 @@ jobs:
         id: zizmor-sarif
         if: ${{ inputs.lint-zizmor && inputs.upload-sarif }}
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           sarif_file: ${{ runner.temp }}/zizmor.sarif
           category: zizmor
@@ -1293,7 +1293,7 @@ jobs:
         id: ruff-sarif
         if: ${{ !cancelled() && steps.ruff.outputs.sarif == 'true' }}
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           sarif_file: ${{ runner.temp }}/ruff.sarif
           category: ruff
@@ -1311,7 +1311,7 @@ jobs:
         id: biome-sarif
         if: ${{ !cancelled() && steps.biome.outputs.sarif == 'true' }}
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           sarif_file: ${{ runner.temp }}/biome.sarif
           category: biome
@@ -1329,7 +1329,7 @@ jobs:
         id: psscriptanalyzer-sarif
         if: ${{ !cancelled() && steps.psscriptanalyzer.outputs.sarif == 'true' }}
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           sarif_file: ${{ runner.temp }}/psscriptanalyzer.sarif
           category: psscriptanalyzer
