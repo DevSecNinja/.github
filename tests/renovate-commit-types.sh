@@ -124,7 +124,9 @@ def matches(rule, dep):
         "matchManagers": lambda v: dep["manager"] in v,
         "matchDepTypes": lambda v: dep.get("depType") in v,
         "matchDatasources": lambda v: dep.get("datasource") in v,
-        "matchPackageNames": lambda v: "*" in v or dep.get("packageName") in v,
+        # Renovate never matches an update without a package name (lock-file
+        # maintenance) by name, not even with "*".
+        "matchPackageNames": lambda v: dep.get("packageName") is not None and ("*" in v or dep["packageName"] in v),
         "matchFileNames": lambda v: any(glob(p).match(dep["packageFile"]) for p in v),
         "matchRepositories": lambda v: any(glob(p).match(dep["repository"]) for p in v),
         "matchJsonata": lambda v: v == ["isLockfileUpdate = true"] and dep.get("isLockfileUpdate", False),
@@ -179,7 +181,12 @@ root = json.loads(os.environ["ROOT"])
 
 
 def dep(manager, package_file, dep_type=None, **extra):
-    return {"manager": manager, "packageFile": package_file, "depType": dep_type, **extra}
+    return {"manager": manager, "packageFile": package_file, "depType": dep_type, "packageName": "example", **extra}
+
+
+def maintenance(manager, package_file):
+    # Lock-file maintenance has no package name.
+    return {"manager": manager, "packageFile": package_file, "depType": None}
 
 
 ordinary = [
@@ -218,6 +225,9 @@ ordinary = [
     (dep("github-actions", ".github/workflows/ci.yml", "github-runner"), "ci"),
     (dep("github-actions", ".github/actions/setup/action.yml", "action"), "ci"),
     (dep("regex", ".github/workflows/lint.yml", datasource="github-releases"), "ci"),
+    # lock-file maintenance: tooling managers are build, the rest chore
+    (maintenance("mise", ".mise.toml"), "build"),
+    (maintenance("npm", "package.json"), "chore"),
     # vulnerability fixes always release
     (dep("github-actions", ".github/workflows/ci.yml", "action", vulnerability=True), "fix"),
     (dep("npm", "package.json", "devDependencies", vulnerability=True), "fix"),
@@ -240,7 +250,13 @@ bandit = [
 cases = [
     ("legacy fleet config", "DevSecNinja/config-sidecar", legacy, ordinary),
     ("config-sync stub template", "DevSecNinja/new-repo", template, ordinary),
-    ("legacy config with :semanticCommitTypeAll(build)", "DevSecNinja/lovelace-ovapi", legacy_build, ordinary),
+    (
+        "legacy config with :semanticCommitTypeAll(build)",
+        "DevSecNinja/lovelace-ovapi",
+        legacy_build,
+        # The override still types unnamed lock-file maintenance.
+        [(s, "build") if s.get("packageName") is None else (s, w) for s, w in ordinary],
+    ),
     ("legacy fleet config", "DevSecNinja/python-bandit-scan", legacy, bandit),
     ("renovate.json5", "DevSecNinja/.github", root, dotgithub),
 ]
