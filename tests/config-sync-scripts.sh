@@ -133,11 +133,14 @@ lf_cases=(
     '* text=auto eol=lf\r\n*.ps1 text eol=crlf\r\n'
     '# Defaults\n*   text=auto   eol=lf\n*.bat text eol=crlf\n'
     '* text=auto eol=crlf\n* eol=lf\n'
+    '* text=auto eol=lf\n* !eol\n* eol=lf\n'
 )
 no_lf_cases=(
     '* text=auto\n*.ps1 text eol=crlf\n'
     '* text=auto eol=crlf\n*.yml text eol=lf\n'
     '* text=auto eol=lf\n* eol=crlf\n'
+    '* text=auto eol=lf\n* !eol\n'
+    '* text=auto eol=lf\n* -eol\n'
     '# * text=auto eol=lf\n*.sh text eol=lf\n'
 )
 for attributes in "${lf_cases[@]}"; do

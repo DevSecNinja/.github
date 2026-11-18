@@ -69,7 +69,7 @@ rule at the end, where later lines win:
 ```
 
 Each sync run warns when an existing `.gitattributes` has no LF default (the
-last `*` line that sets `eol` must set `eol=lf`). A repo that deliberately
+last `*` line that sets or resets `eol` must set `eol=lf`). A repo that deliberately
 uses another default lists `.gitattributes` in `.github/.config-sync-ignore`,
 which also skips that warning.
 
