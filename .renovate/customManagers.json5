@@ -50,12 +50,16 @@
         "/workflow-templates/.+\\.ya?ml$/",
       ],
       matchStrings: [
-        "# renovate: datasource=(?<datasource>\\S+)(?: depName=(?<depName>\\S+))?\\r?\\n\\s+[\\w-]*version: \\[?\"?(?<currentValue>[^\\s\"\\[\\],]+)\"?\\]?[ \\t]*(?:#[^\\n]*)?(?:\\r?\\n|$)",
+        "# renovate: datasource=(?<datasource>\\S+)(?: depName=(?<depName>\\S+))?(?: registryUrl=(?<registryUrl>\\S+))?\\r?\\n\\s+[\\w-]*version: \\[?\"?(?<currentValue>[^\\s\"\\[\\],]+)\"?\\]?[ \\t]*(?:#[^\\n]*)?(?:\\r?\\n|$)",
       ],
       datasourceTemplate: "{{{datasource}}}",
       // `depName=` may be omitted for the runtime datasources, e.g.
       //   # renovate: datasource=python-version
       //   python-version: [3.14]
+      // and `registryUrl=` names a registry other than the datasource's
+      // default, e.g. the PowerShell Gallery for a module:
+      //   # renovate: datasource=nuget depName=PSScriptAnalyzer registryUrl=https://www.powershellgallery.com/api/v2/
+      //   psscriptanalyzer-version: "1.25.0"
       // A single-element matrix list is tracked like a scalar; a list with
       // more entries is not tracked at all (the match must end the line;
       // Renovate's RE2 engine has no lookahead, so the line end is consumed). Without

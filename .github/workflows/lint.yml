@@ -18,6 +18,12 @@ on:
         required: false
         type: string
         default: "go.mod"
+      psscriptanalyzer-version:
+        description: "PSScriptAnalyzer version to install from the PowerShell Gallery. Without it, PSScriptAnalyzer skips
+          the repository's PowerShell files with a warning"
+        required: false
+        type: string
+        default: ""
       lint-config-dir:
         description: "Directory containing optional linter config files"
         required: false
@@ -116,6 +122,12 @@ on:
         required: false
         type: boolean
         default: false
+      lint-psscriptanalyzer:
+        description: "Run PSScriptAnalyzer (PowerShell linting) when the repository has *.ps1, *.psm1 or *.psd1 files — uploads
+          SARIF"
+        required: false
+        type: boolean
+        default: true
       lint-config-drift:
         description: "Check local config files match central DevSecNinja/.github repo"
         required: false
@@ -135,8 +147,8 @@ on:
         type: boolean
         default: false
       upload-sarif:
-        description: "Upload checkov/trivy/zizmor/ruff/biome results to GitHub code scanning (requires GitHub Advanced Security).
-          Set false for private repos without GHAS to gate on exit codes with console output instead."
+        description: "Upload checkov/trivy/zizmor/ruff/biome/psscriptanalyzer results to GitHub code scanning (requires GitHub
+          Advanced Security). Set false for private repos without GHAS to gate on exit codes with console output instead."
         required: false
         type: boolean
         default: true
@@ -822,6 +834,61 @@ jobs:
           sarif_file: ${{ runner.temp }}/biome.sarif
           category: biome
 
+  psscriptanalyzer:
+    name: psscriptanalyzer
+    if: ${{ inputs.lint-psscriptanalyzer && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
+      }}
+    continue-on-error: ${{ ! inputs.lint-fail-on-error }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout lint scripts
+        # The linter scripts ship with this reusable workflow: fetch them from
+        # the same commit of DevSecNinja/.github that the caller pinned.
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .devsecninja-lint
+          sparse-checkout: |-
+            scripts/lint/
+            scripts/lint-inline-scripts.py
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Move lint scripts out of the workspace
+        # Outside the workspace the caller's linters don't scan them, and the
+        # code checkout doesn't delete them.
+        run: mv .devsecninja-lint "${RUNNER_TEMP}/devsecninja-lint"
+
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Find PowerShell files
+        # Repositories without them skip PSScriptAnalyzer.
+        id: powershell-files
+        run: bash "${RUNNER_TEMP}/devsecninja-lint/scripts/lint/detect-language.sh" powershell
+
+      - name: Run PSScriptAnalyzer
+        id: psscriptanalyzer
+        if: ${{ steps.powershell-files.outputs.found == 'true' }}
+        env:
+          PSSCRIPTANALYZER_VERSION: ${{ inputs.psscriptanalyzer-version }}
+          UPLOAD_SARIF: ${{ inputs.upload-sarif }}
+        run: bash "${RUNNER_TEMP}/devsecninja-lint/scripts/lint/psscriptanalyzer.sh"
+
+      - name: Upload SARIF report
+        if: ${{ !cancelled() && steps.psscriptanalyzer.outputs.sarif == 'true' }}
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: ${{ runner.temp }}/psscriptanalyzer.sarif
+          category: psscriptanalyzer
+
   config-drift:
     name: config drift
     if: ${{ inputs.lint-config-drift && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
@@ -959,6 +1026,12 @@ jobs:
         env:
           STEP_ASIDE_FOR: ${{ !inputs.lint-biome-with-eslint && 'eslint' || '' }}
         run: bash "${RUNNER_TEMP}/devsecninja-lint/scripts/lint/detect-language.sh" web
+
+      - name: Find PowerShell files
+        # Repositories without them skip PSScriptAnalyzer.
+        id: powershell-files
+        if: ${{ inputs.lint-psscriptanalyzer }}
+        run: bash "${RUNNER_TEMP}/devsecninja-lint/scripts/lint/detect-language.sh" powershell
 
       - name: Install mise
         if: >-
@@ -1182,6 +1255,24 @@ jobs:
         with:
           sarif_file: ${{ runner.temp }}/biome.sarif
           category: biome
+
+      - name: Run PSScriptAnalyzer
+        id: psscriptanalyzer
+        if: ${{ steps.powershell-files.outputs.found == 'true' }}
+        continue-on-error: true
+        env:
+          PSSCRIPTANALYZER_VERSION: ${{ inputs.psscriptanalyzer-version }}
+          UPLOAD_SARIF: ${{ inputs.upload-sarif }}
+        run: bash "${RUNNER_TEMP}/devsecninja-lint/scripts/lint/psscriptanalyzer.sh"
+
+      - name: Upload PSScriptAnalyzer SARIF report
+        id: psscriptanalyzer-sarif
+        if: ${{ !cancelled() && steps.psscriptanalyzer.outputs.sarif == 'true' }}
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: ${{ runner.temp }}/psscriptanalyzer.sarif
+          category: psscriptanalyzer
 
       - name: Check config drift against central repo
         id: config-drift

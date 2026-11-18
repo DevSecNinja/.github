@@ -27,6 +27,8 @@ jobs:
       mise-version: "2026.10.19"
       # renovate: datasource=github-releases depName=golangci/golangci-lint
       # golangci-lint-version: "v2.12.2"
+      # renovate: datasource=nuget depName=PSScriptAnalyzer registryUrl=https://www.powershellgallery.com/api/v2/
+      psscriptanalyzer-version: "1.25.0"
       lint-config-dir: config-sync/files
       # config-sync/templates holds a root biome.json for other repositories,
       # which Biome rejects as a second root config in this one.
@@ -48,6 +50,8 @@ jobs:
     with:
       # renovate: datasource=github-releases depName=jdx/mise
       mise-version: "2026.10.19"
+      # renovate: datasource=nuget depName=PSScriptAnalyzer registryUrl=https://www.powershellgallery.com/api/v2/
+      psscriptanalyzer-version: "1.25.0"
       lint-config-dir: config-sync/files
       lint-biome-exclude: config-sync/templates/* # See the job above.
       lint-job-mode: single

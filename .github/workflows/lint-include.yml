@@ -26,6 +26,12 @@ on:
         required: false
         type: string
         default: "go.mod"
+      psscriptanalyzer-version:
+        description: "PSScriptAnalyzer version to install from the PowerShell Gallery. Without it, PSScriptAnalyzer skips
+          the repository's PowerShell files with a warning"
+        required: false
+        type: string
+        default: ""
       lint-config-dir:
         description: "Directory containing optional linter config files"
         required: false
@@ -124,6 +130,12 @@ on:
         required: false
         type: boolean
         default: false
+      lint-psscriptanalyzer:
+        description: "Run PSScriptAnalyzer (PowerShell linting) when the repository has *.ps1, *.psm1 or *.psd1 files — uploads
+          SARIF"
+        required: false
+        type: boolean
+        default: false
       lint-config-drift:
         description: "Check local config files match central DevSecNinja/.github repo"
         required: false
@@ -140,8 +152,8 @@ on:
         type: boolean
         default: false
       upload-sarif:
-        description: "Upload checkov/trivy/zizmor/ruff/biome results to GitHub code scanning (requires GitHub Advanced Security).
-          Set false for private repos without GHAS to gate on exit codes with console output instead."
+        description: "Upload checkov/trivy/zizmor/ruff/biome/psscriptanalyzer results to GitHub code scanning (requires GitHub
+          Advanced Security). Set false for private repos without GHAS to gate on exit codes with console output instead."
         required: false
         type: boolean
         default: true
@@ -173,6 +185,7 @@ jobs:
       mise-version: ${{ inputs.mise-version }}
       golangci-lint-version: ${{ inputs.golangci-lint-version }}
       go-version-file: ${{ inputs.go-version-file }}
+      psscriptanalyzer-version: ${{ inputs.psscriptanalyzer-version }}
       lint-config-dir: ${{ inputs.lint-config-dir }}
       lint-fail-on-error: ${{ inputs.lint-fail-on-error }}
       lint-dprint: ${{ inputs.lint-dprint }}
@@ -192,6 +205,7 @@ jobs:
       lint-biome: ${{ inputs.lint-biome }}
       lint-biome-exclude: ${{ inputs.lint-biome-exclude }}
       lint-biome-with-eslint: ${{ inputs.lint-biome-with-eslint }}
+      lint-psscriptanalyzer: ${{ inputs.lint-psscriptanalyzer }}
       lint-config-drift: ${{ inputs.lint-config-drift }}
       lint-inline-scripts: ${{ inputs.lint-inline-scripts }}
       lint-inline-scripts-blocking: ${{ inputs.lint-inline-scripts-blocking }}
