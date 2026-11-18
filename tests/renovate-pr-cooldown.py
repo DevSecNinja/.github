@@ -1,4 +1,3 @@
-#!/usr/bin/env -S uv run --script
 # /// script
 # requires-python = ">=3.9"
 # dependencies = ["pyyaml==6.0.3"]
@@ -31,11 +30,11 @@ NEW = "@@ -1 +1 @@\n-image: ghcr.io/example/app:1.0.0\n+image: ghcr.io/example/a
 REBASED = "@@ -3 +3 @@ services:\n-image: ghcr.io/example/app:1.0.0\n+image: ghcr.io/example/app:1.1.0"
 
 
-def commit(sha: str, days_ago: float, patch: str | None = OLD, parents: int = 1) -> dict:
+def commit(sha: str, days_ago: float, patch: str | None = OLD, parents: int = 1, paged: bool = False) -> dict:
     file = {"filename": "apps/app/compose.yaml", "status": "modified"}
     if patch is not None:
         file["patch"] = patch
-    return {"sha": sha, "days_ago": days_ago, "parents": parents, "files": [file]}
+    return {"sha": sha, "days_ago": days_ago, "parents": parents, "files": [file], "paged": paged}
 
 
 def push(before: str, after: str) -> dict:
@@ -127,6 +126,15 @@ CASES = [
         1,
         "pending",
     ),
+    (
+        "paged file list falls back",
+        "renovate[bot]",
+        GATED,
+        [commit("c1", 20, paged=True), commit("c2", 5)],
+        [push("c1", "c2")],
+        1,
+        "pending",
+    ),
     ("human PR is not gated", "someone", GATED, [commit("c1", 0)], [], 1, "success"),
     ("non-gated Renovate branch", "renovate[bot]", "renovate/all-non-major", [commit("c1", 0)], [], 1, "success"),
 ]
@@ -141,6 +149,7 @@ const commits = Object.fromEntries(fixture.commits.map((c) => [c.sha, {
   parents: Array.from({ length: c.parents }, (_, i) => ({ sha: `p${i}` })),
   files: c.files,
   commit: { committer: { date: new Date(Date.now() - c.days_ago * dayMs).toISOString() } },
+  paged: c.paged,
 }]));
 const head = fixture.commits[fixture.commits.length - 1].sha;
 const statuses = [];
@@ -149,7 +158,8 @@ const github = {
     repos: {
       getCommit: async ({ ref }) => {
         if (!commits[ref]) throw new Error(`No commit found for SHA: ${ref}`);
-        return { data: commits[ref] };
+        const link = commits[ref].paged ? '<https://api.github.com/x?page=2>; rel="next"' : undefined;
+        return { data: commits[ref], headers: link ? { link } : {} };
       },
       createCommitStatus: async (s) => statuses.push(s),
     },

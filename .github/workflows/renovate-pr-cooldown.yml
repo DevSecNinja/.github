@@ -12,7 +12,8 @@ name: Reusable — Renovate PR cooldown
 # equals the head commit's, so a rebase, a retitle or an autoclose/reopen that
 # keeps the same version does not restart it, while any version or digest
 # change does. Anything that cannot be compared (more than one commit, a
-# missing patch, an unexpected push chain) falls back to the head commit date.
+# missing patch, a paged file list, an unexpected push chain) falls back to the
+# head commit date.
 # GitHub auto-merge (Renovate `platformAutomerge`) then merges the PR once the
 # check passes.
 #
@@ -95,7 +96,7 @@ jobs:
             // the base or commit message. null means "cannot compare".
             const changeSignature = (commit) => {
               const files = commit.files || [];
-              if ((commit.parents || []).length !== 1 || files.length === 0) {
+              if (!commit.complete || (commit.parents || []).length !== 1 || files.length === 0) {
                 return null;
               }
               const parts = [];
@@ -113,8 +114,13 @@ jobs:
               return parts.join('\n\u0000\n');
             };
 
-            const getCommit = async (ref) =>
-              (await github.rest.repos.getCommit({ owner, repo, ref })).data;
+            // The endpoint returns at most 300 files and pages the rest; a
+            // partial list cannot be compared, so `complete` marks it.
+            const getCommit = async (ref) => {
+              const response = await github.rest.repos.getCommit({ owner, repo, ref });
+              const complete = !/rel="next"/.test((response.headers || {}).link || '');
+              return { ...response.data, complete };
+            };
 
             // When the PR started proposing its current change: the committer
             // date of the oldest commit in its force-push chain with the same

@@ -98,8 +98,9 @@ The workflow walks back through the PR's `HeadRefForcePushedEvent`s (one
 GraphQL call, then one commit read per earlier push, at most 30) while each
 earlier commit has the same changed lines. Anything it cannot compare falls
 back to the head commit date, which can only make the soak longer: more than
-one commit on the branch, a merge commit, a missing patch, a push chain that
-does not end at the head, or an earlier commit that cannot be read.
+one commit on the branch, a merge commit, a missing patch, a file list the
+API pages (more than 300 files), a push chain that does not end at the head,
+or an earlier commit that cannot be read.
 
 The gated rule also sets **`rebaseWhen: "conflicted"`**. Renovate's default
 (`auto`, which becomes `behind-base-branch` once automerge is enabled) would
