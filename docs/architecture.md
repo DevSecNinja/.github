@@ -254,6 +254,19 @@ runs it blocking. A
 later major release makes blocking the default. The checker runs with the
 runner's system Python, which ships PyYAML (`ubuntu-24.04`).
 
+The `line endings` linter (`scripts/lint/line-endings.sh`) reports every text
+file committed with CRLF or mixed line endings. It reads `git ls-files --eol`,
+so git's own `.gitattributes` resolution decides: a path with `-text` (or
+`binary`) is stored byte for byte and skipped, and an `eol=crlf` path passes
+once git stores it with LF (it only checks it out with CRLF); one still stored
+with CRLF is reported like any other. Those rules are
+the only way to keep CRLF; the linter has no exclude input. Findings are errors
+that fail the linter (and the workflow only with `lint-fail-on-error: true`);
+`lint-line-endings-blocking: false` reports them as warnings. To fix them, put
+`* text=auto eol=lf` in `.gitattributes` (config-sync bootstraps it, see
+[Templates](#templates-config-synctemplates)), run `git add .gitattributes` and
+`git add --renormalize .`, and commit both. The linter needs only git.
+
 **zizmor config.** After v4.7.0, zizmor runs with the shared
 [`scripts/lint/zizmor.yml`](../scripts/lint/zizmor.yml), which ships with
 `lint.yml` at the commit the caller pinned, unless the repository has its own
@@ -293,6 +306,8 @@ its own commit (`lint-include.yml` calling `lint.yml`), `./` in callers.
 | `lint-config-drift`            | Config-drift check. Default: `false`.                                  |
 | `lint-inline-scripts`          | Inline-script check (see above). Default: `true`. After v4.4.0.        |
 | `lint-inline-scripts-blocking` | Report inline scripts as errors. Default: `false`. After v4.4.0.       |
+| `lint-line-endings`            | CRLF line-endings check (see above). Default: `true`. After v4.7.0.    |
+| `lint-line-endings-blocking`   | Report CRLF as errors and fail. Default: `true`. After v4.7.0.         |
 
 **Example caller:**
 
