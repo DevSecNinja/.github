@@ -1,7 +1,78 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  // Commit types decide releases. release-please only releases when a commit
+  // lands in a visible changelog section; by default feat, fix, perf and
+  // revert are visible and build, ci and chore are hidden. config:recommended
+  // (:semanticPrefixFixDepsChoreOthers) already types runtime dependencies
+  // (npm `dependencies`, gomod/composer `require`, pep621/poetry project
+  // dependencies, cargo `dependencies`, maven runtime scopes) as `fix` and
+  // everything else as `chore`. The rules below only re-type updates that
+  // don't change what a repository ships, so they never trigger a release.
+  // A grouped PR takes the highest type of its updates
+  // (chore < ci < build < fix < feat): the weekly batch releases only when it
+  // contains a runtime update. See docs/architecture.md, "Commit types".
   packageRules: [
     {
+      description: "build: development and build tooling (tool versions, devcontainers, pre-commit hooks, test-only scripts).",
+      matchManagers: ["asdf", "devcontainer", "mise", "nodenv", "nvm", "pep723", "pre-commit", "pyenv"],
+      semanticCommitType: "build",
+    },
+    {
+      description: "build: development-only dependency types (npm, pep621/uv/pdm, poetry, cargo) and dprint plugins.",
+      matchDepTypes: [
+        "build-dependencies",
+        "dependency-groups",
+        "dev-dependencies",
+        "devDependencies",
+        "dprint-plugin",
+        "packageManager",
+        "tool.pdm.dev-dependencies",
+        "tool.uv.dev-dependencies",
+      ],
+      semanticCommitType: "build",
+    },
+    {
+      description: "build: versions in tool, formatter and test files, whatever the manager (e.g. `# renovate:` annotations).",
+      matchFileNames: [
+        "**/.mise.toml",
+        "**/mise.toml",
+        "**/.tool-versions",
+        "**/.pre-commit-config.yaml",
+        "**/.devcontainer/**",
+        "**/dprint.json",
+        "**/test/**",
+        "**/tests/**",
+        "**/*.Tests/**",
+        "**/*.bats",
+        "**/*-test.sh",
+      ],
+      semanticCommitType: "build",
+    },
+    {
+      description: "ci: GitHub Actions, runners and service containers in workflows.",
+      matchManagers: ["github-actions"],
+      semanticCommitType: "ci",
+    },
+    {
+      description: "ci: other versions pinned in workflows (e.g. `# renovate:` annotations).",
+      matchFileNames: [".github/workflows/**"],
+      semanticCommitType: "ci",
+    },
+    // Repositories whose actions or workflows ARE the product: consumers only
+    // get a fix through a release, so these updates stay release-triggering.
+    // Add a repository here when it starts publishing an action.
+    {
+      description: "fix: dependencies of published composite actions.",
+      matchRepositories: ["DevSecNinja/.github", "DevSecNinja/python-bandit-scan"],
+      matchFileNames: ["**/action.yml", "**/action.yaml"],
+      semanticCommitType: "fix",
+    },
+    {
+      description: "fix: dependencies of DevSecNinja/.github's reusable workflows, workflow templates and synced config.",
+      matchRepositories: ["DevSecNinja/.github"],
+      matchFileNames: [".github/workflows/**", "workflow-templates/**", "config-sync/**"],
+      semanticCommitType: "fix",
+    },    {
       matchDatasources: ["docker"],
       semanticCommitScope: "container",
       commitMessageTopic: "image {{depName}}",
@@ -37,4 +108,9 @@
       commitMessageTopic: "{{depName}}",
     },
   ],
+  // Security fixes always release, whatever the manager or depType. Renovate
+  // applies vulnerabilityAlerts after every packageRule.
+  vulnerabilityAlerts: {
+    semanticCommitType: "fix",
+  },
 }

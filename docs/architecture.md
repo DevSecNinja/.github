@@ -1153,7 +1153,7 @@ by individual repositories via their `renovate.json5`.
 | `labels.json5`            | Label assignment for Renovate PRs                                  |
 | `packageRules.json5`      | Per-ecosystem rules (and opt-outs from the weekly batch)           |
 | `customManagers.json5`    | Custom regex managers (e.g. `mise-version` in workflow files)      |
-| `semanticCommits.json5`   | Conventional Commits for Renovate PRs                              |
+| `semanticCommits.json5`   | Commit types and scopes for Renovate PRs (see Commit types)        |
 | `go.json5`                | **Opt-in.** `go mod tidy` after Go module updates (Go source only) |
 | `typescript-eslint.json5` | **Opt-in.** Caps `typescript` to the typescript-eslint peer range  |
 
@@ -1316,6 +1316,37 @@ weekly batch: a plugin update can change formatting, which fails the repository'
 `lint / dprint` check until the Markdown is reformatted with `dprint fmt`. The synced `dprint.json` in
 `config-sync/files/` is bumped here, and config-sync then distributes it.
 
+### Commit types
+
+The commit type of a Renovate PR decides whether release-please releases:
+it releases only for commits in a visible changelog section, by default
+`feat`, `fix`, `perf` and `revert` (`build`, `ci` and `chore` are hidden).
+`semanticCommits.json5` sets the type centrally, by dependency type, so
+updates that don't change what a repository ships don't release it:
+
+| Type    | Updates                                                                                                                                                                                                                                                         | Releases |
+| ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| `fix`   | Runtime dependencies, as `config:recommended` types them: npm `dependencies`, gomod and composer `require`, pep621/poetry project dependencies, cargo `dependencies`, maven runtime scopes                                                                       | Yes      |
+| `build` | Development and build tooling: `devDependencies`, `packageManager`, pep621/uv/pdm/poetry/cargo dev and build dependency groups, mise/asdf/nvm/pyenv tools, devcontainers, pre-commit hooks, PEP 723 scripts, dprint plugins, and anything in test or tool files | No       |
+| `ci`    | GitHub Actions, runners and service containers, and other versions pinned in `.github/workflows/`                                                                                                                                                               | No       |
+| `chore` | Everything else (Dockerfiles, compose images, `requirements.txt`, NuGet, lock-file updates and maintenance)                                                                                                                                                     | No       |
+
+Two exceptions, where workflows or actions are the product and consumers only
+get a fix through a release, stay `fix`: the `action.yml` dependencies of
+`DevSecNinja/.github` and `DevSecNinja/python-bandit-scan`, and this
+repository's reusable workflows, workflow templates and `config-sync/` files.
+Add a repository to the `matchRepositories` list when it starts publishing an
+action. Vulnerability fixes are always `fix`, whatever the dependency.
+
+A grouped PR takes the highest type of its updates
+(`chore` < `ci` < `build` < `fix` < `feat`), so the weekly batch releases only
+when it contains a runtime update. Don't extend `:semanticCommitTypeAll(…)`
+in a repository. Listed before the shared presets it has almost no effect,
+because `base.json5`'s `config:best-practices` re-applies the
+`config:recommended` rules after it: it only types updates without a package
+name, such as lock-file maintenance. Listed after them, it overrides every
+dependency, including runtime updates. Keep `build` and `ci` hidden in
+`release-please-config.json`, or tooling updates release.
 ### Consuming the preset
 
 Repositories extend `default.json5`, which pulls in `config:recommended` and

@@ -291,9 +291,11 @@ need manual nudging.
 
 ### release-please opens no PR despite mergeable commits
 
-release-please needs at least one **non-`chore`** Conventional Commit
-since the last tag (or a `chore` with `Release-As: X.Y.Z` footer) to
-open a PR. Check the Actions log — it explains exactly which commits
+release-please needs at least one Conventional Commit in a visible changelog
+section since the last tag (by default `feat`, `fix`, `perf` or `revert`;
+or a commit with a `Release-As: X.Y.Z` footer) to open a PR. Renovate's
+`build`, `ci` and `chore` updates don't count: only runtime dependencies and
+security fixes are `fix` (see [Commit types](architecture.md#commit-types)). Check the Actions log — it explains exactly which commits
 it considered.
 
 Force a release with no qualifying commits: push an empty commit:
