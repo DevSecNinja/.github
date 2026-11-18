@@ -1,0 +1,14 @@
+---
+# Shared zizmor configuration. scripts/lint/zizmor.sh passes it to zizmor for
+# every repo that has no zizmor config of its own (.github/zizmor.yml or
+# zizmor.yml). zizmor loads a single config, so a repo with its own config must
+# carry these rules itself.
+rules:
+  # zizmor 1.30 added self-repository, which asks to rewrite every
+  # workspace-relative `uses: ./...` as `uses: $/...`. We choose the form per
+  # workflow: `$/` where a reusable workflow must call a sibling at its own
+  # commit (lint-include.yml calls lint.yml, #552), `./` elsewhere. Callers in
+  # the fleet and in this repo use `./` on purpose, so the audit only adds noise
+  # and fails lint on gating (non-SARIF) repos.
+  self-repository:
+    disable: true
