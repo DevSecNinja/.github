@@ -172,7 +172,7 @@ jobs:
                 try {
                   before = await getCommit(push.beforeCommit.oid);
                 } catch (error) {
-                  break;
+                  return headDate;
                 }
                 if (changeSignature(before) !== headSignature) break;
                 since = new Date(before.commit.committer.date);
