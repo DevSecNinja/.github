@@ -1,0 +1,39 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.6.8/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": [
+      "**/*.{js,mjs,cjs,jsx,ts,mts,cts,tsx,json,jsonc,css}",
+      "!**/node_modules",
+      "!apm_modules",
+      "!.agents",
+      "!.claude",
+      "!.cursor",
+      "!.gemini",
+      "!.github/agents",
+      "!.github/chatmodes",
+      "!.github/instructions",
+      "!.github/prompts",
+      "!.github/skills",
+      "!.kiro",
+      "!.opencode",
+      "!.specify",
+      "!.venv*",
+      "!.windsurf"
+    ]
+  },
+  "formatter": {
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 120
+  },
+  "linter": {
+    "rules": {
+      "preset": "recommended"
+    }
+  }
+}

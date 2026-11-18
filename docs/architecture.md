@@ -74,7 +74,7 @@ workflow, so it calls `scripts/apm-materialize/` from its own checkout.
 
 ### Lint (`lint.yml`)
 
-Runs up to fourteen linters. By default, linter failures are reported without
+Runs up to fifteen linters. By default, linter failures are reported without
 failing the workflow; set `lint-fail-on-error` to `true` to make lint failures
 fail the workflow. Toggle individual linters on/off with boolean inputs; all
 linter toggles default to `true`.
@@ -193,6 +193,20 @@ pinned, findings fail the linter like any other.
   [`ruff.toml` template](../config-sync/templates/ruff.toml) is a starting
   point. Findings are annotated on the PR, and with `upload-sarif` they also go
   to code scanning (category `ruff`).
+- **Biome** (`lint-biome`, JavaScript, TypeScript, JSON and CSS, after v4.6.0)
+  runs `biome ci`, which lints and checks formatting and import order without
+  writing, on the `*.js`, `*.mjs`, `*.cjs`, `*.jsx`, `*.ts`, `*.mts`, `*.cts`,
+  `*.tsx`, `*.json`, `*.jsonc` and `*.css` files once `biome` 2.4.0 or later is
+  pinned in the repository's mise config (an older pin is skipped with a warning,
+  like a missing one). Biome reads the repository's own `biome.json` or
+  `biome.jsonc`; config-sync's
+  [`biome.json` template](../config-sync/templates/biome.json) is a starting
+  point. Findings are annotated on the PR, and with `upload-sarif` they also go
+  to code scanning (category `biome`). `lint-biome-exclude` skips more paths,
+  such as a directory with another root Biome config, which Biome rejects.
+  Biome steps aside in repositories that configure ESLint (`eslint.config.*`,
+  `.eslintrc*`), which lint in their own CI with their plugins; set
+  `lint-biome-with-eslint` to run both. dprint formats only Markdown.
 
 **Inline scripts.** Code in a `run:` block is out of reach of linters,
 formatters and tests, so a `run:` step may hold exactly one line with one
@@ -235,7 +249,7 @@ runner's system Python, which ships PyYAML (`ubuntu-24.04`).
 | `lint-config-dir`              | Optional linter config directory. Default: `""`.                       |
 | `lint-fail-on-error`           | Fail when a linter fails. Default: `false`.                            |
 | `lint-job-mode`                | `auto`, `single`, or `parallel` (see above). Default: `auto`. v3.3.0+. |
-| `upload-sarif`                 | Upload SARIF (checkov, trivy, zizmor, ruff). Default: `true`.          |
+| `upload-sarif`                 | Upload SARIF (checkov, trivy, zizmor, ruff, biome). Default: `true`.   |
 | `lint-dprint`                  | Markdown formatting (dprint). Default: `true`.                         |
 | `lint-yamlfmt`                 | YAML formatting (yamlfmt). Default: `true`.                            |
 | `lint-yamllint`                | YAML linting (yamllint). Default: `true`.                              |
@@ -248,6 +262,9 @@ runner's system Python, which ships PyYAML (`ubuntu-24.04`).
 | `lint-trivy`                   | Filesystem scan (trivy). Default: `true`.                              |
 | `lint-zizmor`                  | Actions security scan (zizmor). Default: `true`.                       |
 | `lint-ruff`                    | Python linting (ruff, see above). Default: `true`. After v4.5.0.       |
+| `lint-biome`                   | JS/TS/JSON/CSS linting (Biome). Default: `true`. After v4.6.0.         |
+| `lint-biome-exclude`           | Bash pattern of paths Biome skips. Default: `""`. After v4.6.0.        |
+| `lint-biome-with-eslint`       | Run Biome next to ESLint. Default: `false`. After v4.6.0.              |
 | `lint-config-drift`            | Config-drift check. Default: `false`.                                  |
 | `lint-inline-scripts`          | Inline-script check (see above). Default: `true`. After v4.4.0.        |
 | `lint-inline-scripts-blocking` | Report inline scripts as errors. Default: `false`. After v4.4.0.       |

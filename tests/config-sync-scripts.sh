@@ -80,4 +80,10 @@ done
 sync_templates .ruff.toml "line-length = 100"
 [ ! -e "${consumer}/ruff.toml" ] || fail "ruff.toml must not be added next to .ruff.toml"
 
-echo "✓ config-sync: sync-files.sh keeps the ruff.toml template out of repositories that configure ruff elsewhere."
+[ -e "${consumer}/biome.json" ] || fail "a repository without Biome config must get the biome.json template"
+sync_templates biome.jsonc "{}"
+[ ! -e "${consumer}/biome.json" ] || fail "biome.json must not be added next to biome.jsonc"
+grep -Fq "biome.json skipped: configured in biome.jsonc" "${tmp_dir}/log" ||
+    fail "the skipped biome.json must be logged: $(cat "${tmp_dir}/log")"
+
+echo "✓ config-sync: sync-files.sh keeps the ruff.toml and biome.json templates out of repositories that configure them elsewhere."

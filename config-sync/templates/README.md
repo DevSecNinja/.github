@@ -104,3 +104,17 @@ same generated and vendored paths as the shared `dprint.json`. Config-sync
 doesn't add it to a repo that configures ruff in `.ruff.toml` or in
 `[tool.ruff]` of `pyproject.toml`, where `ruff.toml` would take precedence and
 replace those settings.
+
+## biome.json
+
+Config for Biome, which the shared Lint workflow runs when the repo has
+JavaScript, TypeScript, JSON or CSS files (`lint-biome`). It limits Biome to
+those files, leaving Markdown and YAML to dprint and yamlfmt, indents with two
+spaces, wraps at 120 columns, enables the recommended lint rules, respects
+`.gitignore` and skips the same generated and vendored paths as the shared
+`dprint.json`. Biome's other defaults (double quotes, semicolons) apply; change
+them in the repo's copy. JSON allows no comments, so this note replaces the
+usual template header. Config-sync doesn't add it to a repo that has
+`biome.jsonc`. The `customManagers:biomeVersions` Renovate preset, part of the
+shared Renovate config, keeps its `$schema` version in step with the pinned
+Biome.

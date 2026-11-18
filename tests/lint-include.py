@@ -35,7 +35,7 @@ INCLUDE = ROOT / ".github" / "workflows" / "lint-include.yml"
 
 LINT_REF = "$/.github/workflows/lint.yml"
 # Boolean `lint-*` inputs of lint.yml that are options rather than linters.
-NOT_LINTERS = {"lint-fail-on-error", "lint-inline-scripts-blocking"}
+NOT_LINTERS = {"lint-fail-on-error", "lint-inline-scripts-blocking", "lint-biome-with-eslint"}
 LEVELS = {"none": 0, "read": 1, "write": 2}
 
 

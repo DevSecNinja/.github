@@ -98,6 +98,24 @@ on:
         required: false
         type: boolean
         default: true
+      lint-biome:
+        description: "Run Biome (JS/TS/JSON/CSS lint and format) when the repo has such files, no ESLint config and pins biome
+          — uploads SARIF"
+        required: false
+        type: boolean
+        default: true
+      lint-biome-exclude:
+        description: "Glob pattern for paths to exclude from Biome (a bash pattern on the repository-relative path; * also
+          matches /)"
+        required: false
+        type: string
+        default: ""
+      lint-biome-with-eslint:
+        description: "Run Biome in repositories that configure ESLint too (eslint.config.* or .eslintrc*), where it steps
+          aside by default"
+        required: false
+        type: boolean
+        default: false
       lint-config-drift:
         description: "Check local config files match central DevSecNinja/.github repo"
         required: false
@@ -117,7 +135,7 @@ on:
         type: boolean
         default: false
       upload-sarif:
-        description: "Upload checkov/trivy/zizmor/ruff results to GitHub code scanning (requires GitHub Advanced Security).
+        description: "Upload checkov/trivy/zizmor/ruff/biome results to GitHub code scanning (requires GitHub Advanced Security).
           Set false for private repos without GHAS to gate on exit codes with console output instead."
         required: false
         type: boolean
@@ -740,6 +758,70 @@ jobs:
           sarif_file: ${{ runner.temp }}/ruff.sarif
           category: ruff
 
+  biome:
+    name: biome
+    if: ${{ inputs.lint-biome && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
+      }}
+    continue-on-error: ${{ ! inputs.lint-fail-on-error }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout lint scripts
+        # The linter scripts ship with this reusable workflow: fetch them from
+        # the same commit of DevSecNinja/.github that the caller pinned.
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .devsecninja-lint
+          sparse-checkout: |-
+            scripts/lint/
+            scripts/lint-inline-scripts.py
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Move lint scripts out of the workspace
+        # Outside the workspace the caller's linters don't scan them, and the
+        # code checkout doesn't delete them.
+        run: mv .devsecninja-lint "${RUNNER_TEMP}/devsecninja-lint"
+
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Find JavaScript, TypeScript, JSON and CSS files
+        # Repositories without them skip the mise install and Biome.
+        id: web-files
+        env:
+          STEP_ASIDE_FOR: ${{ !inputs.lint-biome-with-eslint && 'eslint' || '' }}
+        run: bash "${RUNNER_TEMP}/devsecninja-lint/scripts/lint/detect-language.sh" web
+
+      - name: Install mise
+        if: ${{ steps.web-files.outputs.found == 'true' }}
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          install: true
+          version: ${{ inputs.mise-version }}
+
+      - name: Run Biome
+        id: biome
+        if: ${{ steps.web-files.outputs.found == 'true' }}
+        env:
+          UPLOAD_SARIF: ${{ inputs.upload-sarif }}
+          EXCLUDE_PATTERN: ${{ inputs.lint-biome-exclude }}
+        run: bash "${RUNNER_TEMP}/devsecninja-lint/scripts/lint/biome.sh"
+
+      - name: Upload SARIF report
+        if: ${{ !cancelled() && steps.biome.outputs.sarif == 'true' }}
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: ${{ runner.temp }}/biome.sarif
+          category: biome
+
   config-drift:
     name: config drift
     if: ${{ inputs.lint-config-drift && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
@@ -870,11 +952,19 @@ jobs:
         if: ${{ inputs.lint-ruff }}
         run: bash "${RUNNER_TEMP}/devsecninja-lint/scripts/lint/detect-language.sh" python
 
+      - name: Find JavaScript, TypeScript, JSON and CSS files
+        # Repositories without them skip Biome (and its mise install).
+        id: web-files
+        if: ${{ inputs.lint-biome }}
+        env:
+          STEP_ASIDE_FOR: ${{ !inputs.lint-biome-with-eslint && 'eslint' || '' }}
+        run: bash "${RUNNER_TEMP}/devsecninja-lint/scripts/lint/detect-language.sh" web
+
       - name: Install mise
         if: >-
           ${{ inputs.lint-dprint || inputs.lint-yamlfmt || inputs.lint-yamllint || inputs.lint-actionlint || inputs.lint-gitleaks
           || inputs.lint-shellcheck || inputs.lint-shfmt || inputs.lint-checkov || inputs.lint-trivy || inputs.lint-zizmor
-          || steps.python-files.outputs.found == 'true' }}
+          || steps.python-files.outputs.found == 'true' || steps.web-files.outputs.found == 'true' }}
         uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
         with:
           install: true
@@ -1074,6 +1164,24 @@ jobs:
         with:
           sarif_file: ${{ runner.temp }}/ruff.sarif
           category: ruff
+
+      - name: Run Biome
+        id: biome
+        if: ${{ steps.web-files.outputs.found == 'true' }}
+        continue-on-error: true
+        env:
+          UPLOAD_SARIF: ${{ inputs.upload-sarif }}
+          EXCLUDE_PATTERN: ${{ inputs.lint-biome-exclude }}
+        run: bash "${RUNNER_TEMP}/devsecninja-lint/scripts/lint/biome.sh"
+
+      - name: Upload Biome SARIF report
+        id: biome-sarif
+        if: ${{ !cancelled() && steps.biome.outputs.sarif == 'true' }}
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: ${{ runner.temp }}/biome.sarif
+          category: biome
 
       - name: Check config drift against central repo
         id: config-drift

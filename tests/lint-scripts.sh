@@ -31,6 +31,8 @@ which) [[ " ${FAKE_TOOLS} " == *" $2 "* ]] ;;
 exec)
     shift 2
     printf '%s: %s\n' "${PWD}" "$*" >>"${MISE_LOG}"
+    [ -z "${FAKE_STDOUT:-}" ] || echo "${FAKE_STDOUT}"
+    [ -z "${FAKE_WRITES:-}" ] || touch "${FAKE_WRITES}"
     exit "${FAKE_EXIT:-0}"
     ;;
 *) exit 2 ;;
@@ -260,6 +262,65 @@ expect_out "::notice::No Python files found; skipping ruff" "ruff without Python
 run_in "${code}" ruff FAKE_TOOLS=""
 expect_out "::notice::No Python files found; skipping ruff" "a repository without Python files must not warn about the pin"
 grep -Fq '::warning' <<<"${out}" && fail "a repository without Python files must not warn about the ruff pin: ${out}"
+
+# Biome checks the JavaScript, TypeScript, JSON and CSS files in one read-only
+# `biome ci` run, which also writes SARIF when asked.
+mkdir -p "${code}/.specify"
+touch "${code}/a.json" "${code}/b.mjs" "${code}/sub/c.tsx" "${code}/sub/d.css" "${code}/e.md" "${code}/.specify/f.json"
+git -C "${code}" add -f -- a.json b.mjs sub/c.tsx sub/d.css e.md .specify/f.json
+listed="$(cd "${code}" && bash "${scripts}/language-files.sh" web | tr '\0' '\n')"
+[ "${listed}" = $'a.json\nb.mjs\nsub/c.tsx\nsub/d.css' ] ||
+    fail "language-files.sh web must list the JavaScript, TypeScript, JSON and CSS files; got: ${listed}"
+# Biome steps aside for ESLint, unless lint-biome-with-eslint clears STEP_ASIDE_FOR.
+touch "${code}/sub/.eslintrc"
+git -C "${code}" add -f -- sub/.eslintrc
+run_in "${code}" "detect-language web" STEP_ASIDE_FOR=eslint
+[ "${outputs}" = found=false ] || fail "Biome must step aside for ESLint; got: ${outputs}"
+expect_out "::notice::The repository has eslint config; skipping the web linter" "a repository with ESLint"
+run_in "${code}" "detect-language web" STEP_ASIDE_FOR=
+[ "${outputs}" = found=true ] || fail "lint-biome-with-eslint must run Biome; got: ${outputs}"
+git -C "${code}" rm -q --cached sub/.eslintrc
+run_in "${code}" "detect-language web" STEP_ASIDE_FOR=eslint
+[ "${outputs}" = found=true ] || fail "Biome must run without ESLint; got: ${outputs}"
+# Without a biome pin, Biome warns how to opt in and skips instead of failing.
+run_in "${code}" biome FAKE_TOOLS=""
+expect_status 0 "Biome without its tool"
+expect_out "::warning title=biome is not pinned::" "Biome without its tool"
+expect_out "pin biome in .mise.toml" "Biome without its tool"
+expect_out "biome.json" "Biome without its tool"
+[ -z "${log}${outputs}" ] || fail "Biome without its tool must not run: ${log} ${outputs}"
+# Excluding every file skips Biome before it needs a pin.
+run_in "${code}" biome FAKE_TOOLS="" EXCLUDE_PATTERN="*"
+expect_status 0 "Biome with every file excluded"
+expect_out "::notice::No JavaScript, TypeScript, JSON or CSS files found; skipping Biome" "Biome with every file excluded"
+grep -Fq '::warning' <<<"${out}" && fail "a repository without Biome's files must not warn about the biome pin: ${out}"
+export FAKE_TOOLS="${FAKE_TOOLS} biome"
+biome_call="biome ci --no-errors-on-unmatched --reporter=default --reporter=github"
+run_in "${code}" biome FAKE_WRITES="${RUNNER_TEMP}/biome.sarif"
+expect_status 0 "Biome with SARIF"
+expect_log "${biome_call} --reporter=sarif --reporter-file=${RUNNER_TEMP}/biome.sarif -- a.json b.mjs sub/c.tsx sub/d.css" \
+    "Biome with SARIF"
+[ "${outputs}" = sarif=true ] || fail "Biome must report its SARIF report; got: ${outputs}"
+run_in "${code}" biome FAKE_EXIT=1
+expect_status 1 "a failing Biome"
+[ -z "${outputs}" ] || fail "Biome must not report a SARIF report it didn't write: ${outputs}"
+# Biome before 2.4.0 lacks multiple reporters: it warns and skips.
+run_in "${code}" biome FAKE_STDOUT="Version: 2.3.11"
+expect_status 0 "Biome 2.3.11"
+expect_out "::warning title=biome is too old::This repository pins biome 2.3.11" "Biome 2.3.11"
+[[ "${log}" != *"biome ci"* ]] || fail "Biome 2.3.11 must not run: ${log}"
+run_in "${code}" biome FAKE_STDOUT="Version: 2.4.0"
+expect_log "biome ci" "Biome 2.4.0"
+run_in "${code}" biome UPLOAD_SARIF=false
+expect_status 0 "Biome without SARIF"
+expect_log "${biome_call} -- a.json" "Biome without SARIF"
+run_in "${code}" biome UPLOAD_SARIF=false EXCLUDE_PATTERN="sub/*"
+[[ "${log}" == *"${biome_call} -- a.json b.mjs" ]] || fail "lint-biome-exclude must skip sub/: ${log}"
+git -C "${code}" rm -q --cached a.json b.mjs sub/c.tsx sub/d.css
+run_in "${code}" biome
+expect_status 0 "Biome without its files"
+expect_out "::notice::No JavaScript, TypeScript, JSON or CSS files found; skipping Biome" "Biome without its files"
+[ -z "${log}" ] || fail "Biome must not run without its files: ${log}"
 
 # The SARIF filter drops checkov's skipped checks (level none) and tolerates a
 # missing report.
