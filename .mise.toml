@@ -11,6 +11,8 @@ git-cliff = "2.14.2"
 "pipx:checkov" = "3.4.3"
 "pipx:json5" = "0.17.3"
 "pipx:yamllint" = "1.38.0"
+# tests/renovate-pr-cooldown.py runs the pr-cooldown github-script under Node.
+node = "26.13.1"
 ruff = "0.17.5"
 shellcheck = "0.11.0"
 shfmt = "3.14.1"
@@ -31,6 +33,7 @@ run = [
   "bash ./tests/config-sync-scripts.sh",
   "bash ./tests/vendored-file-sync-scripts.sh",
   "uv run --script ./tests/workflow-script-fetch.py",
+  "uv run --script ./tests/renovate-pr-cooldown.py",
   "bash ./tests/renovate-custom-manager-coverage.sh",
   "bash ./tests/renovate-apm-manager.sh",
   "bash ./tests/renovate-annotation-managers.sh",

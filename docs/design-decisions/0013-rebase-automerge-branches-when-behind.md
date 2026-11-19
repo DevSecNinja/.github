@@ -49,17 +49,21 @@ to `true`, so open branches are also rebased between windows._
    to `behind-base-branch` when the branch automerges, has the keep-updated
    label, or the repository requires up-to-date branches; to `conflicted` when
    the base branch has a merge queue or none of those apply.
-2. **The docker-gated rule keeps `rebaseWhen: "conflicted"`.** The
-   `pr-cooldown` check measures the age of the PR head commit
-   ([ADR 0005](0005-pr-age-cooldown-for-untrusted-timestamps.md)); a rebase
-   rewrites that commit and restarts the 14-day clock.
+2. **The docker-gated rule keeps `rebaseWhen: "conflicted"`.** When this ADR
+   was written, the `pr-cooldown` check measured the age of the PR head commit
+   ([ADR 0005](0005-pr-age-cooldown-for-untrusted-timestamps.md)), so a rebase
+   restarted the 14-day clock. The clock now starts when the PR began
+   proposing its current change, so a Renovate rebase keeps it; `conflicted`
+   stays to avoid a CI run per base change on PRs that wait two weeks anyway.
 3. **Strict required status checks on public repositories**, with one
    exception: **repositories that require `pr-cooldown` keep strict off**
    (today only `truenas-apps`). Under strict protection a behind-base gated PR
-   can only merge after "Update branch" or a rebase, both of which create a new
-   head commit and restart the cooldown, so on an active repository it would
-   never merge. Lifting this exception needs a cooldown that is not reset by
-   rebases.
+   can only merge after "Update branch" or a rebase. "Update branch" adds a
+   merge commit, which the cooldown cannot compare, so it restarts the clock;
+   on an active repository such a PR would never merge. Since the cooldown no
+   longer resets on a Renovate rebase, this exception could be lifted by
+   letting Renovate rebase gated PRs (`rebaseWhen: "behind-base-branch"` for
+   them) instead; that is a separate decision.
 4. No per-repository `rebaseWhen` override is needed any more:
    ADR 0010 asked strict repositories to set `rebaseWhen: "behind-base-branch"`
    themselves; `auto` already resolves to that for them.

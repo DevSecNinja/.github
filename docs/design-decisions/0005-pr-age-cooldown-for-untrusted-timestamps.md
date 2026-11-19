@@ -5,7 +5,9 @@
 Accepted. Amended by
 [ADR 0013](0013-rebase-automerge-branches-when-behind.md): the
 non-strict branch protection this relies on is now a stated requirement
-for repositories that require `pr-cooldown`.
+for repositories that require `pr-cooldown`. Amended again: the clock now
+starts when the PR began proposing its current change, not at the latest
+head commit (see "Clock start" below).
 
 ## Context
 
@@ -67,21 +69,44 @@ release age**.
    failed silently: `dhi.io` was never added, and its images went ~3.5 months
    with no updates at all (`DevSecNinja/truenas-apps#634`). A registry nobody
    has wired up is now gated by default rather than slipping through.
-2. A required **`pr-cooldown`** status check holds the merge until the PR branch
-   head commit is at least 14 days old, provided by the reusable workflow
+2. A required **`pr-cooldown`** status check holds the merge until the PR has
+   proposed its current change for at least 14 days, provided by the reusable
+   workflow
    [`renovate-pr-cooldown.yml`](../../.github/workflows/renovate-pr-cooldown.yml).
    GitHub auto-merge then merges the PR the moment the check turns green.
 
-Age is measured from the **branch head commit**, not PR creation: when Renovate
-rebases the PR to a newer version the clock correctly restarts, so the exact
-content being merged has always soaked for the full period.
+### Clock start
 
-Because the gate reads the branch head commit date, the gated rule also sets
-**`rebaseWhen: "conflicted"`**. Renovate's default (`auto`, which becomes
-`behind-base-branch` once automerge is enabled) would rebase the PR every time
-`main` advances, rewriting the head commit and resetting the cooldown clock
-forever on an active repo. `conflicted` limits rebases to genuine merge
-conflicts; branch protection is non-strict
+The clock starts at the **oldest commit in the branch's force-push chain that
+makes the same change as the head commit**, not at PR creation and not at the
+latest push. "The same change" means the same changed lines (`+`/`-` lines of
+every file's patch), so the exact content being merged has always been
+proposed for the full period:
+
+- a new version or digest changes those lines, so the clock restarts;
+- a rebase onto a moved base, a retitle (for example a commit-type change in
+  the shared presets) or an autoclose/reopen recreates the commit with the
+  same lines, so the clock keeps running.
+
+The first design measured the age of the head commit itself. Every Renovate
+push restarted it, including pushes that did not change the version:
+`DevSecNinja/truenas-apps#810` proposed traefik-forward-auth v4.14.4 for 18
+days, but a conflict rebase on day 5 reset the clock and the next release
+arrived before it passed again.
+
+The workflow walks back through the PR's `HeadRefForcePushedEvent`s (one
+GraphQL call, then one commit read per earlier push, at most 30) while each
+earlier commit has the same changed lines. Anything it cannot compare falls
+back to the head commit date, which can only make the soak longer: more than
+one commit on the branch, a merge commit, a missing patch, a file list the
+API pages (more than 300 files), a push chain that does not end at the head,
+or an earlier commit that cannot be read.
+
+The gated rule also sets **`rebaseWhen: "conflicted"`**. Renovate's default
+(`auto`, which becomes `behind-base-branch` once automerge is enabled) would
+rebase the PR every time `main` advances. Such a rebase no longer resets the
+clock, but each one still costs a CI run. `conflicted` limits rebases to
+genuine merge conflicts; branch protection is non-strict
 (`strict_required_status_checks_policy: false`), so a behind-base gated PR still
 auto-merges once the soak completes — no rebase required.
 
@@ -134,9 +159,14 @@ Docker Hub branches are unaffected.
 - Updates from every timestamp-less registry flow again and auto-merge after a
   14-day PR-age soak, preserving the ADR 0004 risk posture without trusting a
   forgeable timestamp.
-- The soak clock for these registries starts when Renovate first opens (or last
-  rebases) the PR rather than at publish time; because Renovate opens the PR
-  shortly after detecting a release, the two are close in practice.
+- The soak clock for these registries starts when Renovate first proposes the
+  version (or digest) in the PR rather than at publish time; because Renovate
+  opens or updates the PR shortly after detecting a release, the two are close
+  in practice.
+- An upstream that releases more often than every 14 days never merges on its
+  own: each release restarts the clock (`DevSecNinja/truenas-apps#724`,
+  `#829`). That is the price of soaking the exact version that merges; such
+  PRs need the owner.
 - `pr-cooldown` becomes a load-bearing required check: it must stay in the
   branch ruleset, and the scheduled workflow must keep running for soaked PRs to
   merge.
