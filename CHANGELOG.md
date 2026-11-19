@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.9.1](https://github.com/DevSecNinja/.github/compare/v4.9.0...v4.9.1) (2026-11-19)
+
+
+### 🐛 Bug Fixes
+
+* **cooldown:** start the pr-cooldown soak when the current change was first proposed ([#600](https://github.com/DevSecNinja/.github/issues/600)) ([3ed35da](https://github.com/DevSecNinja/.github/commit/3ed35dab6ba61d69345c5ad311bfe2972d114b72))
+* **github-tag:** update all non-major dependencies [automerge] ([#489](https://github.com/DevSecNinja/.github/issues/489)) ([642c1d3](https://github.com/DevSecNinja/.github/commit/642c1d3521de47e1d55f20472b51944daab55b30))
+
 ## [4.9.0](https://github.com/DevSecNinja/.github/compare/v4.8.0...v4.9.0) (2026-11-18)
 
 
