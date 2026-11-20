@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites time="0.512">
+<testsuite name="install.bats" tests="2" failures="1" errors="0" skipped="0" time="0.300" timestamp="2026-11-20T10:00:00" hostname="runner">
+    <testcase classname="install.bats" name="installs the package" time="0.100" />
+    <testcase classname="install.bats" name="rejects a bad version" time="0.200">
+        <failure type="failure">(in test file tests/bash/install.bats, line 12)
+  `[ &quot;$status&quot; -eq 1 ]&apos; failed</failure>
+    </testcase>
+</testsuite>
+<testsuite name="helpers.bats" tests="1" failures="0" errors="0" skipped="1" time="0.010" timestamp="2026-11-20T10:00:00" hostname="runner">
+    <testcase classname="helpers.bats" name="needs docker" time="0.010">
+        <skipped>docker is not available</skipped>
+    </testcase>
+</testsuite>
+</testsuites>

@@ -939,6 +939,15 @@ percentage and counts as step outputs. Publishing stays with the caller.
 See [`actions/ai-commits-badge/README.md`](../actions/ai-commits-badge/README.md)
 for attribution caveats, inputs and docs-site or standalone Pages examples.
 
+### Test report (`actions/test-report/`)
+
+Reads the JUnit XML that test runners write and shows the results on the run
+page: a job summary with counts per suite and the failed tests, plus `::error`
+annotations at the failing lines. Standard library only, no permissions; run
+it with `if: always()` after the tests. See
+[`actions/test-report/README.md`](../actions/test-report/README.md) and
+[ADR 0014](design-decisions/0014-own-test-report-action.md).
+
 ### Open PR (`actions/open-pr/`)
 
 Opens (or updates) a pull request from the current working tree.
@@ -1352,7 +1361,7 @@ updates that don't change what a repository ships don't release it:
 
 | Type    | Updates                                                                                                                                                                                                                                                         | Releases |
 | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| `fix`   | Runtime dependencies, as `config:recommended` types them: npm `dependencies`, gomod and composer `require`, pep621/poetry project dependencies, cargo `dependencies`, maven runtime scopes                                                                       | Yes      |
+| `fix`   | Runtime dependencies, as `config:recommended` types them: npm `dependencies`, gomod and composer `require`, pep621/poetry project dependencies, cargo `dependencies`, maven runtime scopes                                                                      | Yes      |
 | `build` | Development and build tooling: `devDependencies`, `packageManager`, pep621/uv/pdm/poetry/cargo dev and build dependency groups, mise/asdf/nvm/pyenv tools, devcontainers, pre-commit hooks, PEP 723 scripts, dprint plugins, and anything in test or tool files | No       |
 | `ci`    | GitHub Actions, runners and service containers, and other versions pinned in `.github/workflows/`                                                                                                                                                               | No       |
 | `chore` | Everything else (Dockerfiles, compose images, `requirements.txt`, NuGet, lock-file updates and maintenance)                                                                                                                                                     | No       |
@@ -1373,6 +1382,7 @@ because `base.json5`'s `config:best-practices` re-applies the
 name, such as lock-file maintenance. Listed after them, it overrides every
 dependency, including runtime updates. Keep `build` and `ci` hidden in
 `release-please-config.json`, or tooling updates release.
+
 ### Consuming the preset
 
 Repositories extend `default.json5`, which pulls in `config:recommended` and
