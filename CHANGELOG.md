@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.10.0](https://github.com/DevSecNinja/.github/compare/v4.9.1...v4.10.0) (2026-11-20)
+
+
+### 🚀 Features
+
+* **actions:** add test-report composite action ([#604](https://github.com/DevSecNinja/.github/issues/604)) ([26872c3](https://github.com/DevSecNinja/.github/commit/26872c34bcb661b3c3dc2c761528834431f94827))
+
 ## [4.9.1](https://github.com/DevSecNinja/.github/compare/v4.9.0...v4.9.1) (2026-11-19)
 
 
