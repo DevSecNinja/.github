@@ -17,6 +17,15 @@
       minimumGroupSize: 2,
     },
     {
+      // The `ansible` PyPI package (pip/deps manager) and the `pipx:ansible`
+      // mise tool both track the same ansible-community/ansible-build-data
+      // release, so they always bump in lock-step. Group them into one PR
+      // instead of opening two separate updates for the same version.
+      description: "Group Ansible updates (pip dependency + pipx:ansible mise tool)",
+      groupName: "ansible",
+      matchDepNames: ["ansible", "pipx:ansible"],
+    },
+    {
       // vite, @vitejs/* and vitest share vite as a (peer) dependency and
       // their majors are interdependent — e.g. vite@8 requires
       // @vitejs/plugin-react@6, which in turn drops support for vite<8.
