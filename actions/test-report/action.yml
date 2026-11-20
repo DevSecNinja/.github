@@ -1,0 +1,62 @@
+---
+name: Test report
+description: Show JUnit XML test results on the run page as a job summary and annotations, with no extra permissions.
+inputs:
+  paths:
+    description: "JUnit XML files to read: glob patterns, one per line (** matches directories)."
+    required: true
+  title:
+    description: "Heading of the summary. Include matrix values to tell jobs apart."
+    default: Test results
+  max-failures:
+    description: "Most failed tests listed in the summary table."
+    default: "50"
+  if-no-files:
+    description: "When no file matches: warn, error (fail the step) or ignore."
+    default: warn
+  upload-artifact:
+    description: "Also upload the matched files as an artifact (true or false)."
+    default: "false"
+  artifact-name:
+    description: "Artifact name when upload-artifact is true. Must be unique per run, so include matrix values."
+    default: test-results
+  retention-days:
+    description: "Artifact retention in days. Empty uses the repository setting."
+    default: ""
+outputs:
+  total:
+    description: "Number of tests."
+    value: ${{ steps.report.outputs.total }}
+  passed:
+    description: "Number of passed tests."
+    value: ${{ steps.report.outputs.passed }}
+  failed:
+    description: "Number of failed tests, including errors."
+    value: ${{ steps.report.outputs.failed }}
+  skipped:
+    description: "Number of skipped tests."
+    value: ${{ steps.report.outputs.skipped }}
+runs:
+  using: composite
+  steps:
+    - name: Summarize test results
+      id: report
+      shell: bash
+      env:
+        REPORT_PATHS: ${{ inputs.paths }}
+        REPORT_TITLE: ${{ inputs.title }}
+        REPORT_MAX_FAILURES: ${{ inputs.max-failures }}
+        REPORT_IF_NO_FILES: ${{ inputs.if-no-files }}
+      run: bash "${GITHUB_ACTION_PATH}/report.sh"
+
+    - name: Upload test results
+      if: ${{ inputs.upload-artifact == 'true' }}
+      # renovate: datasource=github-tags depName=actions/upload-artifact
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ inputs.paths }}
+        retention-days: ${{ inputs.retention-days }}
+        if-no-files-found: ignore
+        # The caller named these files, so include them even in hidden directories.
+        include-hidden-files: true

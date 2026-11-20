@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testsuites name="pytest tests">
+  <testsuite name="pytest" errors="1" failures="1" skipped="1" tests="5" time="0.250" timestamp="2026-11-20T10:00:00.000000+00:00" hostname="runner">
+    <testcase classname="tests.test_math" name="test_add" time="0.001" />
+    <testcase classname="tests.test_math" name="test_divide" time="0.002">
+      <failure message="assert 2.0 == 3">def test_divide():
+&gt;       assert 4 / 2 == 3
+E       assert 2.0 == 3
+
+tests/test_math.py:7: AssertionError</failure>
+    </testcase>
+    <testcase classname="tests.test_math" name="test_skip_on_ci" time="0.000">
+      <skipped type="pytest.skip" message="not on CI">tests/test_math.py:10: not on CI</skipped>
+    </testcase>
+    <testcase classname="tests.test_io" name="test_read[a|b]" time="0.003">
+      <error message="failed on setup with &quot;FileNotFoundError: data.txt&quot;">tests/test_io.py:4: in data
+    return Path("data.txt").read_text()
+/usr/lib/python3.12/pathlib.py:1027: in read_text
+    with self.open(mode="r") as f:
+E   FileNotFoundError: data.txt
+
+/usr/lib/python3.12/pathlib.py:1013: FileNotFoundError</error>
+    </testcase>
+    <testcase classname="tests.test_io" name="test_write" time="0.004" />
+  </testsuite>
+</testsuites>

@@ -8,6 +8,7 @@ repositories.
 | Reusable workflows           | [`.github/workflows/`](.github/workflows/)                                                |
 | Composite actions            | [`actions/`](actions/)                                                                    |
 | AI commits badge             | [`actions/ai-commits-badge/`](actions/ai-commits-badge/README.md)                         |
+| Test report                  | [`actions/test-report/`](actions/test-report/README.md)                                   |
 | Workflow templates           | [`workflow-templates/`](workflow-templates/)                                              |
 | Config sync (files)          | [`config-sync/files/`](config-sync/files/)                                                |
 | Config sync (templates)      | [`config-sync/templates/`](config-sync/templates/)                                        |
