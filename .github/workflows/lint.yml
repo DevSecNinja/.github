@@ -189,7 +189,7 @@ jobs:
     if: ${{ inputs.lint-dprint && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
       }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     steps:
       - name: Checkout lint scripts
@@ -232,7 +232,7 @@ jobs:
     if: ${{ inputs.lint-yamlfmt && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
       }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     steps:
       - name: Checkout lint scripts
@@ -275,7 +275,7 @@ jobs:
     if: ${{ inputs.lint-yamllint && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
       }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     steps:
       - name: Checkout lint scripts
@@ -318,7 +318,7 @@ jobs:
     if: ${{ inputs.lint-actionlint && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
       }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     steps:
       - name: Checkout code
@@ -340,7 +340,7 @@ jobs:
     if: ${{ inputs.lint-gitleaks && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
       }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     permissions:
       contents: read
@@ -420,7 +420,7 @@ jobs:
     if: ${{ inputs.lint-go && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
       }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 15
     steps:
       - name: Checkout lint scripts
@@ -476,7 +476,7 @@ jobs:
     if: ${{ inputs.lint-shellcheck && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
       }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     steps:
       - name: Checkout lint scripts
@@ -520,7 +520,7 @@ jobs:
     if: ${{ inputs.lint-shfmt && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
       }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     steps:
       - name: Checkout lint scripts
@@ -563,7 +563,7 @@ jobs:
     if: ${{ inputs.lint-checkov && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
       }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 15
     permissions:
       contents: read
@@ -620,7 +620,7 @@ jobs:
     if: ${{ inputs.lint-trivy && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
       }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 15
     permissions:
       contents: read
@@ -674,7 +674,7 @@ jobs:
     if: ${{ inputs.lint-zizmor && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
       }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     permissions:
       contents: read
@@ -727,7 +727,7 @@ jobs:
     if: ${{ inputs.lint-ruff && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
       }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     permissions:
       contents: read
@@ -788,7 +788,7 @@ jobs:
     if: ${{ inputs.lint-biome && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
       }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     permissions:
       contents: read
@@ -852,7 +852,7 @@ jobs:
     if: ${{ inputs.lint-psscriptanalyzer && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
       }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     permissions:
       contents: read
@@ -907,7 +907,7 @@ jobs:
     if: ${{ inputs.lint-config-drift && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
       }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     steps:
       - name: Checkout lint scripts
@@ -942,7 +942,7 @@ jobs:
     if: ${{ inputs.lint-inline-scripts && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
       }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     steps:
       - name: Checkout lint scripts
@@ -980,7 +980,7 @@ jobs:
     if: ${{ inputs.lint-line-endings && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
       }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     steps:
       - name: Checkout lint scripts
@@ -1026,7 +1026,7 @@ jobs:
     if: ${{ !(inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
       }}
     continue-on-error: ${{ ! inputs.lint-fail-on-error }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 30
     permissions:
       contents: read
