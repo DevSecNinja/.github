@@ -1280,6 +1280,14 @@ can still assign Code Owners if an automerge PR cannot merge cleanly.
   year as abandoned. Known-stable packages that trip this (for example
   `@testing-library/user-event`) are exempted by name in
   `packageRules.json5`, not per repository.
+- **npm 12 `allow-remote` workaround** — npm 12 refuses registry tarballs in
+  `--package-lock-only` runs when a package in the tree declares
+  `bundleDependencies` ([npm/cli#9800](https://github.com/npm/cli/issues/9800)),
+  which breaks Renovate's lockfile updates in every Tailwind CSS 4 repository.
+  `base.json5` sets `allow-remote=all` for Renovate's npm manager only (merged with
+  the repository's `.npmrc`). That manager also runs pnpm and Yarn lockfile
+  updates, which ignore the setting. Installs in CI and on developer machines keep npm 12's
+  `allow-remote=none`. Remove it once Renovate's npm includes the fix.
 - **npm `engines` are never pinned** — `rangeStrategy: "pin"` applies to
   dependencies, but `engines` declare the supported range (`node: "^24.0.0"`)
   and use `rangeStrategy: "replace"`. The exact Node.js version for
