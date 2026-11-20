@@ -125,6 +125,45 @@ class TestReportContract(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("invalid choice", result.stderr)
 
+    def test_locations_in_paths_with_spaces_and_file_without_line(self):
+        for source in ("my suite/a.bats", "my suite/B.Tests.ps1", "my tests/test_c.py", "tests/test_d.py"):
+            (self.work / source).parent.mkdir(parents=True, exist_ok=True)
+            (self.work / source).write_text("\n", encoding="utf-8")
+        cases = [
+            ("a", "", "(in test file my suite/a.bats, line 3)"),
+            ("b", "", f"at &lt;ScriptBlock&gt;, {self.work.as_posix()}/my suite/B.Tests.ps1:4"),
+            ("c", "", "my tests/test_c.py:5: AssertionError"),
+            ("d", ' file="tests/test_d.py"', "tests/test_d.py:6: AssertionError"),
+        ]
+        xml = "".join(f'<testcase name="{n}"{a}><failure>{t}</failure></testcase>' for n, a, t in cases)
+        (self.work / "results" / "spaces.xml").write_text(f"<testsuite name='s'>{xml}</testsuite>", "utf-8")
+        result, _, _ = self.run_action(paths="results/spaces.xml")
+        self.assertEqual(
+            re.findall(r"file=([^,]+),line=(\d+)", result.stdout),
+            [
+                ("my suite/a.bats", "3"),
+                ("my suite/B.Tests.ps1", "4"),
+                ("my tests/test_c.py", "5"),
+                ("tests/test_d.py", "6"),
+            ],
+        )
+
+    def test_overlapping_patterns_count_each_file_once(self):
+        _, _, outputs = self.run_action(paths="results/bats.xml\n./results/bats.xml\nresults/*ats.xml")
+        self.assertEqual(outputs["total"], "3")
+
+    def test_test_names_cannot_inject_workflow_commands(self):
+        name = "x&#13;::error title=Injected::forged&#13;"
+        xml = f'<testsuite name="s"><testcase name="{name}"><failure message="m"/></testcase></testsuite>'
+        (self.work / "results" / "inject.xml").write_text(xml, "utf-8")
+        result, summary, _ = self.run_action(paths="results/inject.xml")
+        self.assertNotIn("\r", summary)
+        # The summary echo runs with workflow commands stopped; nothing outside it may inject.
+        stopped = re.sub(r"::stop-commands::(\w+)\n.*?\n::\1::", "", result.stdout, flags=re.DOTALL)
+        lines = re.split(r"[\r\n]", stopped)
+        self.assertFalse([line for line in lines if line.lstrip().startswith("::error title=Injected")])
+        self.assertEqual(len([line for line in lines if line.startswith("::error ")]), 1)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

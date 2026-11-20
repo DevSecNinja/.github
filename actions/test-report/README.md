@@ -32,9 +32,11 @@ reports when the tests fail.
 | `retention-days`  | empty          | Artifact retention; empty uses the repository setting.                      |
 
 Artifacts are off by default because private repositories have limited
-artifact storage. Files that are not valid XML are reported as a warning and
-skipped; the other files still count. A `<failure>` or `<error>` counts as
-failed, `<skipped>` as skipped.
+artifact storage. A file matched by several patterns is read once. Files that
+are not valid XML are reported as a warning and skipped; the other files still
+count. A `<failure>` or `<error>` counts as failed, `<skipped>` as skipped. The
+summary is also echoed to the log with workflow commands stopped, so test names
+cannot inject annotations.
 
 ## Producing JUnit XML
 
@@ -84,7 +86,9 @@ release and keep the version comment, so Renovate tracks it.
    `GITHUB_WORKSPACE`: bats `(in test file X, line N)` notes, Python
    `File "x.py", line N` frames and `path:line` references (pytest, Pester,
    go). Frames in the standard library or site-packages are skipped, so the
-   annotation lands on the deepest frame in your repository.
+   annotation lands on the deepest frame in your repository. Paths may contain
+   spaces.
+3. Otherwise a `file` attribute without a line, which annotates the file.
 
 Absolute paths inside the workspace are made relative to it.
 

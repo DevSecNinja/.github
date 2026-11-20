@@ -14,6 +14,7 @@ import argparse
 import glob
 import os
 import re
+import secrets
 import sys
 from pathlib import Path
 from xml.etree import ElementTree as ET
@@ -23,11 +24,12 @@ MESSAGE_ANNOTATION = 1000
 MAX_ANNOTATIONS = 10  # GitHub shows at most 10 error annotations per step.
 COLLAPSE_SUITES = 10
 # bats: "(in test file tests/x.bats, line 12)"
-BATS_LOCATION = re.compile(r"in test file (?P<file>\S+), line (?P<line>\d+)")
+BATS_LOCATION = re.compile(r"in test file (?P<file>.+?), line (?P<line>\d+)")
 BATS_NOTE = re.compile(r"^\s*\(in test file [^)]*\)\s*$", re.MULTILINE)
 # Python tracebacks: 'File "tests/test_x.py", line 12'
 PYTHON_LOCATION = re.compile(r'File "(?P<file>[^"]+)", line (?P<line>\d+)')
-# pytest, Pester, jest, go and most others: "tests/test_x.py:12"
+# pytest, Pester, jest, go and most others: "tests/test_x.py:12". The path may
+# contain spaces, which spaced_paths() tries in turn.
 PATH_LOCATION = re.compile(r"(?P<file>[\w./\\:-]*[\w-]\.[A-Za-z0-9]+):(?P<line>\d+)")
 
 
@@ -64,32 +66,48 @@ def first_line(text: str) -> str:
     return next((line.strip() for line in text.splitlines() if line.strip()), "")
 
 
-def relative(path: str, workspace: Path) -> str | None:
-    """`path` relative to the workspace when it lies inside it, else None."""
+def workspace_file(path: str, workspace: Path) -> str | None:
+    """`path` relative to the workspace when it is a file inside it, else None."""
     candidate = Path(path)
     if not candidate.is_absolute():
         candidate = workspace / candidate
     try:
-        return candidate.resolve().relative_to(workspace.resolve()).as_posix()
+        if candidate.is_file():
+            return candidate.resolve().relative_to(workspace.resolve()).as_posix()
     except (ValueError, OSError):
-        return None
+        pass
+    return None
+
+
+def spaced_paths(text: str, match: re.Match) -> list[str]:
+    """Paths that end where `match`'s path ends, longest first: the path may
+    start after any earlier space on the same line."""
+    line_start = text.rfind("\n", 0, match.start("file")) + 1
+    before = text[line_start : match.start("file")]
+    starts = [0] + [i + 1 for i, char in enumerate(before) if char == " "]
+    return [text[line_start + start : match.end("file")] for start in starts] + [match.group("file")]
 
 
 def location(case: ET.Element, result: ET.Element, workspace: Path) -> tuple[str | None, str | None]:
-    """Where a test failed: the testcase's file/line attributes, or else the
-    last (deepest) location in the failure text that is a file in the
+    """Where a test failed: the testcase's file and line attributes, or else
+    the last (deepest) location in the failure text that is a file in the
     workspace, so frames in libraries and the standard library are skipped."""
-    if case.get("file"):
-        file = case.get("file", "")
-        return relative(file, workspace) or file, case.get("line")
+    attribute = case.get("file")
+    if attribute and case.get("line"):
+        return workspace_file(attribute, workspace) or attribute, case.get("line")
     text = "\n".join(filter(None, (result.get("message"), result.text)))
     found: tuple[int, str | None, str | None] = (-1, None, None)
     for pattern in (BATS_LOCATION, PYTHON_LOCATION, PATH_LOCATION):
         for match in pattern.finditer(text):
-            path = relative(match.group("file"), workspace)
-            if path and match.start() > found[0] and (workspace / path).is_file():
+            if match.start() <= found[0]:
+                continue
+            candidates = spaced_paths(text, match) if pattern is PATH_LOCATION else [match.group("file")]
+            path = next(filter(None, (workspace_file(c, workspace) for c in candidates)), None)
+            if path:
                 found = (match.start(), path, match.group("line"))
-    return found[1], found[2]
+    if found[1] or not attribute:
+        return found[1], found[2]
+    return workspace_file(attribute, workspace) or attribute, None
 
 
 def parse(path: str, workspace: Path, suites: list[Suite], failures: list[Failure]) -> None:
@@ -133,7 +151,7 @@ def truncate(text: str, limit: int) -> str:
 
 def cell(text: str) -> str:
     text = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-    return text.replace("|", "\\|").replace("\n", " ")
+    return text.replace("|", "\\|").replace("\r", " ").replace("\n", " ")
 
 
 def escape_data(value: str) -> str:
@@ -206,14 +224,16 @@ def main(argv: list[str]) -> int:
     patterns = [line.strip() for line in args.paths.splitlines() if line.strip()]
     if not patterns:
         parser.error("--paths must contain at least one glob pattern")
-    files = sorted(
-        {path for pattern in patterns for path in glob.glob(pattern, recursive=True) if os.path.isfile(path)}
-    )
+    files: dict[str, str] = {}
+    for pattern in patterns:
+        for path in sorted(glob.glob(pattern, recursive=True)):
+            if os.path.isfile(path):
+                files.setdefault(os.path.realpath(path), path)  # one entry per file, however it matched
 
     suites: list[Suite] = []
     failures: list[Failure] = []
     notes: list[str] = []
-    for path in files:
+    for path in files.values():
         try:
             parse(path, args.workspace, suites, failures)
         except (ET.ParseError, OSError) as error:
@@ -233,7 +253,10 @@ def main(argv: list[str]) -> int:
     for failure in failures[:MAX_ANNOTATIONS]:
         annotate(failure)
     text = render(args.title, suites, failures, args.max_failures, notes)
-    print(text)
+    # Test names come from the XML, so stop the runner from reading workflow
+    # commands in this echo of the summary.
+    token = secrets.token_hex(16)
+    print(f"::stop-commands::{token}\n{text}\n::{token}::")
     if args.summary:
         with open(args.summary, "a", encoding="utf-8") as handle:
             handle.write(text)
