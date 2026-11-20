@@ -41,7 +41,8 @@ Ship our own composite action, [`actions/test-report/`](../../actions/test-repor
 - There is no separate "Tests" check run or history across runs. Callers that
   need trends keep the uploaded XML or add a reporter later.
 - GitHub shows at most 10 error annotations per step, so the summary table is
-  the complete list.
+  where every failure is listed, up to `max-failures` (default 50). Beyond that
+  the summary states how many were left out.
 - Each repository must produce JUnit XML. Stdlib `unittest` cannot, so those
   repositories need a JUnit-capable runner first.
 - Format quirks (failure locations in bats notes, Python tracebacks, Pester

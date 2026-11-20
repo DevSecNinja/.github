@@ -148,6 +148,23 @@ class TestReportContract(unittest.TestCase):
             ],
         )
 
+    def test_text_location_beats_attributes_and_dependencies_are_skipped(self):
+        dependency = self.work / ".venv/lib/python3.14/site-packages/pkg/helper.py"
+        dependency.parent.mkdir(parents=True)
+        dependency.write_text("\n", encoding="utf-8")
+        cases = [
+            ("e", ' file="tests/test_math.py" line="2"', "tests/test_math.py:9: AssertionError"),
+            ("f", ' file="tests/test_math.py" line="0"', "AssertionError"),
+            ("g", "", "tests/test_io.py:7: in test_g\n.venv/lib/python3.14/site-packages/pkg/helper.py:20: Error"),
+        ]
+        xml = "".join(f'<testcase name="{n}"{a}><failure>{t}</failure></testcase>' for n, a, t in cases)
+        (self.work / "results" / "attrs.xml").write_text(f"<testsuite name='s'>{xml}</testsuite>", "utf-8")
+        result, _, _ = self.run_action(paths="results/attrs.xml")
+        self.assertEqual(
+            re.findall(r"^::error file=([^,]+)(?:,line=(\d+))?,title", result.stdout, re.MULTILINE),
+            [("tests/test_math.py", "9"), ("tests/test_math.py", ""), ("tests/test_io.py", "7")],
+        )
+
     def test_overlapping_patterns_count_each_file_once(self):
         _, _, outputs = self.run_action(paths="results/bats.xml\n./results/bats.xml\nresults/*ats.xml")
         self.assertEqual(outputs["total"], "3")

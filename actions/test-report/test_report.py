@@ -66,14 +66,21 @@ def first_line(text: str) -> str:
     return next((line.strip() for line in text.splitlines() if line.strip()), "")
 
 
+DEPENDENCY_DIRS = {"site-packages", "dist-packages", "node_modules", "vendor"}
+
+
 def workspace_file(path: str, workspace: Path) -> str | None:
-    """`path` relative to the workspace when it is a file inside it, else None."""
+    """`path` relative to the workspace when it is a file inside it and not
+    in an installed dependency (a virtualenv or node_modules in the
+    workspace), else None."""
     candidate = Path(path)
     if not candidate.is_absolute():
         candidate = workspace / candidate
     try:
         if candidate.is_file():
-            return candidate.resolve().relative_to(workspace.resolve()).as_posix()
+            relative = candidate.resolve().relative_to(workspace.resolve())
+            if not DEPENDENCY_DIRS.intersection(relative.parts):
+                return relative.as_posix()
     except (ValueError, OSError):
         pass
     return None
@@ -89,12 +96,11 @@ def spaced_paths(text: str, match: re.Match) -> list[str]:
 
 
 def location(case: ET.Element, result: ET.Element, workspace: Path) -> tuple[str | None, str | None]:
-    """Where a test failed: the testcase's file and line attributes, or else
-    the last (deepest) location in the failure text that is a file in the
-    workspace, so frames in libraries and the standard library are skipped."""
-    attribute = case.get("file")
-    if attribute and case.get("line"):
-        return workspace_file(attribute, workspace) or attribute, case.get("line")
+    """Where a test failed: the last (deepest) location in the failure text
+    that is a file of the repository, so frames in the standard library and
+    dependencies are skipped. Otherwise the testcase's file and line
+    attributes; those usually point at the test's definition, and pytest's
+    xunit1 line is zero-based, so a line of 0 is dropped."""
     text = "\n".join(filter(None, (result.get("message"), result.text)))
     found: tuple[int, str | None, str | None] = (-1, None, None)
     for pattern in (BATS_LOCATION, PYTHON_LOCATION, PATH_LOCATION):
@@ -105,9 +111,11 @@ def location(case: ET.Element, result: ET.Element, workspace: Path) -> tuple[str
             path = next(filter(None, (workspace_file(c, workspace) for c in candidates)), None)
             if path:
                 found = (match.start(), path, match.group("line"))
+    attribute = case.get("file")
     if found[1] or not attribute:
         return found[1], found[2]
-    return workspace_file(attribute, workspace) or attribute, None
+    line = case.get("line") or ""
+    return workspace_file(attribute, workspace) or attribute, line if line.isdigit() and int(line) > 0 else None
 
 
 def parse(path: str, workspace: Path, suites: list[Suite], failures: list[Failure]) -> None:

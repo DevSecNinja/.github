@@ -58,3 +58,5 @@ runs:
         path: ${{ inputs.paths }}
         retention-days: ${{ inputs.retention-days }}
         if-no-files-found: ignore
+        # The caller named these files, so include them even in hidden directories.
+        include-hidden-files: true

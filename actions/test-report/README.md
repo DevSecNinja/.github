@@ -80,15 +80,16 @@ release and keep the version comment, so Renovate tracks it.
 
 ## How failure locations are found
 
-1. `file` and `line` attributes on the `<testcase>` (jest-junit, pytest's
-   `xunit1` family).
-2. Otherwise the last location in the failure text that is a file inside
-   `GITHUB_WORKSPACE`: bats `(in test file X, line N)` notes, Python
+1. The last location in the failure text that is a file of the repository
+   (inside `GITHUB_WORKSPACE`): bats `(in test file X, line N)` notes, Python
    `File "x.py", line N` frames and `path:line` references (pytest, Pester,
-   go). Frames in the standard library or site-packages are skipped, so the
-   annotation lands on the deepest frame in your repository. Paths may contain
-   spaces.
-3. Otherwise a `file` attribute without a line, which annotates the file.
+   go). Frames outside the workspace (the standard library) and in
+   `site-packages`, `dist-packages`, `node_modules` or `vendor` directories are
+   skipped, so the annotation lands on the deepest frame in your own code.
+   Paths may contain spaces.
+2. Otherwise the `file` and `line` attributes of the `<testcase>` (jest-junit,
+   pytest's `xunit1` family). These usually point at the test's definition;
+   a line of `0` (pytest counts from zero) annotates the file only.
 
 Absolute paths inside the workspace are made relative to it.
 
