@@ -79,6 +79,7 @@ run_validation() {
         INSTALL_COMMAND="" \
         TEST_SETUP_COMMAND="" \
         TEST_COMMAND="" \
+        TEST_REPORT_PATHS="" \
         BUILD_COMMAND="" \
         BUILD_GITHUB_TOKEN="false" \
         ARTIFACT_PATH="dist" \

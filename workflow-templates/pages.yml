@@ -48,6 +48,8 @@ jobs:
         npm run test:html
         npm run test:a11y
         npm run test:e2e
+      # Optional: show JUnit XML that test-command writes on the run page.
+      # test-report-paths: test-results/*.xml
       update-sitemap-lastmod: true
       # Optional Cloudflare production instead of GitHub Pages:
       # github-pages: false
