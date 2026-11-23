@@ -184,17 +184,24 @@ class TestReportContract(unittest.TestCase):
     def test_node_root_level_testcases_and_file_urls(self):
         source = self.work / "tests" / "planner.test.js"
         source.write_text("\n", encoding="utf-8")
+        spaced = self.work / "my tests" / "static.test.js"
+        spaced.parent.mkdir()
+        spaced.write_text("\n", encoding="utf-8")
         failure = f"Expected values to be strictly equal\n    at TestContext.&lt;anonymous&gt; ({source.as_uri()}:12:3)"
         xml = (
             '<testsuites><testcase name="top passes" classname="test"/>'
             f'<testcase name="top fails" classname="test"><failure type="testCodeFailure">{failure}</failure></testcase>'
+            f'<testcase name="spaced" classname="test"><failure>at x ({spaced.as_uri()}:4:1)</failure></testcase>'
             '<testsuite name="group"><testcase name="nested" classname="test"/></testsuite></testsuites>'
         )
         (self.work / "results" / "node.xml").write_text(xml, "utf-8")
         result, summary, outputs = self.run_action(paths="results/node.xml")
-        self.assertEqual(outputs, {"passed": "2", "failed": "1", "skipped": "0", "total": "3"})
-        self.assertIn("| ❌ node.xml | 1 | 1 | 0 |", summary)
-        self.assertEqual(re.findall(r"file=([^,]+),line=(\d+)", result.stdout), [("tests/planner.test.js", "12")])
+        self.assertEqual(outputs, {"passed": "2", "failed": "2", "skipped": "0", "total": "4"})
+        self.assertIn("| ❌ node.xml | 1 | 2 | 0 |", summary)
+        self.assertEqual(
+            re.findall(r"file=([^,]+),line=(\d+)", result.stdout),
+            [("tests/planner.test.js", "12"), ("my tests/static.test.js", "4")],
+        )
 
     def test_paths_relative_to_a_report_in_a_subdirectory(self):
         (self.work / "backend" / "tests").mkdir(parents=True)

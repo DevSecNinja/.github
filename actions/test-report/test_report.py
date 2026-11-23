@@ -32,7 +32,7 @@ BATS_NOTE = re.compile(r"^\s*\(in test file [^)]*\)\s*$", re.MULTILINE)
 PYTHON_LOCATION = re.compile(r'File "(?P<file>[^"]+)", line (?P<line>\d+)')
 # pytest, Pester, jest, go and most others: "tests/test_x.py:12". The path may
 # contain spaces, which spaced_paths() tries in turn.
-PATH_LOCATION = re.compile(r"(?P<file>[\w./\\:-]*[\w-]\.[A-Za-z0-9]+):(?P<line>\d+)")
+PATH_LOCATION = re.compile(r"(?P<file>[\w./\\:%-]*[\w-]\.[A-Za-z0-9]+):(?P<line>\d+)")
 
 
 class Suite:
