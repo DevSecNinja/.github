@@ -26,11 +26,11 @@ grep -A4 -E '^      test-report-title:' "${workflow}" | grep -Fq 'default: "Test
 
 test_job="$(sed -n '/^  test:$/,/^  deploy:$/p' "${workflow}")"
 for expected in \
-    'if: ${{ inputs.test-report-paths != '"''"' }}' \
+    'if: ${{ !cancelled() && inputs.test-report-paths != '"''"' }}' \
     'ref: ${{ job.workflow_sha }}' \
     'actions/test-report/' \
     'id: tests' \
-    "(steps.tests.outcome == 'success' || steps.tests.outcome == 'failure')" \
+    "REPORT_IF_NO_FILES: \${{ steps.tests.outcome == 'skipped' && 'ignore' || 'warn' }}" \
     'REPORT_PATHS: ${{ inputs.test-report-paths }}' \
     'REPORT_TITLE: ${{ inputs.test-report-title }}' \
     'run: bash "${RUNNER_TEMP}/devsecninja-test-report/actions/test-report/report.sh"'; do

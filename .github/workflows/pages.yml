@@ -331,18 +331,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          # Fetch tags so a build-github-token build can read the release tag
-          # at HEAD (footer/version metadata). Safe when no tags exist.
-          fetch-tags: ${{ inputs.build-github-token }}
       - name: Checkout test-report action
         # The action ships with this reusable workflow: fetch it from the same
         # commit of DevSecNinja/.github that the caller pinned (a `uses:` ref
-        # can't be an expression).
-        if: ${{ inputs.test-report-paths != '' }}
+        # can't be an expression). tests/workflow-script-fetch.py requires the
+        # fetch first and the same condition on every step that runs it.
+        if: ${{ !cancelled() && inputs.test-report-paths != '' }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ${{ job.workflow_repository }}
@@ -353,8 +347,15 @@ jobs:
           sparse-checkout-cone-mode: false
           persist-credentials: false
       - name: Move test-report action out of the workspace
-        if: ${{ inputs.test-report-paths != '' }}
+        if: ${{ !cancelled() && inputs.test-report-paths != '' }}
         run: mv .devsecninja-test-report "${RUNNER_TEMP}/devsecninja-test-report"
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # Fetch tags so a build-github-token build can read the release tag
+          # at HEAD (footer/version metadata). Safe when no tags exist.
+          fetch-tags: ${{ inputs.build-github-token }}
       - name: Setup Node.js
         if: ${{ inputs.node-version != '' }}
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -384,15 +385,14 @@ jobs:
           TEST_COMMAND: ${{ inputs.test-command }}
         run: bash -euo pipefail -c "${TEST_COMMAND}"
       - name: Publish test results
-        # Also when the tests failed, but not when they never ran.
-        if: >-
-          ${{ always() && inputs.test-report-paths != '' && (steps.tests.outcome == 'success' || steps.tests.outcome == 'failure')
-          }}
+        # Also when the tests failed. When they never ran (an earlier step
+        # failed), a missing results file is no news, so it is ignored.
+        if: ${{ !cancelled() && inputs.test-report-paths != '' }}
         env:
           REPORT_PATHS: ${{ inputs.test-report-paths }}
           REPORT_TITLE: ${{ inputs.test-report-title }}
           REPORT_MAX_FAILURES: "50"
-          REPORT_IF_NO_FILES: warn
+          REPORT_IF_NO_FILES: ${{ steps.tests.outcome == 'skipped' && 'ignore' || 'warn' }}
         run: bash "${RUNNER_TEMP}/devsecninja-test-report/actions/test-report/report.sh"
       # Runs here, in a contents: read job, rather than in the privileged deploy
       # jobs: the build gets GITHUB_TOKEN for authenticated API calls (rate
