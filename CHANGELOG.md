@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.11.0](https://github.com/DevSecNinja/.github/compare/v4.10.1...v4.11.0) (2026-11-23)
+
+
+### 🚀 Features
+
+* **pages:** add optional test-report-paths input ([#617](https://github.com/DevSecNinja/.github/issues/617)) ([095fe1f](https://github.com/DevSecNinja/.github/commit/095fe1fe680e15cae5ad8a8d74a5a4c3f44b13f7))
+
 ## [4.10.1](https://github.com/DevSecNinja/.github/compare/v4.10.0...v4.10.1) (2026-11-23)
 
 
