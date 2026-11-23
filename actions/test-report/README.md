@@ -34,7 +34,9 @@ reports when the tests fail.
 Artifacts are off by default because private repositories have limited
 artifact storage. A file matched by several patterns is read once. Files that
 are not valid XML are reported as a warning and skipped; the other files still
-count. A `<failure>` or `<error>` counts as failed, `<skipped>` as skipped. The
+count. A `<failure>` or `<error>` counts as failed, `<skipped>` as skipped.
+Test cases directly under `<testsuites>` (Node's `junit` reporter puts top-level
+tests there) count as a suite named after the file. The
 summary is also echoed to the log with workflow commands stopped, so test names
 cannot inject annotations.
 
@@ -91,7 +93,10 @@ release and keep the version comment, so Renovate tracks it.
    pytest's `xunit1` family). These usually point at the test's definition;
    a line of `0` (pytest counts from zero) annotates the file only.
 
-Absolute paths inside the workspace are made relative to it.
+Absolute paths and `file://` URLs inside the workspace are made relative to it.
+A relative path that isn't a file from the workspace root is also tried from
+the report's directory, for runners started in a subdirectory (for example
+`cd backend && pytest --junitxml=junit.xml`).
 
 ## Local checks
 

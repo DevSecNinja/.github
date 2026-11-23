@@ -181,6 +181,37 @@ class TestReportContract(unittest.TestCase):
         self.assertFalse([line for line in lines if line.lstrip().startswith("::error title=Injected")])
         self.assertEqual(len([line for line in lines if line.startswith("::error ")]), 1)
 
+    def test_node_root_level_testcases_and_file_urls(self):
+        source = self.work / "tests" / "planner.test.js"
+        source.write_text("\n", encoding="utf-8")
+        failure = f"Expected values to be strictly equal\n    at TestContext.&lt;anonymous&gt; ({source.as_uri()}:12:3)"
+        xml = (
+            '<testsuites><testcase name="top passes" classname="test"/>'
+            f'<testcase name="top fails" classname="test"><failure type="testCodeFailure">{failure}</failure></testcase>'
+            '<testsuite name="group"><testcase name="nested" classname="test"/></testsuite></testsuites>'
+        )
+        (self.work / "results" / "node.xml").write_text(xml, "utf-8")
+        result, summary, outputs = self.run_action(paths="results/node.xml")
+        self.assertEqual(outputs, {"passed": "2", "failed": "1", "skipped": "0", "total": "3"})
+        self.assertIn("| ❌ node.xml | 1 | 1 | 0 |", summary)
+        self.assertEqual(re.findall(r"file=([^,]+),line=(\d+)", result.stdout), [("tests/planner.test.js", "12")])
+
+    def test_paths_relative_to_a_report_in_a_subdirectory(self):
+        (self.work / "backend" / "tests").mkdir(parents=True)
+        (self.work / "backend" / "tests" / "test_api.py").write_text("\n", encoding="utf-8")
+        xml = (
+            '<testsuite name="pytest"><testcase classname="tests.test_api" name="a" file="tests/test_api.py" line="3">'
+            '<failure message="boom">tests/test_api.py:12: AssertionError</failure></testcase>'
+            '<testcase classname="tests.test_api" name="b" file="tests/test_api.py" line="20">'
+            '<failure message="no location"/></testcase></testsuite>'
+        )
+        (self.work / "backend" / "junit.xml").write_text(xml, "utf-8")
+        result, _, _ = self.run_action(paths="backend/junit.xml")
+        self.assertEqual(
+            re.findall(r"file=([^,]+),line=(\d+)", result.stdout),
+            [("backend/tests/test_api.py", "12"), ("backend/tests/test_api.py", "20")],
+        )
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
