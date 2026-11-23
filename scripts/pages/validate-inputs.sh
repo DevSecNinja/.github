@@ -19,6 +19,11 @@ if [ -n "${ARTIFACT_NAME}" ] && [ -n "${BUILD_COMMAND}" ]; then
     exit 1
 fi
 
+if [ -n "${TEST_REPORT_PATHS}" ] && [ -z "${TEST_COMMAND}" ]; then
+    echo "::error::test-report-paths requires test-command; it reports the JUnit XML that test-command writes."
+    exit 1
+fi
+
 if [ "${BUILD_GITHUB_TOKEN}" = "true" ]; then
     if [ -z "${BUILD_COMMAND}" ]; then
         echo "::error::build-github-token requires build-command."

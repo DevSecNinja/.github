@@ -460,6 +460,8 @@ may also opt into safe DNS CNAME creation; DNS remains unmanaged by default.
 | `install-command`                  | Dependency install command. Default: `npm ci`.                                                   |
 | `test-command`                     | Validation command block. Default: empty.                                                        |
 | `test-setup-command`               | Optional command after install and before tests.                                                 |
+| `test-report-paths`                | JUnit XML that `test-command` writes; shows it on the run page (`actions/test-report`). Off.     |
+| `test-report-title`                | Heading of that test results summary. Default: `Tests`.                                          |
 | `build-command`                    | Optional build command before deployment.                                                        |
 | `build-github-token`               | Run `build-command` in the read-only test job with `GITHUB_TOKEN`. Default: `false`.             |
 | `build-artifact-name`              | Artifact name used by `build-github-token`; unique per call. Default: `pages-build`.             |
@@ -480,6 +482,14 @@ may also opt into safe DNS CNAME creation; DNS remains unmanaged by default.
 | `cloudflare-project-name`          | Cloudflare Pages project; lowercase letters, numbers, and hyphens only.                          |
 | `cloudflare-production-branch`     | Cloudflare production branch. Default: `main`.                                                   |
 | `preview-comment-marker`           | Marker used to update the preview PR comment.                                                    |
+
+**Test results on the run page.** Set `test-report-paths` to the JUnit XML that
+`test-command` writes (for example vitest
+`--reporter=default --reporter=junit --outputFile.junit=test-results.xml`).
+After the tests, passed or failed, the test job runs
+[`actions/test-report`](../actions/test-report/README.md) from the same
+`DevSecNinja/.github` commit as the workflow, so it needs no separate pin and no
+permissions. `test-report-paths` requires `test-command`.
 
 Build, pre-deploy, and pre-preview commands run with an `APP_COMMIT_SHA`
 environment variable set to `${{ github.event.pull_request.head.sha || github.sha }}`.
