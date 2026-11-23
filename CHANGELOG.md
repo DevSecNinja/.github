@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.10.1](https://github.com/DevSecNinja/.github/compare/v4.10.0...v4.10.1) (2026-11-23)
+
+
+### 🐛 Bug Fixes
+
+* **actions:** read root-level testcases and subdirectory paths in test-report ([#614](https://github.com/DevSecNinja/.github/issues/614)) ([44c5a7c](https://github.com/DevSecNinja/.github/commit/44c5a7c9809b5a220b45b774f1706ce0b2bfa89b))
+
 ## [4.10.0](https://github.com/DevSecNinja/.github/compare/v4.9.1...v4.10.0) (2026-11-20)
 
 
