@@ -71,8 +71,9 @@ jobs:
         run: bash "${RUNNER_TEMP}/devsecninja-label-sync/scripts/label-sync/resolve-config-files.sh"
 
       - name: Sync Labels
-        uses: EndBug/label-sync@52074158190acb45f3077f9099fea818aa43f97a # v2.3.3
-        with:
-          config-file: ${{ steps.resolve.outputs.config-files }}
-          delete-other-labels: ${{ inputs.delete-other-labels }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          CONFIG_FILES: ${{ steps.resolve.outputs.config-files }}
+          DELETE_OTHER_LABELS: ${{ inputs.delete-other-labels }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: bash "${RUNNER_TEMP}/devsecninja-label-sync/scripts/label-sync/sync-labels.sh"

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Lists the label config files that exist, for EndBug/label-sync (job label-sync
+# Lists the label config files that exist, for sync-labels.sh (job label-sync
 # of .github/workflows/label-sync.yml).
 
 set -euo pipefail

@@ -825,6 +825,15 @@ repository's own `.github/labels.yaml`. Either file is optional —
 whichever exist are merged, and with `delete-other-labels` (default
 `true`) any label not present in the union is removed.
 
+`scripts/label-sync/sync-labels.sh` applies the files with `gh label` (no
+third-party action). A label is edited when one of the same name exists (names
+match case-insensitively), renamed from the first existing label listed in its
+`aliases` so issues and pull requests keep it, and created otherwise. A label
+without a `description` keeps the one it has. With `delete-other-labels`, a
+leftover alias of a label that already exists is not deleted (that would
+unlabel its issues); the run warns so you can move them by hand. Colours must
+be six-digit hex strings; quote them in YAML.
+
 | Input                 | Description                                                       |
 | --------------------- | ----------------------------------------------------------------- |
 | `base-labels-file`    | Shared base labels file. Default: `.github/labels-base.yaml`.     |
