@@ -49,6 +49,7 @@ jobs:
         npm run test:a11y
         npm run test:e2e
       # Optional: show JUnit XML that test-command writes on the run page.
+      # Needs a pages.yml pin that declares test-report-paths (released after v4.10.1).
       # test-report-paths: test-results/*.xml
       update-sitemap-lastmod: true
       # Optional Cloudflare production instead of GitHub Pages:
