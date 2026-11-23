@@ -197,4 +197,43 @@ grep -Fq "::error::Labels need a name, a six-digit hex colour" "${case_dir}/stdo
 expect_calls ""
 [ ! -e "${case_dir}/calls.list" ] || fail "an invalid config must fail before reading labels"
 
+new_case
+printf -- '- name: merged\n  color: "000000"\n  aliases: old\n' >"${case_dir}/base.yaml"
+if sync '[{"name": "old", "color": "cccccc"}]' true base.yaml; then
+    fail "aliases that aren't a list must fail"
+fi
+expect_calls ""
+
+# An empty or non-list file must not read as "no labels" and delete them all.
+for content in '' 'null' 'name: bug'; do
+    new_case
+    printf '%s\n' "${content}" >"${case_dir}/base.yaml"
+    if sync '[{"name": "bug", "color": "d73a4a"}]' true base.yaml; then
+        fail "a config file holding '${content}' must fail"
+    fi
+    grep -Fq "::error file=base.yaml::A label config file must be a YAML list of labels" "${case_dir}/stdout" ||
+        fail "a non-list config file must be explained"
+    expect_calls ""
+done
+
+new_case
+printf -- '- name: bug\n  color: "000000"\n' >"${case_dir}/base.yaml"
+printf -- '[]\n' >"${case_dir}/labels.yaml"
+sync '[{"name": "bug", "color": "000000"}]' true base.yaml labels.yaml || fail "an explicit empty list must pass"
+expect_calls ""
+
+# Names match case-insensitively beyond ASCII, as GitHub does.
+new_case
+printf -- '- name: équipe\n  color: "000000"\n' >"${case_dir}/base.yaml"
+sync '[{"name": "Équipe", "color": "000000", "description": ""}]' true base.yaml ||
+    fail "a non-ASCII case-only rename must pass"
+expect_calls "label|edit|Équipe|--name|équipe|--color|000000"
+
+# A label that is configured itself is never taken as another label's alias.
+new_case
+printf -- '- name: new\n  color: "000000"\n  aliases: [old]\n- name: old\n  color: "111111"\n' >"${case_dir}/base.yaml"
+sync '[{"name": "old", "color": "111111", "description": ""}]' true base.yaml ||
+    fail "an alias that is configured itself must sync"
+expect_calls "label|create|new|--color|000000"
+
 echo "✓ label-sync: sync-labels.sh creates, edits, renames aliases and deletes labels."

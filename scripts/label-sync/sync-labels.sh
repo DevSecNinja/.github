@@ -16,6 +16,8 @@
 # Needs yq, jq and gh, with GH_TOKEN and GH_REPO set.
 
 set -euo pipefail
+# Lowercasing names below must be Unicode-aware.
+export LC_ALL=C.UTF-8
 
 : "${CONFIG_FILES:?CONFIG_FILES must list the label config files}"
 delete_other="${DELETE_OTHER_LABELS:-false}"
@@ -23,36 +25,58 @@ delete_other="${DELETE_OTHER_LABELS:-false}"
 desired_parts=()
 while IFS= read -r file; do
     [ -z "${file}" ] && continue
-    desired_parts+=("$(yq -o=json '.' "${file}")")
+    part="$(yq -o=json -I0 '.' "${file}")"
+    # An empty or non-list file would otherwise mean "no labels" and, with
+    # deletes on, remove every label.
+    if [ "$(jq -r 'type' <<<"${part}")" != "array" ]; then
+        echo "::error file=${file}::A label config file must be a YAML list of labels ([] for none)."
+        exit 1
+    fi
+    desired_parts+=("${part}")
 done <<<"${CONFIG_FILES}"
 
-# Merge the files (the last file wins per name) and normalise colours.
-desired="$(printf '%s\n' "${desired_parts[@]}" | jq -s '
-    map(. // []) | add // []
-    | map(.color |= (tostring | ltrimstr("#") | ascii_downcase))
-    | reverse | unique_by(.name | ascii_downcase)')"
+# Normalise colours; the files are merged per name below.
+desired="$(printf '%s\n' "${desired_parts[@]}" | jq -sc '
+    add // [] | map(.color |= (tostring | ltrimstr("#") | ascii_downcase))')"
 
 invalid="$(jq -r '.[] | select((.name | type) != "string" or .name == ""
     or (.color | test("^[0-9a-f]{6}$") | not)
-    or ((.description | type) | IN("string", "null") | not)) | tojson' <<<"${desired}")"
+    or ((.description | type) | IN("string", "null") | not)
+    or ((.aliases | type) as $t | $t != "null"
+        and ($t != "array" or any(.aliases[]; type != "string" or . == "")))) | tojson' <<<"${desired}")"
 if [ -n "${invalid}" ]; then
-    echo "::error::Labels need a name, a six-digit hex colour (quote it in YAML) and a text description, if any:"
+    echo "::error::Labels need a name, a six-digit hex colour (quote it in YAML), a text description, if any, and aliases as a list of names, if any:"
     echo "${invalid}"
     exit 1
 fi
 
 existing="$(gh label list --limit 1000 --json name,color,description)"
 
-plan="$(jq -c --argjson delete "${delete_other}" '
-    def lc: ascii_downcase;
-    . as [$desired, $existing]
+# GitHub matches label names case-insensitively, Unicode included; jq's
+# ascii_downcase leaves letters such as É alone, so bash lowercases every name.
+lower="$(
+    jq -r '(.[0][] | .name, .aliases[]?), .[1][].name' <<<"[${desired}, ${existing}]" |
+        while IFS= read -r label; do
+            printf '%s\t%s\n' "${label}" "${label,,}"
+        done |
+        jq -Rn '[inputs | split("\t") | {(.[0]): .[1]}] | add // {}'
+)"
+
+plan="$(jq -c --argjson delete "${delete_other}" --argjson lower "${lower}" '
+    def lc: $lower[.] // ascii_downcase;
+    . as [$all, $existing]
+    # A later file wins over an earlier one for the same name.
+    | ($all | reverse | unique_by(.name | lc)) as $desired
+    | [$desired[] | .name | lc] as $names
     | [$desired[] | .name as $name | .aliases[]? | {alias: lc, name: $name}] as $aliases
     | reduce $desired[] as $label ({used: [], actions: []};
         .used as $used
         | [$existing[] | select((.name | lc) as $n | any($used[]; . == $n) | not)] as $free
         | ([$free[] | select((.name | lc) == ($label.name | lc))] | first) as $same
+        # A configured label never serves as an alias of another one.
         | ([$label.aliases[]? | lc] as $own
-            | [$free[] | select((.name | lc) as $n | any($own[]; . == $n))] | first) as $alias
+            | [$free[] | select((.name | lc) as $n
+                | any($own[]; . == $n) and (any($names[]; . == $n) | not))] | first) as $alias
         | ($same // $alias) as $current
         | if $current == null then
             .actions += [$label + {action: "create"}]

@@ -831,8 +831,9 @@ match case-insensitively), renamed from the first existing label listed in its
 `aliases` so issues and pull requests keep it, and created otherwise. A label
 without a `description` keeps the one it has. With `delete-other-labels`, a
 leftover alias of a label that already exists is not deleted (that would
-unlabel its issues); the run warns so you can move them by hand. Colours must
-be six-digit hex strings; quote them in YAML.
+unlabel its issues); the run warns so you can move them by hand. Each file must
+be a YAML list (`[]` for none), and colours six-digit hex strings; quote them
+in YAML.
 
 | Input                 | Description                                                       |
 | --------------------- | ----------------------------------------------------------------- |
