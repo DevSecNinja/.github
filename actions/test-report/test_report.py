@@ -17,6 +17,8 @@ import re
 import secrets
 import sys
 from pathlib import Path
+from urllib.parse import urlparse
+from urllib.request import url2pathname
 from xml.etree import ElementTree as ET
 
 MESSAGE_CELL = 200
@@ -30,7 +32,7 @@ BATS_NOTE = re.compile(r"^\s*\(in test file [^)]*\)\s*$", re.MULTILINE)
 PYTHON_LOCATION = re.compile(r'File "(?P<file>[^"]+)", line (?P<line>\d+)')
 # pytest, Pester, jest, go and most others: "tests/test_x.py:12". The path may
 # contain spaces, which spaced_paths() tries in turn.
-PATH_LOCATION = re.compile(r"(?P<file>[\w./\\:-]*[\w-]\.[A-Za-z0-9]+):(?P<line>\d+)")
+PATH_LOCATION = re.compile(r"(?P<file>[\w./\\:%-]*[\w-]\.[A-Za-z0-9]+):(?P<line>\d+)")
 
 
 class Suite:
@@ -69,20 +71,24 @@ def first_line(text: str) -> str:
 DEPENDENCY_DIRS = {"site-packages", "dist-packages", "node_modules", "vendor"}
 
 
-def workspace_file(path: str, workspace: Path) -> str | None:
+def workspace_file(path: str, workspace: Path, bases: tuple[Path, ...] = ()) -> str | None:
     """`path` relative to the workspace when it is a file inside it and not
     in an installed dependency (a virtualenv or node_modules in the
-    workspace), else None."""
-    candidate = Path(path)
-    if not candidate.is_absolute():
-        candidate = workspace / candidate
-    try:
-        if candidate.is_file():
-            relative = candidate.resolve().relative_to(workspace.resolve())
-            if not DEPENDENCY_DIRS.intersection(relative.parts):
-                return relative.as_posix()
-    except (ValueError, OSError):
-        pass
+    workspace), else None. A relative path is tried against the workspace
+    first and then against each of `bases`, such as the directory of the
+    report of a runner started in a subdirectory. Node's `file://` URLs are
+    read as paths."""
+    if path.startswith("file://"):
+        path = url2pathname(urlparse(path).path)
+    candidates = [Path(path)] if Path(path).is_absolute() else [workspace / path, *(base / path for base in bases)]
+    for candidate in candidates:
+        try:
+            if candidate.is_file():
+                relative = candidate.resolve().relative_to(workspace.resolve())
+                if not DEPENDENCY_DIRS.intersection(relative.parts):
+                    return relative.as_posix()
+        except (ValueError, OSError):
+            pass
     return None
 
 
@@ -95,7 +101,9 @@ def spaced_paths(text: str, match: re.Match) -> list[str]:
     return [text[line_start + start : match.end("file")] for start in starts] + [match.group("file")]
 
 
-def location(case: ET.Element, result: ET.Element, workspace: Path) -> tuple[str | None, str | None]:
+def location(
+    case: ET.Element, result: ET.Element, workspace: Path, bases: tuple[Path, ...] = ()
+) -> tuple[str | None, str | None]:
     """Where a test failed: the last (deepest) location in the failure text
     that is a file of the repository, so frames in the standard library and
     dependencies are skipped. Otherwise the testcase's file and line
@@ -108,23 +116,29 @@ def location(case: ET.Element, result: ET.Element, workspace: Path) -> tuple[str
             if match.start() <= found[0]:
                 continue
             candidates = spaced_paths(text, match) if pattern is PATH_LOCATION else [match.group("file")]
-            path = next(filter(None, (workspace_file(c, workspace) for c in candidates)), None)
+            path = next(filter(None, (workspace_file(c, workspace, bases) for c in candidates)), None)
             if path:
                 found = (match.start(), path, match.group("line"))
     attribute = case.get("file")
     if found[1] or not attribute:
         return found[1], found[2]
     line = case.get("line") or ""
-    return workspace_file(attribute, workspace) or attribute, line if line.isdigit() and int(line) > 0 else None
+    return workspace_file(attribute, workspace, bases) or attribute, line if line.isdigit() and int(line) > 0 else None
 
 
 def parse(path: str, workspace: Path, suites: list[Suite], failures: list[Failure]) -> None:
     root = ET.parse(path).getroot()  # XML written by the caller's own tests
-    for element in root.iter("testsuite"):
+    # Runners started in a subdirectory (cd backend && pytest) report paths
+    # relative to it, and usually write the report there too.
+    report_dir = Path(path).resolve().parent
+    bases = () if report_dir == workspace.resolve() else (report_dir,)
+    # Node's junit reporter puts top-level tests directly under <testsuites>.
+    elements = ([] if root.tag == "testsuite" else [root]) + list(root.iter("testsuite"))
+    for element in elements:
         cases = element.findall("testcase")
         if not cases:
             continue
-        suite = Suite(element.get("name") or Path(path).name)
+        suite = Suite((element.get("name") if element.tag == "testsuite" else None) or Path(path).name)
         for case in cases:
             suite.time += number(case.get("time"))
             result = case.find("failure")
@@ -132,7 +146,7 @@ def parse(path: str, workspace: Path, suites: list[Suite], failures: list[Failur
                 result = case.find("error")
             if result is not None:
                 suite.failed += 1
-                file, line = location(case, result, workspace)
+                file, line = location(case, result, workspace, bases)
                 message = result.get("message") or first_line(BATS_NOTE.sub("", result.text or "")) or result.tag
                 group = case.get("classname") or suite.name
                 failures.append(Failure(group, case.get("name") or "(unnamed)", message, file, line))
@@ -140,7 +154,8 @@ def parse(path: str, workspace: Path, suites: list[Suite], failures: list[Failur
                 suite.skipped += 1
             else:
                 suite.passed += 1
-        if element.get("time"):
+        # The root's time covers every suite, so only a <testsuite> time replaces the sum.
+        if element.tag == "testsuite" and element.get("time"):
             suite.time = number(element.get("time"))
         suites.append(suite)
 
