@@ -40,8 +40,12 @@ In the history SARIF post-processing (`scripts/lint/gitleaks.sh`):
 - Dismissals of history findings stick: editing or deleting the cited line, or
   the file, doesn't open a new alert.
 - Alerts are file-level. The code scanning view no longer jumps to the line,
-  but the private alert message names it, and the fingerprint is ready to paste
-  into `.gitleaksignore`.
+  but the private alert message names it.
+- The alert's `primaryLocationLineHash` is a one-way hash for matching only,
+  not a `.gitleaksignore` entry. To suppress a finding in the scan itself, take
+  its native fingerprint (`commit:file:rule:line`) from a local
+  `gitleaks git --redact --report-format json` run on a private clone. The alert
+  gives the commit, file, rule and line to find it.
 - Rolling out re-keys every existing `gitleaks/history` alert once: the first
   scan after a repository adopts the release closes the old alerts and opens
   each finding again under the new fingerprint. Dismissed findings must be
