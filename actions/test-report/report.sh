@@ -15,4 +15,5 @@ fi
     "--paths=${REPORT_PATHS}" \
     "--title=${REPORT_TITLE}" \
     "--max-failures=${REPORT_MAX_FAILURES}" \
-    "--if-no-files=${REPORT_IF_NO_FILES}"
+    "--if-no-files=${REPORT_IF_NO_FILES}" \
+    "--coverage-paths=${REPORT_COVERAGE_PATHS:-}"

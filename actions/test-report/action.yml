@@ -14,6 +14,10 @@ inputs:
   if-no-files:
     description: "When no file matches: warn, error (fail the step) or ignore."
     default: warn
+  coverage-paths:
+    description: "Optional Cobertura XML or lcov reports (glob patterns, one per line). When set, the summary shows the line
+      coverage summed over them."
+    default: ""
   upload-artifact:
     description: "Also upload the matched files as an artifact (true or false)."
     default: "false"
@@ -36,6 +40,9 @@ outputs:
   skipped:
     description: "Number of skipped tests."
     value: ${{ steps.report.outputs.skipped }}
+  line-coverage:
+    description: "Line coverage in percent, one decimal (empty without coverage-paths or readable reports)."
+    value: ${{ steps.report.outputs.line-coverage }}
 runs:
   using: composite
   steps:
@@ -47,6 +54,7 @@ runs:
         REPORT_TITLE: ${{ inputs.title }}
         REPORT_MAX_FAILURES: ${{ inputs.max-failures }}
         REPORT_IF_NO_FILES: ${{ inputs.if-no-files }}
+        REPORT_COVERAGE_PATHS: ${{ inputs.coverage-paths }}
       run: bash "${GITHUB_ACTION_PATH}/report.sh"
 
     - name: Upload test results
