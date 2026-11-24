@@ -27,6 +27,8 @@ jobs:
   assign:
     name: Assign issue to CODEOWNERS
     runs-on: ubuntu-24.04
+    # A dispatch without an issue number walks every open issue.
+    timeout-minutes: 10
     permissions:
       contents: read
       issues: write

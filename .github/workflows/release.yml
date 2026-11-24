@@ -20,6 +20,7 @@ jobs:
   release:
     name: Create GitHub Release
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     permissions:
       contents: write
     steps:

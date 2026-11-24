@@ -36,6 +36,7 @@ jobs:
   materialize:
     name: Materialize APM primitives
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     # The DevSecNinja Automation App credentials live in the `production`
     # environment (pinned to main) once provisioned by the dotfiles
     # GitHubRepoConfig module; `deployment: false` reads them without creating

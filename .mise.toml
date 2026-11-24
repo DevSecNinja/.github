@@ -68,6 +68,7 @@ run = [
   "bash ./tests/lint-scripts.sh",
   "uv run --script ./tests/issue-labeler-config.py",
   "python3 ./tests/workflow-job-conditions.py",
+  "uv run --script ./tests/workflow-job-timeouts.py",
   "python3 ./tests/ai-commits-badge.py",
   "uv run --script ./tests/test-report.py",
   "uv run --script ./tests/pr-labeler-config.py",

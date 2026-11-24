@@ -281,6 +281,7 @@ jobs:
       github.event_name != 'pull_request' || github.event.action == 'closed' || (github.event.pull_request.user.login != 'renovate[bot]'
       && github.event.pull_request.user.login != 'dependabot[bot]' && github.actor != 'renovate[bot]' && github.actor != 'dependabot[bot]')
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
     outputs:
       enabled: ${{ steps.detect.outputs.enabled }}
       project-name: ${{ steps.detect.outputs.project-name }}

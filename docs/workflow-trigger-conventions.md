@@ -132,6 +132,22 @@ unrelated runs.
 
 ---
 
+## Job timeouts
+
+Every job that runs steps sets `timeout-minutes`. Without one, a hung job
+holds its runner for GitHub's default of 360 minutes and bills all of
+them. Size it from the job's recent runs: about 3× the p95 duration, at
+least 5 minutes. Use 10 when a job has too few runs to measure or
+installs a full mise toolchain. Jobs that call a reusable workflow
+(`uses:`) can't set it; the called workflow's jobs carry their own.
+`tests/workflow-job-timeouts.py` fails when a job in
+`.github/workflows/` has none.
+
+A timeout doesn't catch a job whose steps all finished but whose status
+GitHub never updated; cancel that run by hand.
+
+---
+
 ## Draft PRs
 
 GitHub fires `pull_request` events on draft PRs by default. We do
