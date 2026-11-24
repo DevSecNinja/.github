@@ -234,8 +234,9 @@ class TestReportContract(unittest.TestCase):
             "utf-8",
         )
         (cov / "cobertura-coverage.xml").write_text(
-            '<coverage><packages><package><classes><class><lines><line number="1" hits="3"/>'
-            '<line number="2" hits="0"/></lines></class></classes></package></packages></coverage>',
+            '<coverage><packages><package><classes><class><methods><method><lines><line number="1" hits="3"/>'
+            '</lines></method></methods><lines><line number="1" hits="3"/><line number="2" hits="0"/></lines>'
+            "</class></classes></package></packages></coverage>",
             "utf-8",
         )
         (cov / "lcov.info").write_text(
@@ -248,6 +249,14 @@ class TestReportContract(unittest.TestCase):
         # 32 + 1 + 6 of 40 + 2 + 8 lines.
         self.assertIn("Line coverage: **78.0%** (39 of 50 lines).", summary)
         self.assertEqual(outputs["line-coverage"], "78.0")
+
+    def test_cobertura_with_a_byte_order_mark(self):
+        (self.work / "coverage.xml").write_text(
+            '\ufeff<?xml version="1.0" ?>\n<coverage lines-valid="4" lines-covered="3"></coverage>\n', "utf-8"
+        )
+        result, _, outputs = self.run_action(paths="results/bats.xml", **{"coverage-paths": "coverage.xml"})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(outputs["line-coverage"], "75.0")
 
     def test_coverage_is_off_by_default(self):
         result, summary, outputs = self.run_action(paths="results/bats.xml")
@@ -266,10 +275,15 @@ class TestReportContract(unittest.TestCase):
         self.assertIn("not a Cobertura report (root element &lt;testsuite&gt;)", summary)
         self.assertNotIn("Line coverage", summary)
         self.assertNotIn("line-coverage", outputs)
-        # Unmatched patterns warn only when nothing matches at all.
-        result, summary, _ = self.run_action(paths="results/bats.xml", **{"coverage-paths": "missing/*.xml"})
         self.assertIn("::warning title=Test report::No coverage files match: missing/*.xml", result.stdout)
-        self.assertEqual(outputs["total"], "3")
+        # Each pattern that matches nothing warns, even when others match.
+        (self.work / "coverage.xml").write_text('<coverage lines-valid="2" lines-covered="1"/>', "utf-8")
+        result, summary, outputs = self.run_action(
+            paths="results/bats.xml", **{"coverage-paths": "coverage.xml\nfrontend/coverage.xml"}
+        )
+        self.assertIn("::warning title=Test report::No coverage files match: frontend/coverage.xml", result.stdout)
+        self.assertIn("No coverage files match: frontend/coverage.xml", summary)
+        self.assertEqual(outputs["line-coverage"], "50.0")
 
 
 if __name__ == "__main__":

@@ -71,7 +71,7 @@ matches nothing gives a warning.
 | lcov          | jest/vitest `lcov` (`lcov.info`), c8, `cargo llvm-cov --lcov`                           |
 
 Cobertura's `lines-valid`/`lines-covered` totals are used when present;
-otherwise the `<line hits>` elements are counted. lcov uses the `LF`/`LH`
+otherwise the class-level `<line hits>` elements are counted (method `<lines>` repeat them). A UTF-8 byte order mark is fine. lcov uses the `LF`/`LH`
 lines.
 
 ## Example

@@ -178,8 +178,9 @@ class Coverage:
 def parse_coverage(path: str, coverage: Coverage) -> None:
     """Add the line counts of a Cobertura XML (coverage.py, jest, ...) or
     lcov report. Cobertura's `lines-valid`/`lines-covered` totals are used
-    when present, otherwise its `<line hits>` elements are counted."""
-    with open(path, encoding="utf-8") as handle:
+    when present, otherwise the class-level `<line hits>` elements are
+    counted (method `<lines>` repeat them)."""
+    with open(path, encoding="utf-8-sig") as handle:
         head = handle.read(512).lstrip()
     if head.startswith("<"):
         root = ET.parse(path).getroot()  # XML written by the caller's own tests
@@ -188,12 +189,12 @@ def parse_coverage(path: str, coverage: Coverage) -> None:
         if root.get("lines-valid") is not None and root.get("lines-covered") is not None:
             valid, covered = int(number(root.get("lines-valid"))), int(number(root.get("lines-covered")))
         else:
-            hits = [number(line.get("hits")) for line in root.iter("line")]
+            hits = [number(line.get("hits")) for cls in root.iter("class") for line in cls.findall("lines/line")]
             valid, covered = len(hits), sum(1 for hit in hits if hit > 0)
     else:
         valid = covered = 0
         found = False
-        with open(path, encoding="utf-8") as handle:
+        with open(path, encoding="utf-8-sig") as handle:
             for line in handle:
                 if line.startswith("LF:"):
                     valid += int(number(line[3:]))
@@ -207,15 +208,19 @@ def parse_coverage(path: str, coverage: Coverage) -> None:
     coverage.files += 1
 
 
-def matching_files(text: str) -> tuple[list[str], dict[str, str]]:
-    """Glob patterns (one per line) and the files they match, once each."""
+def matching_files(text: str) -> tuple[list[str], dict[str, str], list[str]]:
+    """Glob patterns (one per line), the files they match (once each) and
+    the patterns that match no file."""
     patterns = [line.strip() for line in text.splitlines() if line.strip()]
     files: dict[str, str] = {}
+    unmatched: list[str] = []
     for pattern in patterns:
-        for path in sorted(glob.glob(pattern, recursive=True)):
-            if os.path.isfile(path):
-                files.setdefault(os.path.realpath(path), path)  # one entry per file, however it matched
-    return patterns, files
+        matched = [path for path in sorted(glob.glob(pattern, recursive=True)) if os.path.isfile(path)]
+        if not matched:
+            unmatched.append(pattern)
+        for path in matched:
+            files.setdefault(os.path.realpath(path), path)  # one entry per file, however it matched
+    return patterns, files, unmatched
 
 
 def duration(seconds: float) -> str:
@@ -314,7 +319,7 @@ def main(argv: list[str]) -> int:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # cp1252 on Windows runners
     if args.max_failures < 0:
         parser.error("--max-failures must be 0 or more")
-    patterns, files = matching_files(args.paths)
+    patterns, files, _ = matching_files(args.paths)
     if not patterns:
         parser.error("--paths must contain at least one glob pattern")
 
@@ -330,7 +335,7 @@ def main(argv: list[str]) -> int:
             )
             notes.append(f"⚠️ Could not parse `{cell(path)}`: {cell(str(error))}")
     coverage = None
-    coverage_patterns, coverage_files = matching_files(args.coverage_paths)
+    coverage_patterns, coverage_files, coverage_unmatched = matching_files(args.coverage_paths)
     if coverage_patterns:
         coverage = Coverage()
         for path in coverage_files.values():
@@ -342,8 +347,9 @@ def main(argv: list[str]) -> int:
                     f"Could not read coverage: {escape_data(str(error))}"
                 )
                 notes.append(f"⚠️ Could not read coverage from `{cell(path)}`: {cell(str(error))}")
-        if not coverage_files:
-            message = f"No coverage files match: {', '.join(coverage_patterns)}"
+        # Each pattern that matches nothing is named, so partial coverage isn't taken for the whole.
+        for pattern in coverage_unmatched:
+            message = f"No coverage files match: {pattern}"
             print(f"::warning title=Test report::{escape_data(message)}")
             notes.append(f"⚠️ {cell(message)}")
     if not files:
