@@ -189,18 +189,19 @@ make_repo public
     mkdir -p "my dir"
     printf 'token = "%s"\n' "${odd_token}" >"my dir/café [1].txt"
     echo not-a-key >id.fakekey
-    # A newline in a file name must not split its fingerprint record. Only
-    # some filesystems allow it (not Windows), so the count adapts.
-    echo not-a-key >$'multi\nline.fakekey' 2>/dev/null || true
     git add -A
+    # A newline in a file name must not split its fingerprint record. Git
+    # stores one fine, so it goes straight into the index: not every
+    # filesystem (Windows) can create it, and gitleaks only reads history.
+    blob="$(echo not-a-key | git hash-object -w --stdin)"
+    name=$'multi\nline.fakekey'
+    # Git for Windows rejects such a path unless protectNTFS is off; it is never checked out.
+    git -c core.protectNTFS=false update-index --add --cacheinfo "100644,${blob},${name}"
     git commit -qm odd
     # gitleaks logs invalid ignore entries verbatim; this one names a file.
     echo "withheld-ignore-entry.txt" >.gitleaksignore
 )
-expected=4
-if git -C "${tmp_dir}/public" ls-files | grep -q 'line.fakekey'; then
-    expected=5
-fi
+expected=5
 CONFIG_DIR="${tmp_dir}/public-config"
 mkdir -p "${CONFIG_DIR}"
 cat >"${CONFIG_DIR}/.gitleaks.toml" <<'EOF'
@@ -255,7 +256,8 @@ for visibility in public internal error; do
     jq -r '.runs[].results[].partialFingerprints.primaryLocationLineHash' "${sarif}" | tr -d '\r' | sort >"${tmp_dir}/fp-sarif"
     gitleaks git "${tmp_dir}/public" --no-banner --redact --exit-code 0 --config "${CONFIG_DIR}/.gitleaks.toml" \
         --report-format json --report-path "${tmp_dir}/fp-report.json" >/dev/null 2>&1
-    jq -r '.[].Fingerprint' "${tmp_dir}/fp-report.json" | tr -d '\r' | while IFS= read -r fingerprint; do
+    # NUL-delimited, like the script: a fingerprint may contain a newline.
+    jq -j '.[] | .Fingerprint + "\u0000"' "${tmp_dir}/fp-report.json" | while IFS= read -r -d '' fingerprint; do
         printf '%s:1\n' "$(printf '%s' "${fingerprint}" | sha256sum | cut -c1-16)"
     done | sort >"${tmp_dir}/fp-gitleaks"
     diff "${tmp_dir}/fp-gitleaks" "${tmp_dir}/fp-sarif" >&2 ||
