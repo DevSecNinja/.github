@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.12.1](https://github.com/DevSecNinja/.github/compare/v4.12.0...v4.12.1) (2026-11-24)
+
+
+### 🐛 Bug Fixes
+
+* **lint:** match gitleaks history alerts on gitleaks' own fingerprint ([#625](https://github.com/DevSecNinja/.github/issues/625)) ([edbb2ab](https://github.com/DevSecNinja/.github/commit/edbb2abf7180e25c0521cb0df3575e71710566e5))
+
 ## [4.12.0](https://github.com/DevSecNinja/.github/compare/v4.11.0...v4.12.0) (2026-11-24)
 
 
