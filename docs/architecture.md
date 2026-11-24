@@ -274,12 +274,14 @@ that fail the linter (and the workflow only with `lint-fail-on-error: true`);
 
 The `attestations` linter (`scripts/lint/attestations.sh`) verifies the
 [artifact attestation](artifact-attestations.md) of every image the repository
-pins from its owner's own GHCR namespace (`ghcr.io/<owner>/...`) in a tracked
-`devcontainer.json` or Compose file. It runs `gh attestation verify
-oci://<ref> --owner <owner> --bundle-from-oci` once per reference (the digest
-when one is pinned), so it needs no permission beyond `contents: read`, and it
-only passes images attested with `push-to-registry: true`. Third-party images
-are out of scope. Findings are warnings by default;
+pins from its owner's own GHCR namespace (`ghcr.io/<owner>/...`) as an active
+`image` value in a tracked `devcontainer.json` or Compose file (comments don't
+count). It runs `gh attestation verify oci://<ref> --owner <owner>
+--bundle-from-oci` once per reference (the digest when one is pinned), so it
+needs no permission beyond `contents: read`, and it only passes images
+attested with `push-to-registry: true`. A reference with a variable is
+verified by its literal digest; without one it is reported as unresolved.
+Third-party images are out of scope. Findings are warnings by default;
 `lint-attestations-blocking: true` reports errors and fails the linter. The
 linter needs only git and `gh`, both on the runner.
 

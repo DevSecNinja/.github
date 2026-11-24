@@ -52,32 +52,57 @@ git ls-files -z -- ':(glob)**/devcontainer.json' ':(glob)**/.devcontainer.json' 
     ':(glob)**/compose*.yml' ':(glob)**/compose*.yaml' \
     ':(glob)**/docker-compose*.yml' ':(glob)**/docker-compose*.yaml' >"${listing}"
 
-# The first file that pins each reference, in a stable order.
-pattern="${namespace//./\\.}/[a-z0-9._/-]+(:[A-Za-z0-9._-]+)?(@sha256:[0-9a-f]{64})?"
+# Only active `image` values count: a YAML `image:` key or a JSON(C) "image"
+# key, never a comment or another substring. Captures the whole value, so a
+# variable in it can't silently truncate the reference.
+image_values() {
+    sed -nE 's/^[[:space:]{,]*"?image"?[[:space:]]*:[[:space:]]*["'\'']?([^"'\''[:space:],]+).*/\1/p' -- "$1"
+}
+
+# The reference to verify for an image value; empty when a variable leaves it
+# unresolved. With a digest the tag is informational: verify the digest itself.
+resolve() {
+    local value="$1" name digest base last
+    if [[ "${value}" =~ @(sha256:[0-9a-f]{64})$ ]]; then
+        digest="${BASH_REMATCH[1]}"
+        name="${value%@*}"
+        base="${name%/*}" last="${name##*/}"
+        name="${base}/${last%%:*}"
+        [[ "${name}" == *'$'* ]] || printf '%s@%s' "${name}" "${digest}"
+    elif [[ "${value}" != *'$'* ]]; then
+        printf '%s' "${value}"
+    fi
+}
+
+# The first file that pins each value, in a stable order.
 declare -A first_file=()
-refs=()
+values=()
 while IFS= read -r -d '' path; do
-    while IFS= read -r ref; do
-        [ -n "${ref}" ] || continue
-        # With a digest the tag is informational: verify the digest itself.
-        if [[ "${ref}" == *@sha256:* ]]; then
-            name="${ref%@*}"
-            [[ "${name##*/}" != *:* ]] || name="${name%:*}"
-            ref="${name}@${ref##*@}"
-        fi
-        [ -z "${first_file[${ref}]+set}" ] || continue
-        first_file["${ref}"]="${path}"
-        refs+=("${ref}")
-    done < <(grep -oE "${pattern}" -- "${path}" || true)
+    while IFS= read -r value; do
+        [[ "$(tr '[:upper:]' '[:lower:]' <<<"${value}")" == "${namespace}/"* ]] || continue
+        [ -z "${first_file[${value}]+set}" ] || continue
+        first_file["${value}"]="${path}"
+        values+=("${value}")
+    done < <(image_values "${path}")
 done <"${listing}"
 
-if [ "${#refs[@]}" -eq 0 ]; then
+if [ "${#values[@]}" -eq 0 ]; then
     echo "✓ No ${namespace}/ image is pinned in a dev container or Compose file."
     exit 0
 fi
 
 failed=0
-for ref in "${refs[@]}"; do
+declare -A verified=()
+for value in "${values[@]}"; do
+    path="${first_file[${value}]}"
+    ref="$(resolve "${value}")"
+    if [ -z "${ref}" ]; then
+        failed=$((failed + 1))
+        echo "::${level} file=$(escape_property "${path}"),title=Unresolved image::$(escape_data "${value}") uses a variable, so the image it pulls can't be verified. Pin a literal digest (name@sha256:…)."
+        continue
+    fi
+    [ -z "${verified[${ref}]+set}" ] || continue
+    verified["${ref}"]=1
     if gh attestation verify "oci://${ref}" --owner "${owner}" --bundle-from-oci >"${output}" 2>&1; then
         echo "✓ ${ref} is attested by a ${owner} workflow."
         continue
@@ -86,10 +111,9 @@ for ref in "${refs[@]}"; do
     echo "::group::gh attestation verify oci://${ref}"
     cat "${output}"
     echo "::endgroup::"
-    path="${first_file[${ref}]}"
     echo "::${level} file=$(escape_property "${path}"),title=Unattested image::$(escape_data "${ref}") has no GitHub artifact attestation from a ${owner} workflow in the registry."
 done
 
 [ "${failed}" -gt 0 ] || exit 0
-echo "::${level} title=Unattested image::${failed} of ${#refs[@]} pinned ${namespace}/ image(s) failed attestation verification. Pin a digest that the publishing workflow attested with actions/attest and push-to-registry: true (docs/artifact-attestations.md in DevSecNinja/.github)."
+echo "::${level} title=Unattested image::${failed} of ${#values[@]} pinned ${namespace}/ image(s) failed attestation verification. Pin a literal digest that the publishing workflow attested with actions/attest and push-to-registry: true (docs/artifact-attestations.md in DevSecNinja/.github)."
 [ "${blocking}" = false ] || exit 1

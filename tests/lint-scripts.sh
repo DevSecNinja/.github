@@ -578,6 +578,22 @@ grep -Fxq "attestation verify oci://ghcr.io/devsecninja/apps/app@${digest} --own
     <<<"${gh_calls}" || fail "a pinned digest must be verified without its tag: ${gh_calls}"
 [ "$(wc -l <<<"${gh_calls}")" -eq 2 ] || fail "each reference must be verified once, tracked files only: ${gh_calls}"
 ! grep -Fq "ghcr.io/other/" <<<"${gh_calls}" || fail "third-party images must be skipped: ${gh_calls}"
+# Only active image values count; a variable tag keeps its literal digest, and
+# a variable digest can't be verified, so it is reported, never truncated.
+# shellcheck disable=SC2016 # literal Compose variables
+printf '# image: ghcr.io/devsecninja/retired:v1\nservices:\n  var:\n    image: ghcr.io/devsecninja/var:${TAG:-v1}@%s\n  open:\n    image: "ghcr.io/devsecninja/open:v1@${DIGEST}" # pinned at deploy\n' \
+    "${digest}" >"${att}/compose.extra.yaml"
+printf '{\n  // "image": "ghcr.io/devsecninja/old-dev:1",\n  "name": "x"\n}\n' >"${att}/.devcontainer.json"
+git -C "${att}" add compose.extra.yaml .devcontainer.json
+attest
+expect_status 0 "variables and comments without blocking"
+grep -Fxq "attestation verify oci://ghcr.io/devsecninja/var@${digest} --owner DevSecNinja --bundle-from-oci" \
+    <<<"${gh_calls}" || fail "a variable tag must keep the literal digest: ${gh_calls}"
+! grep -Eq "retired|old-dev|open" <<<"${gh_calls}" || fail "comments and unresolved values must not be verified: ${gh_calls}"
+# shellcheck disable=SC2016 # literal Compose variable
+expect_out '::warning file=compose.extra.yaml,title=Unresolved image::ghcr.io/devsecninja/open:v1@${DIGEST} uses a variable' \
+    "an unresolved digest"
+git -C "${att}" rm -q --cached compose.extra.yaml .devcontainer.json
 attest FAKE_UNATTESTED="ghcr.io/devsecninja/apps/app@${digest}"
 expect_status 0 "an unattested image without blocking"
 expect_out "::warning file=services/app/compose.yaml,title=Unattested image::ghcr.io/devsecninja/apps/app@${digest} has no" \
