@@ -272,6 +272,17 @@ that fail the linter (and the workflow only with `lint-fail-on-error: true`);
 [Templates](#templates-config-synctemplates)), run `git add .gitattributes` and
 `git add --renormalize .`, and commit both. The linter needs only git.
 
+The `attestations` linter (`scripts/lint/attestations.sh`) verifies the
+[artifact attestation](artifact-attestations.md) of every image the repository
+pins from its owner's own GHCR namespace (`ghcr.io/<owner>/...`) in a tracked
+`devcontainer.json` or Compose file. It runs `gh attestation verify
+oci://<ref> --owner <owner> --bundle-from-oci` once per reference (the digest
+when one is pinned), so it needs no permission beyond `contents: read`, and it
+only passes images attested with `push-to-registry: true`. Third-party images
+are out of scope. Findings are warnings by default;
+`lint-attestations-blocking: true` reports errors and fails the linter. The
+linter needs only git and `gh`, both on the runner.
+
 **zizmor config.** After v4.7.0, zizmor runs with the shared
 [`scripts/lint/zizmor.yml`](../scripts/lint/zizmor.yml), which ships with
 `lint.yml` at the commit the caller pinned, unless the repository has its own
@@ -313,6 +324,8 @@ its own commit (`lint-include.yml` calling `lint.yml`), `./` in callers.
 | `lint-inline-scripts-blocking` | Report inline scripts as errors. Default: `false`. After v4.4.0.       |
 | `lint-line-endings`            | CRLF line-endings check (see above). Default: `true`. After v4.7.0.    |
 | `lint-line-endings-blocking`   | Report CRLF as errors and fail. Default: `true`. After v4.7.0.         |
+| `lint-attestations`            | GHCR image attestations (see above). Default: `true`. After v5.0.1.    |
+| `lint-attestations-blocking`   | Report unattested images as errors. Default: `false`. After v5.0.1.    |
 
 **Example caller:**
 

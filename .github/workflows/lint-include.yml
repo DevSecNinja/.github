@@ -161,6 +161,16 @@ on:
         required: false
         type: boolean
         default: true
+      lint-attestations:
+        description: "Verify attestations of pinned ghcr.io/<owner>/ images (scripts/lint/attestations.sh). See lint.yml."
+        required: false
+        type: boolean
+        default: false
+      lint-attestations-blocking:
+        description: "Report unattested images as errors and fail the attestations linter; false reports warnings only"
+        required: false
+        type: boolean
+        default: false
       upload-sarif:
         description: "Upload checkov/trivy/zizmor/ruff/biome/psscriptanalyzer results to GitHub code scanning (requires GitHub
           Advanced Security). Set false for private repos without GHAS to gate on exit codes with console output instead."
@@ -221,5 +231,7 @@ jobs:
       lint-inline-scripts-blocking: ${{ inputs.lint-inline-scripts-blocking }}
       lint-line-endings: ${{ inputs.lint-line-endings }}
       lint-line-endings-blocking: ${{ inputs.lint-line-endings-blocking }}
+      lint-attestations: ${{ inputs.lint-attestations }}
+      lint-attestations-blocking: ${{ inputs.lint-attestations-blocking }}
       upload-sarif: ${{ inputs.upload-sarif }}
       lint-job-mode: ${{ inputs.lint-job-mode }}

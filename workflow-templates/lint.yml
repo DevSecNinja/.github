@@ -86,3 +86,7 @@ jobs:
       # lint.yml release after v4.7.0; bump the pin above before uncommenting.
       # lint-line-endings: true
       # lint-line-endings-blocking: true # false: warnings instead of errors
+      # Optional: verify attestations of pinned ghcr.io/<owner>/ images. Needs
+      # a lint.yml release after v5.0.1; bump the pin above before uncommenting.
+      # lint-attestations: true
+      # lint-attestations-blocking: false # true: errors instead of warnings

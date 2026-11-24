@@ -545,4 +545,52 @@ run_in "${tmp_dir}/not-a-repo" line-endings GIT_CEILING_DIRECTORIES="${tmp_dir}"
 expect_failure "outside a git repository"
 ! grep -Fq "No text file is committed" <<<"${out}" || fail "a failed scan must not report success: ${out}"
 
+# attestations verifies each ghcr.io/<owner>/ image pinned in a tracked dev
+# container or Compose file once, by digest when one is pinned, from the
+# registry bundle. A stand-in gh records its calls and fails for the
+# references in $FAKE_UNATTESTED.
+cat >"${tmp_dir}/bin/gh" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >>"${GH_LOG}"
+[[ " ${FAKE_UNATTESTED:-} " != *" ${3#oci://} "* ]] || { echo "no attestations found"; exit 1; }
+EOF
+chmod +x "${tmp_dir}/bin/gh"
+export GH_LOG="${tmp_dir}/gh.log"
+digest="sha256:$(printf '%064d' 7)"
+att="${tmp_dir}/att"
+mkdir -p "${att}/.devcontainer" "${att}/services/app"
+git -C "${att}" init -q
+printf '{ "image": "ghcr.io/devsecninja/dev-image:v1.2.3" }\n' >"${att}/.devcontainer/devcontainer.json"
+printf 'services:\n  app:\n    image: ghcr.io/devsecninja/apps/app:abc123@%s\n  db:\n    image: ghcr.io/other/db:1\n' \
+    "${digest}" >"${att}/services/app/compose.yaml"
+printf 'services:\n  again:\n    image: ghcr.io/devsecninja/dev-image:v1.2.3\n' >"${att}/docker-compose.yml"
+printf 'image: ghcr.io/devsecninja/untracked:1\n' >"${att}/compose.override.yaml"
+git -C "${att}" add .devcontainer services docker-compose.yml
+attest() {
+    : >"${GH_LOG}"
+    run_in "${att}" attestations GITHUB_REPOSITORY_OWNER=DevSecNinja "$@"
+    gh_calls="$(cat "${GH_LOG}")"
+}
+attest
+expect_status 0 "attested images"
+expect_out "✓ ghcr.io/devsecninja/dev-image:v1.2.3 is attested by a DevSecNinja workflow." "attested images"
+grep -Fxq "attestation verify oci://ghcr.io/devsecninja/apps/app@${digest} --owner DevSecNinja --bundle-from-oci" \
+    <<<"${gh_calls}" || fail "a pinned digest must be verified without its tag: ${gh_calls}"
+[ "$(wc -l <<<"${gh_calls}")" -eq 2 ] || fail "each reference must be verified once, tracked files only: ${gh_calls}"
+! grep -Fq "ghcr.io/other/" <<<"${gh_calls}" || fail "third-party images must be skipped: ${gh_calls}"
+attest FAKE_UNATTESTED="ghcr.io/devsecninja/apps/app@${digest}"
+expect_status 0 "an unattested image without blocking"
+expect_out "::warning file=services/app/compose.yaml,title=Unattested image::ghcr.io/devsecninja/apps/app@${digest} has no" \
+    "an unattested image without blocking"
+expect_out "no attestations found" "the gh output"
+expect_out "1 of 2 pinned ghcr.io/devsecninja/ image(s) failed" "the summary"
+attest FAKE_UNATTESTED="ghcr.io/devsecninja/apps/app@${digest}" LINT_ATTESTATIONS_BLOCKING=true
+expect_status 1 "an unattested image with blocking"
+expect_out "::error file=services/app/compose.yaml,title=Unattested image::" "an unattested image with blocking"
+attest LINT_ATTESTATIONS_BLOCKING=bogus
+expect_status 2 "an invalid blocking value"
+run_in "${eol}" attestations GITHUB_REPOSITORY_OWNER=DevSecNinja
+expect_status 0 "no pinned images"
+expect_out "✓ No ghcr.io/devsecninja/ image is pinned" "no pinned images"
+
 echo "lint scripts: OK"
