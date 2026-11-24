@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.12.0](https://github.com/DevSecNinja/.github/compare/v4.11.0...v4.12.0) (2026-11-24)
+
+
+### 🚀 Features
+
+* **label-sync:** replace EndBug/label-sync with a gh script ([#620](https://github.com/DevSecNinja/.github/issues/620)) ([15b678a](https://github.com/DevSecNinja/.github/commit/15b678ae909c3aa1eb225e4c38c501c318ec4bf9))
+
+
+### 🐛 Bug Fixes
+
+* **github-release:** update release dprint/dprint-plugin-markdown to v0.29.0 [automerge] ([#622](https://github.com/DevSecNinja/.github/issues/622)) ([a66256c](https://github.com/DevSecNinja/.github/commit/a66256c5f99fce3744a9a9b1e69c73df833680d1))
+
 ## [4.11.0](https://github.com/DevSecNinja/.github/compare/v4.10.1...v4.11.0) (2026-11-23)
 
 
