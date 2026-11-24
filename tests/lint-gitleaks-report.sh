@@ -233,12 +233,27 @@ for visibility in public internal error; do
             and (.properties.tags | index("security") and index("secret"))))
         and ([.runs[].results[].level] | all(. == "error"))' "${sarif}" >/dev/null ||
         fail "the SARIF report must mark findings as high-severity security errors"
-    # Valid URI references and 1-based regions, so the upload neither logs
-    # a path nor rejects the file.
+    # Valid URI references and no regions: the upload neither logs a path
+    # nor hashes the current checkout's line into the alert's fingerprint.
     jq -e '[.runs[].results[].locations[].physicalLocation]
         | all(.artifactLocation.uri | test("^[A-Za-z0-9._~%!$&'"'"'()*+,;=:@/-]+$"))
-        and all(.region // {} | [.[] | numbers] | all(. >= 1))' "${sarif}" >/dev/null ||
-        fail "the SARIF report must hold valid URIs and regions: $(jq -c '[.runs[].results[].locations]' "${sarif}")"
+        and all(has("region") | not)' "${sarif}" >/dev/null ||
+        fail "the SARIF report must hold valid URIs and no regions: $(jq -c '[.runs[].results[].locations]' "${sarif}")"
+    # Alerts match across runs on gitleaks' own fingerprint
+    # (commit:file:rule:line), so editing a cited line can't re-open a
+    # dismissed history finding (#624). Each result carries only that key,
+    # the line stays in the message, and gitleaks' commit metadata is gone.
+    jq -r '.runs[].results[].partialFingerprints["gitleaksFingerprint/v1"]' "${sarif}" | sort >"${tmp_dir}/fp-sarif"
+    gitleaks git "${tmp_dir}/public" --no-banner --redact --exit-code 0 --config "${CONFIG_DIR}/.gitleaks.toml" \
+        --report-format json --report-path "${tmp_dir}/fp-report.json" >/dev/null 2>&1
+    jq -r '.[].Fingerprint' "${tmp_dir}/fp-report.json" | sort >"${tmp_dir}/fp-gitleaks"
+    diff "${tmp_dir}/fp-gitleaks" "${tmp_dir}/fp-sarif" >&2 ||
+        fail "each SARIF result must carry gitleaks' fingerprint as partialFingerprints[gitleaksFingerprint/v1]"
+    jq -e '[.runs[].results[]]
+        | all(.partialFingerprints | keys == ["gitleaksFingerprint/v1"])
+        and ([.[] | select(.partialFingerprints["gitleaksFingerprint/v1"] | endswith(":0") | not)]
+            | all(.message.text | test(" Line [0-9]+[.]$")))' "${sarif}" >/dev/null ||
+        fail "SARIF results must carry only the stable fingerprint, and their line in the message"
     assert_redacted public
 done
 UPLOAD_SARIF=false scan public

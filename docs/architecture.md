@@ -128,7 +128,12 @@ on the event (v4.1.0+):
   artifacts of public repositories are public, so there the findings go only to
   code scanning (SARIF, category `gitleaks/history`), whose alerts need write
   access. They're filed as high-severity security alerts (`security-severity
-  8.0`, tags `security` and `secret`, level `error`), not quality warnings. The log shows the count only: gitleaks' own log is withheld, since its
+  8.0`, tags `security` and `secret`, level `error`), not quality warnings.
+  They're file-level alerts matched across runs on gitleaks' own fingerprint
+  (`commit:file:rule:line`), with the line in the alert message, so editing a
+  cited line on the default branch can't re-open a dismissed finding
+  ([ADR 0015](design-decisions/0015-stable-gitleaks-history-fingerprints.md)).
+  The log shows the count only: gitleaks' own log is withheld, since its
   diagnostics can name findings, and a failed scan prints a generic error. There
   is no file, line, commit, summary or artifact. The SARIF paths are
   percent-encoded and repeated tags removed, so the upload step never logs a path

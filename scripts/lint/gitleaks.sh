@@ -71,15 +71,30 @@ if [ "${mode}" = history-private ]; then
     count="$(jq length "${report}")"
     where="See the job summary."
 else
-    # Make the SARIF valid for code scanning, whose upload would
-    # otherwise log invalid URIs (file paths) or reject path-only
-    # findings (line 0): percent-encode paths, drop empty regions.
-    # Without a security-severity, code scanning files the findings as
-    # non-security warnings.
-    jq '(.runs[].results[].locations[]?.physicalLocation) |= (
+    # Make the SARIF fit code scanning:
+    # - Match alerts across runs on gitleaks' own fingerprint
+    #   (commit:file:rule:line, the .gitleaksignore format), which never
+    #   changes for a history finding. The upload would otherwise hash the
+    #   cited line of the current checkout, so any later edit to that line
+    #   re-opened a dismissed finding as a new alert (#624).
+    # - Drop the region, so the upload skips that line hashing (silently;
+    #   a pre-set line hash that disagreed would log the path). Alerts are
+    #   file-level; the line is kept in the alert message.
+    # - Percent-encode paths, which the upload would otherwise log as
+    #   invalid URIs.
+    # - Without a security-severity, code scanning files the findings as
+    #   non-security warnings.
+    jq '(.runs[].results[]?) |= (
+      (.locations[0].physicalLocation.region.startLine // 0) as $line
+      | .partialFingerprints = {"gitleaksFingerprint/v1": ([
+          .partialFingerprints.commitSha // "",
+          .locations[0].physicalLocation.artifactLocation.uri // "",
+          .ruleId, ($line | tostring)] | join(":"))}
+      | .message.text += (if $line > 0 then " Line \($line)." else "" end)
+    )
+    | (.runs[].results[].locations[]?.physicalLocation) |= (
       .artifactLocation.uri |= (split("/") | map(@uri) | join("/"))
-      | if .region then .region |= with_entries(select(.value | type != "number" or . >= 1)) else . end
-      | if (.region.startLine // 0) < 1 then del(.region) else . end
+      | del(.region)
     )
     # Leaked secrets are security alerts: high severity, error level.
     | (.runs[].tool.driver.rules[]?.properties) |= ((. // {}) + {"security-severity": "8.0"}
