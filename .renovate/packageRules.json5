@@ -217,8 +217,8 @@
       // already uses (`v4` -> `v4.4.0`, `^6.12.0` -> `6.12.0`, `@main` ->
       // `@<sha> # main`), so there is no new code to soak. With the soak, a
       // single young version held the whole pin PR on
-      // renovate/stability-days (DevSecNinja/funda-scorecard#67). Kept last so
-      // it wins over the per-datasource soak rules above. groupName null takes
+      // renovate/stability-days (DevSecNinja/funda-scorecard#67). Kept after
+      // the per-datasource soak rules above so it wins. groupName null takes
       // pins out of the weekly batch and Renovate's own "Pin Dependencies"
       // group, so one slow pin cannot hold the others. Non-Docker-Hub images
       // keep their docker-gated- branch and pr-cooldown check (ADR 0005).
@@ -230,6 +230,21 @@
       // specific groups (postgres sets 2), or a lone pin never gets a branch.
       minimumGroupSize: 1,
       automerge: true,
+    },
+    {
+      // Renovate applies packageRules after the lockFileMaintenance block
+      // (base.json5), so a rule without matchUpdateTypes, such as the mise
+      // 14-day soak above, also hits a lock refresh. A lock refresh has no
+      // release timestamp, so under the default timestamp-required behaviour
+      // its renovate/stability-days check stays pending forever and the
+      // monthly branch never merges (DevSecNinja/.github#631,
+      // renovatebot/renovate#45236). Kept last so no manager or datasource
+      // rule can put the soak back. npm still applies its own 3-day
+      // minimumReleaseAgePackageManager (config:best-practices) during the
+      // refresh.
+      description: "Lock file maintenance has no release timestamp: never hold it on a release-age soak",
+      matchUpdateTypes: ["lockFileMaintenance"],
+      minimumReleaseAge: null,
     },
   ],
 }
