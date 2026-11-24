@@ -37,7 +37,13 @@ class TestReportContract(unittest.TestCase):
     def run_action(self, **overrides):
         """Run the composite step with its env mapping, like the runner does."""
         text = (ACTION / "action.yml").read_text(encoding="utf-8")
-        inputs = {"paths": "results/*.xml", "title": "Test results", "max-failures": "50", "if-no-files": "warn"}
+        inputs = {
+            "paths": "results/*.xml",
+            "title": "Test results",
+            "max-failures": "50",
+            "if-no-files": "warn",
+            "coverage-paths": "",
+        }
         inputs.update(overrides)
         summary, output = self.work / "summary.md", self.work / "output"
         summary.write_text("", encoding="utf-8")
@@ -218,6 +224,81 @@ class TestReportContract(unittest.TestCase):
             re.findall(r"file=([^,]+),line=(\d+)", result.stdout),
             [("backend/tests/test_api.py", "12"), ("backend/tests/test_api.py", "20")],
         )
+
+    def test_line_coverage_from_cobertura_and_lcov(self):
+        cov = self.work / "cov"
+        cov.mkdir()
+        # coverage.py writes totals; jest-style files without totals are counted from <line hits>.
+        (cov / "coverage.xml").write_text(
+            '<?xml version="1.0" ?>\n<coverage line-rate="0.8" lines-valid="40" lines-covered="32"></coverage>\n',
+            "utf-8",
+        )
+        (cov / "cobertura-coverage.xml").write_text(
+            '<coverage><packages><package><classes><class><methods><method><lines><line number="1" hits="3"/>'
+            '</lines></method></methods><lines><line number="1" hits="3"/><line number="2" hits="0"/></lines>'
+            "</class></classes></package></packages></coverage>",
+            "utf-8",
+        )
+        (cov / "lcov.info").write_text(
+            "TN:\nSF:src/a.js\nLF:8\nLH:6\nend_of_record\nSF:src/b.js\nLF:0\nLH:0\n", "utf-8"
+        )
+        result, summary, outputs = self.run_action(
+            paths="results/bats.xml", **{"coverage-paths": "cov/*.xml\ncov/lcov.info"}
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        # 32 + 1 + 6 of 40 + 2 + 8 lines.
+        self.assertIn("Line coverage: **78.0%** (39 of 50 lines).", summary)
+        self.assertEqual(outputs["line-coverage"], "78.0")
+
+    def test_cobertura_with_a_byte_order_mark(self):
+        (self.work / "coverage.xml").write_text(
+            '\ufeff<?xml version="1.0" ?>\n<coverage lines-valid="4" lines-covered="3"></coverage>\n', "utf-8"
+        )
+        result, _, outputs = self.run_action(paths="results/bats.xml", **{"coverage-paths": "coverage.xml"})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(outputs["line-coverage"], "75.0")
+
+    def test_coverage_is_off_by_default(self):
+        result, summary, outputs = self.run_action(paths="results/bats.xml")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn("coverage", summary.lower())
+        self.assertNotIn("line-coverage", outputs)
+
+    def test_missing_or_unreadable_coverage_only_warns(self):
+        (self.work / "notes.txt").write_text("no coverage here\n", "utf-8")
+        (self.work / "report.xml").write_text("<testsuite/>", "utf-8")
+        result, summary, outputs = self.run_action(
+            paths="results/bats.xml", **{"coverage-paths": "missing/*.xml\nnotes.txt\nreport.xml"}
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("::warning file=notes.txt,title=Test report::Could not read coverage", result.stdout)
+        self.assertIn("not a Cobertura report (root element &lt;testsuite&gt;)", summary)
+        self.assertNotIn("Line coverage", summary)
+        self.assertNotIn("line-coverage", outputs)
+        self.assertIn("::warning title=Test report::No coverage files match: missing/*.xml", result.stdout)
+        # Malformed counters skip the report with a warning instead of counting as zero or crashing.
+        (self.work / "bad.info").write_text("SF:a.js\nLF:10\nLH:bad\n", "utf-8")
+        (self.work / "inf.info").write_text("SF:b.js\nLF:10\nLH:inf\n", "utf-8")
+        (self.work / "good.info").write_text("SF:c.js\nLF:4\nLH:2\n", "utf-8")
+        result, summary, outputs = self.run_action(paths="results/bats.xml", **{"coverage-paths": "*.info"})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(
+            "::warning file=bad.info,title=Test report::Could not read coverage: invalid line count 'bad'",
+            result.stdout,
+        )
+        self.assertIn(
+            "::warning file=inf.info,title=Test report::Could not read coverage: invalid line count 'inf'",
+            result.stdout,
+        )
+        self.assertEqual((outputs["total"], outputs["line-coverage"]), ("3", "50.0"))
+        # Each pattern that matches nothing warns, even when others match.
+        (self.work / "coverage.xml").write_text('<coverage lines-valid="2" lines-covered="1"/>', "utf-8")
+        result, summary, outputs = self.run_action(
+            paths="results/bats.xml", **{"coverage-paths": "coverage.xml\nfrontend/coverage.xml"}
+        )
+        self.assertIn("::warning title=Test report::No coverage files match: frontend/coverage.xml", result.stdout)
+        self.assertIn("No coverage files match: frontend/coverage.xml", summary)
+        self.assertEqual(outputs["line-coverage"], "50.0")
 
 
 if __name__ == "__main__":

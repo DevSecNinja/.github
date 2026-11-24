@@ -4,8 +4,10 @@
 Reads the JUnit XML files that match one or more glob patterns and writes a
 job summary (totals per suite and a table of failing tests), `::error`
 annotations for failures, and `total`/`passed`/`failed`/`skipped` step
-outputs. Standard library only, Python 3.8+. It only reports: failing tests do
-not change the exit code, because the test step itself already fails the job.
+outputs. With coverage reports (Cobertura XML or lcov) it also shows the line
+coverage and sets `line-coverage`. Standard library only, Python 3.8+. It
+only reports: failing tests and low coverage do not change the exit code,
+because the test step itself already fails the job.
 """
 
 from __future__ import annotations
@@ -160,6 +162,76 @@ def parse(path: str, workspace: Path, suites: list[Suite], failures: list[Failur
         suites.append(suite)
 
 
+class Coverage:
+    """Line coverage summed over the coverage reports read."""
+
+    def __init__(self) -> None:
+        self.covered = 0
+        self.valid = 0
+        self.files = 0
+
+    @property
+    def percent(self) -> float | None:
+        return 100.0 * self.covered / self.valid if self.valid else None
+
+
+def counter(value: str | None) -> int:
+    """A coverage line count: a non-negative integer, else ValueError (so the
+    report is skipped with a warning instead of counting as zero)."""
+    text = (value or "").strip()
+    if not text.isdigit():
+        raise ValueError(f"invalid line count {text!r}")
+    return int(text)
+
+
+def parse_coverage(path: str, coverage: Coverage) -> None:
+    """Add the line counts of a Cobertura XML (coverage.py, jest, ...) or
+    lcov report. Cobertura's `lines-valid`/`lines-covered` totals are used
+    when present, otherwise the class-level `<line hits>` elements are
+    counted (method `<lines>` repeat them)."""
+    with open(path, encoding="utf-8-sig") as handle:
+        head = handle.read(512).lstrip()
+    if head.startswith("<"):
+        root = ET.parse(path).getroot()  # XML written by the caller's own tests
+        if root.tag != "coverage":
+            raise ValueError(f"not a Cobertura report (root element <{root.tag}>)")
+        if root.get("lines-valid") is not None and root.get("lines-covered") is not None:
+            valid, covered = counter(root.get("lines-valid")), counter(root.get("lines-covered"))
+        else:
+            hits = [number(line.get("hits")) for cls in root.iter("class") for line in cls.findall("lines/line")]
+            valid, covered = len(hits), sum(1 for hit in hits if hit > 0)
+    else:
+        valid = covered = 0
+        found = False
+        with open(path, encoding="utf-8-sig") as handle:
+            for line in handle:
+                if line.startswith("LF:"):
+                    valid += counter(line[3:])
+                    found = True
+                elif line.startswith("LH:"):
+                    covered += counter(line[3:])
+        if not found:
+            raise ValueError("neither Cobertura XML nor an lcov report with LF/LH lines")
+    coverage.valid += valid
+    coverage.covered += covered
+    coverage.files += 1
+
+
+def matching_files(text: str) -> tuple[list[str], dict[str, str], list[str]]:
+    """Glob patterns (one per line), the files they match (once each) and
+    the patterns that match no file."""
+    patterns = [line.strip() for line in text.splitlines() if line.strip()]
+    files: dict[str, str] = {}
+    unmatched: list[str] = []
+    for pattern in patterns:
+        matched = [path for path in sorted(glob.glob(pattern, recursive=True)) if os.path.isfile(path)]
+        if not matched:
+            unmatched.append(pattern)
+        for path in matched:
+            files.setdefault(os.path.realpath(path), path)  # one entry per file, however it matched
+    return patterns, files, unmatched
+
+
 def duration(seconds: float) -> str:
     if seconds < 60:
         return f"{seconds:.1f}s"
@@ -196,7 +268,14 @@ def annotate(failure: Failure) -> None:
     print(f"::error {','.join(props)}::{escape_data(message)}")
 
 
-def render(title: str, suites: list[Suite], failures: list[Failure], max_failures: int, notes: list[str]) -> str:
+def render(
+    title: str,
+    suites: list[Suite],
+    failures: list[Failure],
+    max_failures: int,
+    notes: list[str],
+    coverage: Coverage | None = None,
+) -> str:
     passed = sum(s.passed for s in suites)
     failed = sum(s.failed for s in suites)
     skipped = sum(s.skipped for s in suites)
@@ -208,6 +287,8 @@ def render(title: str, suites: list[Suite], failures: list[Failure], max_failure
         f"{total} test(s) in {len(suites)} suite(s), {duration(sum(s.time for s in suites))}.",
         "",
     ]
+    if coverage is not None and coverage.percent is not None:
+        out += [f"Line coverage: **{coverage.percent:.1f}%** ({coverage.covered} of {coverage.valid} lines).", ""]
     if suites:
         table = ["| Suite | Passed | Failed | Skipped | Time |", "| ----- | -----: | -----: | ------: | ---: |"]
         table += [
@@ -236,6 +317,9 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--title", default="Test results")
     parser.add_argument("--max-failures", type=int, default=50, help="rows in the failed-tests table")
     parser.add_argument("--if-no-files", choices=("warn", "error", "ignore"), default="warn")
+    parser.add_argument(
+        "--coverage-paths", default="", help="newline-separated glob patterns of Cobertura XML or lcov reports"
+    )
     parser.add_argument("--workspace", type=Path, default=Path(os.environ.get("GITHUB_WORKSPACE") or "."))
     parser.add_argument("--summary", default=os.environ.get("GITHUB_STEP_SUMMARY"))
     parser.add_argument("--github-output", default=os.environ.get("GITHUB_OUTPUT"))
@@ -244,14 +328,9 @@ def main(argv: list[str]) -> int:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # cp1252 on Windows runners
     if args.max_failures < 0:
         parser.error("--max-failures must be 0 or more")
-    patterns = [line.strip() for line in args.paths.splitlines() if line.strip()]
+    patterns, files, _ = matching_files(args.paths)
     if not patterns:
         parser.error("--paths must contain at least one glob pattern")
-    files: dict[str, str] = {}
-    for pattern in patterns:
-        for path in sorted(glob.glob(pattern, recursive=True)):
-            if os.path.isfile(path):
-                files.setdefault(os.path.realpath(path), path)  # one entry per file, however it matched
 
     suites: list[Suite] = []
     failures: list[Failure] = []
@@ -264,6 +343,24 @@ def main(argv: list[str]) -> int:
                 f"::warning file={escape_property(path)},title=Test report::Could not parse: {escape_data(str(error))}"
             )
             notes.append(f"⚠️ Could not parse `{cell(path)}`: {cell(str(error))}")
+    coverage = None
+    coverage_patterns, coverage_files, coverage_unmatched = matching_files(args.coverage_paths)
+    if coverage_patterns:
+        coverage = Coverage()
+        for path in coverage_files.values():
+            try:
+                parse_coverage(path, coverage)
+            except (ET.ParseError, OSError, ValueError) as error:
+                print(
+                    f"::warning file={escape_property(path)},title=Test report::"
+                    f"Could not read coverage: {escape_data(str(error))}"
+                )
+                notes.append(f"⚠️ Could not read coverage from `{cell(path)}`: {cell(str(error))}")
+        # Each pattern that matches nothing is named, so partial coverage isn't taken for the whole.
+        for pattern in coverage_unmatched:
+            message = f"No coverage files match: {pattern}"
+            print(f"::warning title=Test report::{escape_data(message)}")
+            notes.append(f"⚠️ {cell(message)}")
     if not files:
         message = f"No test result files match: {', '.join(patterns)}"
         if args.if_no_files == "ignore":
@@ -275,7 +372,7 @@ def main(argv: list[str]) -> int:
 
     for failure in failures[:MAX_ANNOTATIONS]:
         annotate(failure)
-    text = render(args.title, suites, failures, args.max_failures, notes)
+    text = render(args.title, suites, failures, args.max_failures, notes, coverage)
     # Test names come from the XML, so stop the runner from reading workflow
     # commands in this echo of the summary.
     token = secrets.token_hex(16)
@@ -288,6 +385,8 @@ def main(argv: list[str]) -> int:
         counts["total"] = sum(counts.values())
         with open(args.github_output, "a", encoding="utf-8") as handle:
             handle.writelines(f"{key}={value}\n" for key, value in counts.items())
+            if coverage is not None and coverage.percent is not None:
+                handle.write(f"line-coverage={coverage.percent:.1f}\n")
     return 1 if not files and args.if_no_files == "error" else 0
 
 

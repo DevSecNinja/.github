@@ -8,7 +8,9 @@ action reads JUnit XML and writes:
 - an **`::error` annotation** per failed test (at most 10, GitHub's per-step
   limit), placed on the failing file and line when the XML or failure text
   contains one, so it shows on the PR diff;
-- **step outputs** `total`, `passed`, `failed` and `skipped`.
+- **step outputs** `total`, `passed`, `failed` and `skipped`;
+- optionally, the **line coverage** from Cobertura XML or lcov reports, in the
+  summary and as the `line-coverage` output.
 
 It runs a standard-library Python script (Python 3.8+, present on GitHub-hosted
 runners), so there are no third-party actions or packages, and it needs no
@@ -27,6 +29,7 @@ reports when the tests fail.
 | `title`           | `Test results` | Summary heading. Add matrix values so jobs are told apart.                  |
 | `max-failures`    | `50`           | Most failed tests listed in the summary table.                              |
 | `if-no-files`     | `warn`         | No matching file: `warn`, `error` (fail the step) or `ignore` (no summary). |
+| `coverage-paths`  | empty          | Cobertura XML or lcov reports to show line coverage from. Empty: no line.   |
 | `upload-artifact` | `"false"`      | Set `"true"` to upload the matched files with `actions/upload-artifact`.    |
 | `artifact-name`   | `test-results` | Artifact name. Names must be unique per run, so include matrix values.      |
 | `retention-days`  | empty          | Artifact retention; empty uses the repository setting.                      |
@@ -54,6 +57,23 @@ cannot inject annotations.
 Stdlib `unittest` cannot write JUnit XML; run the tests with pytest (it runs
 `unittest` test cases unchanged) or another JUnit-capable runner.
 
+## Line coverage
+
+Set `coverage-paths` to show one line in the summary, such as
+`Line coverage: 85.3% (1234 of 1446 lines).`, and set the `line-coverage`
+output. The lines of all matched reports are added up. It only reports: low
+coverage does not fail the step. An unreadable report or a pattern that
+matches nothing gives a warning.
+
+| Format        | Produced by                                                                             |
+| ------------- | --------------------------------------------------------------------------------------- |
+| Cobertura XML | pytest-cov `--cov-report=xml` (`coverage.xml`), jest/vitest `cobertura`, `go-cobertura` |
+| lcov          | jest/vitest `lcov` (`lcov.info`), c8, `cargo llvm-cov --lcov`                           |
+
+Cobertura's `lines-valid`/`lines-covered` totals are used when present;
+otherwise the class-level `<line hits>` elements are counted (method `<lines>` repeat them). A UTF-8 byte order mark is fine. lcov uses the `LF`/`LH`
+lines.
+
 ## Example
 
 ```yaml
@@ -68,13 +88,16 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # Set up Python and install the pinned test requirements here.
-      - run: python -m pytest --junitxml=test-results.xml
+      # Set up Python and install the pinned test requirements here,
+      # pytest-cov included for the coverage report.
+      - run: python -m pytest --junitxml=test-results.xml --cov --cov-report=xml
       - uses: DevSecNinja/.github/actions/test-report@<release-commit-sha> # vX.Y.Z
         if: ${{ !cancelled() }}
         with:
           paths: test-results.xml
           title: pytest (Python ${{ matrix.python }})
+          # Optional: show line coverage from pytest-cov's --cov-report=xml.
+          coverage-paths: coverage.xml
 ```
 
 Replace `<release-commit-sha>` with the full 40-character commit SHA of a
