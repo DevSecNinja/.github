@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.12.2](https://github.com/DevSecNinja/.github/compare/v4.12.1...v4.12.2) (2026-11-24)
+
+
+### 🐛 Bug Fixes
+
+* **renovate:** never hold lock file maintenance on a release-age soak ([#633](https://github.com/DevSecNinja/.github/issues/633)) ([dca178f](https://github.com/DevSecNinja/.github/commit/dca178f8836761b2df2b33ab7b64569e9bcc8ebd))
+
 ## [4.12.1](https://github.com/DevSecNinja/.github/compare/v4.12.0...v4.12.1) (2026-11-24)
 
 
