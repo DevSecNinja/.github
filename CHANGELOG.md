@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.0.0](https://github.com/DevSecNinja/.github/compare/v4.12.2...v5.0.0) (2026-11-24)
+
+
+### ⚠ BREAKING CHANGES
+
+* remove the reusable todo-to-issue workflow ([#627](https://github.com/DevSecNinja/.github/issues/627))
+
+### 🚀 Features
+
+* remove the reusable todo-to-issue workflow ([#627](https://github.com/DevSecNinja/.github/issues/627)) ([5a67fcb](https://github.com/DevSecNinja/.github/commit/5a67fcbe37b264b19955df1bbad6624d4f3d3fbd))
+* **test-report:** show line coverage from Cobertura or lcov reports ([#630](https://github.com/DevSecNinja/.github/issues/630)) ([a076bd3](https://github.com/DevSecNinja/.github/commit/a076bd336bde1287a6e95db5bd9916e0080468fb))
+
 ## [4.12.2](https://github.com/DevSecNinja/.github/compare/v4.12.1...v4.12.2) (2026-11-24)
 
 
