@@ -414,22 +414,24 @@ else
 fi
 
 # The SARIF filter drops checkov's skipped checks (level none, or an accepted
-# suppression from an inline checkov:skip comment, with or without a state) and
-# tolerates a missing report. Suppressions under review or rejected stay.
+# suppression from an inline checkov:skip comment, with or without a status)
+# and tolerates a missing report. Suppressions under review or rejected stay.
 run checkov-sarif-filter
 expect_status 0 "the SARIF filter without a report"
 mkdir -p "${RUNNER_TEMP}"
 sarif='{"runs": [{"results": [
   {"ruleId": "skipped", "level": "none"},
   {"ruleId": "found", "level": "error"},
-  {"ruleId": "accepted", "level": "warning", "suppressions": [{"kind": "inSource", "state": "accepted"}]},
-  {"ruleId": "no-state", "level": "warning", "suppressions": [{"kind": "inSource"}]},
+  {"ruleId": "accepted", "level": "warning", "suppressions": [{"kind": "inSource", "status": "accepted"}]},
+  {"ruleId": "no-status", "level": "warning", "suppressions": [{"kind": "inSource"}]},
+  {"ruleId": "github-state", "level": "warning", "suppressions": [{"state": "accepted"}]},
   {"ruleId": "found", "level": "warning", "suppressions": []},
-  {"ruleId": "found", "level": "warning", "suppressions": [{"kind": "external", "state": "underReview"}]}
+  {"ruleId": "found", "level": "warning", "suppressions": [{"kind": "external", "status": "underReview"}]},
+  {"ruleId": "found", "level": "warning", "suppressions": [{"kind": "external", "status": "rejected"}]}
 ]}]}'
 (cd "${repo}" && printf '%s\n' "${sarif}" >"${RUNNER_TEMP}/results_sarif.sarif" && bash "${scripts}/checkov-sarif-filter.sh") ||
     fail "the SARIF filter failed"
-[ "$(jq -c '[.runs[].results[].ruleId]' "${RUNNER_TEMP}/results_sarif.sarif")" = '["found","found","found"]' ] ||
+[ "$(jq -c '[.runs[].results[].ruleId]' "${RUNNER_TEMP}/results_sarif.sarif")" = '["found","found","found","found"]' ] ||
     fail "the SARIF filter must keep only reported checks: $(cat "${RUNNER_TEMP}/results_sarif.sarif")"
 
 # Go linting runs only when the Go version file exists, and then needs a
