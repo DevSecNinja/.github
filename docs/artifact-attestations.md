@@ -120,7 +120,8 @@ registry so it travels with the image:
   attestations. They're useful metadata but prove nothing about who
   built the image; keep the signed attestation as the source of truth.
 
-Verify:
+Verify (public images need no login; for a private image, run
+`docker login ghcr.io` with a `read:packages` token first):
 
 ```sh
 gh attestation verify oci://ghcr.io/devsecninja/<image>@sha256:<digest> --owner DevSecNinja \
@@ -153,7 +154,10 @@ gh attestation verify tool-v1.2.3-windows-x64.zip --repo DevSecNinja/<repo> \
 `--owner DevSecNinja` or `--repo DevSecNinja/<repo>` alone accepts an
 attestation from any workflow in that owner or repo.
 `--signer-workflow` also pins the workflow that built the artifact, so a
-compromised unrelated workflow can't vouch for it. Use it whenever you
+compromised unrelated workflow can't vouch for it. That guarantee needs
+GitHub CLI 2.102.0 or later: earlier versions match the value as a prefix
+([GHSA-wjmr-j3rp-mh2g](https://github.com/cli/cli/security/advisories/GHSA-wjmr-j3rp-mh2g)).
+Use it whenever you
 know the publishing workflow, as in the examples above:
 
 ```sh
