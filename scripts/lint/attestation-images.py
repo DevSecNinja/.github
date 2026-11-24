@@ -1,16 +1,18 @@
-#!/usr/bin/env python3
 """Print the image values that dev container and Compose files pin.
 
-Reads NUL-separated repository paths on stdin and prints one
-"<path>\t<image>" line per image:
+Reads NUL-separated repository paths on stdin and writes NUL-separated
+"<path>", "<image>" pairs, so any file name is safe:
 
 - dev container (`devcontainer.json`, `.devcontainer.json`, JSONC: comments
   and trailing commas allowed): the top-level "image";
 - Compose (`compose*.y(a)ml`, `docker-compose*.y(a)ml`): `services.<name>.image`,
-  with anchors, aliases and merge keys resolved and any YAML layout.
+  with anchors, aliases, merge keys and Compose's `!reset`/`!override` tags
+  resolved, in any YAML layout.
 
-A file that can't be parsed prints "<path>\t!<reason>". Comments never count.
-Part of scripts/lint/attestations.sh; the runner's system Python ships PyYAML.
+A file that can't be parsed writes "<path>", "!<reason>". Comments never count.
+Run by scripts/lint/attestations.sh with the runner's system Python, which
+ships PyYAML (no shebang: the API commits that ship it can't set the
+executable bit).
 """
 
 from __future__ import annotations
@@ -21,6 +23,22 @@ import sys
 from pathlib import Path
 
 import yaml
+
+
+class ComposeLoader(yaml.SafeLoader):
+    """SafeLoader plus Compose's merge tags; every other unknown tag is still rejected."""
+
+
+def _override(loader: ComposeLoader, node: yaml.Node):
+    if isinstance(node, yaml.MappingNode):
+        return loader.construct_mapping(node, deep=True)
+    if isinstance(node, yaml.SequenceNode):
+        return loader.construct_sequence(node, deep=True)
+    return loader.construct_scalar(node)
+
+
+ComposeLoader.add_constructor("!override", _override)
+ComposeLoader.add_constructor("!reset", lambda loader, node: None)
 
 
 def strip_jsonc(text: str) -> str:
@@ -59,7 +77,7 @@ def images(path: str) -> list[str]:
         data = json.loads(strip_jsonc(text))
         value = data.get("image") if isinstance(data, dict) else None
         return [value] if isinstance(value, str) else []
-    data = yaml.safe_load(text)
+    data = yaml.load(text, Loader=ComposeLoader)  # a SafeLoader subclass
     services = data.get("services") if isinstance(data, dict) else None
     if not isinstance(services, dict):
         return []
@@ -67,13 +85,14 @@ def images(path: str) -> list[str]:
 
 
 def main() -> int:
+    out = sys.stdout
     for path in filter(None, sys.stdin.read().split("\0")):
         try:
             for value in images(path):
-                print(f"{path}\t{value}")
+                out.write(f"{path}\0{value}\0")
         except (OSError, ValueError, yaml.YAMLError) as exc:
             reason = " ".join(str(exc).split())
-            print(f"{path}\t!{reason}")
+            out.write(f"{path}\0!{reason}\0")
     return 0
 
 

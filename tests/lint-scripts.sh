@@ -552,6 +552,7 @@ expect_failure "outside a git repository"
 cat >"${tmp_dir}/bin/gh" <<'EOF'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >>"${GH_LOG}"
+[[ " ${FAKE_PRIVATE:-} " != *" ${3#oci://} "* ]] || { echo "GET https://ghcr.io/token: UNAUTHORIZED: authentication required"; exit 1; }
 [[ " ${FAKE_UNATTESTED:-} " != *" ${3#oci://} "* ]] || { echo "no attestations found"; exit 1; }
 EOF
 chmod +x "${tmp_dir}/bin/gh"
@@ -585,27 +586,33 @@ printf '# image: ghcr.io/devsecninja/retired:v1\nservices:\n  var:\n    image: g
     "${digest}" >"${att}/compose.extra.yaml"
 printf '{\n  // "image": "ghcr.io/devsecninja/old-dev:1",\n  "name": "x"\n}\n' >"${att}/.devcontainer.json"
 # Any JSON(C) or YAML layout counts: a value on the line after its key with a
-# trailing comma, flow mappings, and anchors merged into a service.
-mkdir -p "${att}/layouts/a" "${att}/layouts/b" "${att}/broken"
+# trailing comma, flow mappings, anchors merged into a service, Compose's
+# !reset and !override tags, and a tab in a tracked path.
+mkdir -p "${att}/layouts/a" "${att}/layouts/b" "${att}/broken" "${att}/tab"$'\t'"dir"
 printf '{\n  "name": "dev", /* block */\n  "image":\n    "ghcr.io/devsecninja/next-line:v1",\n}\n' \
     >"${att}/layouts/a/devcontainer.json"
 printf 'x-base: &base\n  image: ghcr.io/devsecninja/anchored:v1\nservices: {flow: {image: ghcr.io/devsecninja/flow:1}, merged: {<<: *base}}\n' \
     >"${att}/layouts/b/compose.yaml"
+printf 'services:\n  tagged:\n    image: !override ghcr.io/devsecninja/override:v1\n    ports: !reset []\n' \
+    >"${att}/layouts/b/compose.override.yml"
+printf 'services:\n  tabbed:\n    image: ghcr.io/devsecninja/tabbed:v1\n' >"${att}/tab"$'\t'"dir/compose.yaml"
 printf 'services: [\n' >"${att}/broken/compose.yaml"
-git -C "${att}" add compose.extra.yaml .devcontainer.json layouts broken
-attest
+git -C "${att}" add compose.extra.yaml .devcontainer.json layouts broken "tab"$'\t'"dir"
+attest FAKE_PRIVATE="ghcr.io/devsecninja/flow:1"
 expect_status 0 "variables and comments without blocking"
 grep -Fxq "attestation verify oci://ghcr.io/devsecninja/var@${digest} --owner DevSecNinja --bundle-from-oci" \
     <<<"${gh_calls}" || fail "a variable tag must keep the literal digest: ${gh_calls}"
 ! grep -Eq "retired|old-dev|open" <<<"${gh_calls}" || fail "comments and unresolved values must not be verified: ${gh_calls}"
-for image in next-line:v1 flow:1 anchored:v1; do
+for image in next-line:v1 flow:1 anchored:v1 override:v1 tabbed:v1; do
     grep -Fq "oci://ghcr.io/devsecninja/${image} " <<<"${gh_calls}" || fail "${image} must be found in any layout: ${gh_calls}"
 done
 # shellcheck disable=SC2016 # literal Compose variable
 expect_out '::warning file=compose.extra.yaml,title=Unresolved image::ghcr.io/devsecninja/open:v1@${DIGEST} uses a variable' \
     "an unresolved digest"
 expect_out "::warning file=broken/compose.yaml,title=Unreadable file::broken/compose.yaml can't be parsed" "a broken file"
-git -C "${att}" rm -q -r --cached compose.extra.yaml .devcontainer.json layouts broken
+expect_out "::warning file=layouts/b/compose.yaml,title=Unreadable image::ghcr.io/devsecninja/flow:1 can't be read" \
+    "a registry read failure is not a missing attestation"
+git -C "${att}" rm -q -r --cached compose.extra.yaml .devcontainer.json layouts broken "tab"$'\t'"dir"
 attest FAKE_UNATTESTED="ghcr.io/devsecninja/apps/app@${digest}"
 expect_status 0 "an unattested image without blocking"
 expect_out "::warning file=services/app/compose.yaml,title=Unattested image::ghcr.io/devsecninja/apps/app@${digest} has no" \

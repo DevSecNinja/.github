@@ -54,7 +54,8 @@ git ls-files -z -- ':(glob)**/devcontainer.json' ':(glob)**/.devcontainer.json' 
     ':(glob)**/docker-compose*.yml' ':(glob)**/docker-compose*.yaml' >"${listing}"
 
 # The image values the files pin, parsed (JSONC and YAML, any layout, anchors
-# resolved; comments never count): "<path>\t<image>", or "<path>\t!<reason>"
+# and Compose merge tags resolved; comments never count), as NUL-separated
+# "<path>", "<image>" pairs, so any file name is safe; "<path>", "!<reason>"
 # for a file that can't be parsed.
 /usr/bin/python3 "$(dirname "${BASH_SOURCE[0]}")/attestation-images.py" <"${listing}" >"${pins}"
 
@@ -76,10 +77,12 @@ resolve() {
 # The first file that pins each value, in a stable order.
 declare -A first_file=()
 values=()
-unreadable=()
-while IFS=$'\t' read -r path value; do
+unreadable_paths=()
+unreadable_reasons=()
+while IFS= read -r -d '' path && IFS= read -r -d '' value; do
     if [[ "${value}" == '!'* ]]; then
-        unreadable+=("${path}"$'\t'"${value#!}")
+        unreadable_paths+=("${path}")
+        unreadable_reasons+=("${value#!}")
         continue
     fi
     [[ "$(tr '[:upper:]' '[:lower:]' <<<"${value}")" == "${namespace}/"* ]] || continue
@@ -88,15 +91,16 @@ while IFS=$'\t' read -r path value; do
     values+=("${value}")
 done <"${pins}"
 
-if [ "${#values[@]}" -eq 0 ] && [ "${#unreadable[@]}" -eq 0 ]; then
+if [ "${#values[@]}" -eq 0 ] && [ "${#unreadable_paths[@]}" -eq 0 ]; then
     echo "✓ No ${namespace}/ image is pinned in a dev container or Compose file."
     exit 0
 fi
 
 failed=0
-for entry in "${unreadable[@]}"; do
+for i in "${!unreadable_paths[@]}"; do
     failed=$((failed + 1))
-    echo "::${level} file=$(escape_property "${entry%%$'\t'*}"),title=Unreadable file::$(escape_data "${entry%%$'\t'*}") can't be parsed ($(escape_data "${entry#*$'\t'}")), so its images can't be checked."
+    path="${unreadable_paths[${i}]}"
+    echo "::${level} file=$(escape_property "${path}"),title=Unreadable file::$(escape_data "${path}") can't be parsed ($(escape_data "${unreadable_reasons[${i}]}")), so its images can't be checked."
 done
 declare -A verified=()
 for value in "${values[@]}"; do
@@ -117,9 +121,15 @@ for value in "${values[@]}"; do
     echo "::group::gh attestation verify oci://${ref}"
     cat "${output}"
     echo "::endgroup::"
-    echo "::${level} file=$(escape_property "${path}"),title=Unattested image::$(escape_data "${ref}") has no GitHub artifact attestation from a ${owner} workflow in the registry."
+    # The job has no registry login (it would need packages: read from every
+    # caller), so a private image can't be read; that is not a missing attestation.
+    if grep -Eiq 'unauthorized|denied|authentication required|\b40[13]\b' "${output}"; then
+        echo "::${level} file=$(escape_property "${path}"),title=Unreadable image::$(escape_data "${ref}") can't be read from the registry without a login (a private image?), so its attestation can't be checked."
+    else
+        echo "::${level} file=$(escape_property "${path}"),title=Unattested image::$(escape_data "${ref}") has no GitHub artifact attestation from a ${owner} workflow in the registry."
+    fi
 done
 
 [ "${failed}" -gt 0 ] || exit 0
-echo "::${level} title=Unattested image::${failed} of $((${#values[@]} + ${#unreadable[@]})) pinned ${namespace}/ image(s) or file(s) failed attestation verification. Pin a literal digest that the publishing workflow attested with actions/attest and push-to-registry: true (docs/artifact-attestations.md in DevSecNinja/.github)."
+echo "::${level} title=Unattested image::${failed} of $((${#values[@]} + ${#unreadable_paths[@]})) pinned ${namespace}/ image(s) or file(s) failed attestation verification. Pin a literal digest that the publishing workflow attested with actions/attest and push-to-registry: true (docs/artifact-attestations.md in DevSecNinja/.github)."
 [ "${blocking}" = false ] || exit 1

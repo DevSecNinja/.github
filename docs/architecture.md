@@ -277,7 +277,9 @@ The `attestations` linter (`scripts/lint/attestations.sh`) verifies the
 pins from its owner's own GHCR namespace (`ghcr.io/<owner>/...`) as the
 `image` of a tracked `devcontainer.json` or of a Compose service. It parses the
 files with the runner's system Python and PyYAML (JSONC, any YAML layout,
-anchors resolved; comments don't count; a file it can't parse is reported).
+anchors and Compose's `!reset`/`!override` resolved; comments don't count; a
+file it can't parse is reported). The job has no registry login, so a private
+image is reported as unreadable rather than unattested.
 It runs `gh attestation verify oci://<ref> --owner <owner>
 --bundle-from-oci` once per reference (the digest when one is pinned), so it
 needs no permission beyond `contents: read`, and it only passes images
