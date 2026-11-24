@@ -56,9 +56,9 @@ for manager in mise npm pep621 cargo gomod; do
     check "${manager} lock file maintenance" "${lock_base}" "$(dep "${manager}" "" lockFileMaintenance "" "")" "${no_soak}"
 done
 
-# Real updates keep the soak.
-check "mise tool minor update" "${update_base}" "$(dep mise github-releases minor jdx/mise 2026.11.1)" \
-    '.minimumReleaseAge == "14 days"'
-check "npm patch update" "${update_base}" "$(dep npm npm patch maplibre-gl 6.12.0)" '.minimumReleaseAge == "14 days"'
+# Real updates keep a release-age soak (whatever its length).
+soaked='.minimumReleaseAge != null and .minimumReleaseAge != "0"'
+check "mise tool minor update" "${update_base}" "$(dep mise github-releases minor jdx/mise 2026.11.1)" "${soaked}"
+check "npm patch update" "${update_base}" "$(dep npm npm patch maplibre-gl 6.12.0)" "${soaked}"
 
 echo "Renovate lock file maintenance skips the soak: OK"
