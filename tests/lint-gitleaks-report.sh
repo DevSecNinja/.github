@@ -189,11 +189,18 @@ make_repo public
     mkdir -p "my dir"
     printf 'token = "%s"\n' "${odd_token}" >"my dir/café [1].txt"
     echo not-a-key >id.fakekey
+    # A newline in a file name must not split its fingerprint record. Only
+    # some filesystems allow it (not Windows), so the count adapts.
+    echo not-a-key >$'multi\nline.fakekey' 2>/dev/null || true
     git add -A
     git commit -qm odd
     # gitleaks logs invalid ignore entries verbatim; this one names a file.
     echo "withheld-ignore-entry.txt" >.gitleaksignore
 )
+expected=4
+if git -C "${tmp_dir}/public" ls-files | grep -q 'line.fakekey'; then
+    expected=5
+fi
 CONFIG_DIR="${tmp_dir}/public-config"
 mkdir -p "${CONFIG_DIR}"
 cat >"${CONFIG_DIR}/.gitleaks.toml" <<'EOF'
@@ -211,11 +218,11 @@ for visibility in public internal error; do
     [ "${status}" -eq 0 ] || fail "a history scan must only report (got ${status}): ${out}"
     grep -Fqx mode=history-public <<<"${outputs}" || fail "expected mode=history-public; got: ${outputs}"
     grep -Fqx sarif=true <<<"${outputs}" || fail "expected sarif=true; got: ${outputs}"
-    grep -Fqx '::warning::gitleaks found 4 finding(s) in the git history. They are in code scanning (category gitleaks/history), visible only with write access.' <<<"${out}" ||
+    grep -Fqx "::warning::gitleaks found ${expected} finding(s) in the git history. They are in code scanning (category gitleaks/history), visible only with write access." <<<"${out}" ||
         fail "expected a count-only warning; got: ${out}"
-    unexpected="$(grep -v '^::warning::gitleaks found 4 finding' <<<"${out}" || true)"
+    unexpected="$(grep -v "^::warning::gitleaks found ${expected} finding" <<<"${out}" || true)"
     [ -z "${unexpected}" ] || fail "the public log may hold only the count; got: ${unexpected}"
-    for detail in old.txt fake,token github-pat gitleaks-history withheld-ignore-entry 'my dir' café id.fakekey "$(git -C "${tmp_dir}/public" rev-parse --short=7 HEAD)" '::error' 'file='; do
+    for detail in old.txt fake,token github-pat gitleaks-history line.fakekey withheld-ignore-entry 'my dir' café id.fakekey "$(git -C "${tmp_dir}/public" rev-parse --short=7 HEAD)" '::error' 'file='; do
         if grep -Fq -- "${detail}" <<<"${out}"; then
             fail "the public log must show a count only, but it contains '${detail}': ${out}"
         fi
@@ -223,7 +230,7 @@ for visibility in public internal error; do
     [ -z "${summary}" ] || fail "a public history scan must not write a summary; got: ${summary}"
     [ ! -e "${tmp_dir}/public-runner-temp/gitleaks-findings.json" ] || fail "a public history scan must not upload findings"
     sarif="${tmp_dir}/public-runner-temp/gitleaks-history.sarif"
-    [ "$(jq '[.runs[].results[]] | length' "${sarif}")" -eq 4 ] || fail "the SARIF report must hold all four findings"
+    [ "$(jq '[.runs[].results[]] | length' "${sarif}")" -eq "${expected}" ] || fail "the SARIF report must hold all ${expected} findings"
     jq -e '[.. | objects | .tags? | arrays | length == (unique | length)] | all' "${sarif}" >/dev/null ||
         fail "the SARIF report must not repeat tags, which the upload rejects"
     # Leaked secrets must land as high-severity security alerts, not warnings.

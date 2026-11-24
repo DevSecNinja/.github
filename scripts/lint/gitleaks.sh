@@ -88,14 +88,19 @@ else
     # - Without a security-severity, code scanning files the findings as
     #   non-security warnings.
     # Hash each result's gitleaks fingerprint (jq has no hash function),
-    # in result order, into a JSON array the next jq call reads.
-    jq -r '.runs[].results[]? | [
+    # in result order, into a JSON array the next jq call reads. The
+    # fingerprints are NUL-terminated: a file name may contain a newline.
+    jq -j '.runs[].results[]? | [
       .partialFingerprints.commitSha // "",
       .locations[0].physicalLocation.artifactLocation.uri // "",
-      .ruleId, (.locations[0].physicalLocation.region.startLine // 0 | tostring)] | join(":")' "${report}" |
-        while IFS= read -r fingerprint; do
-            printf '%s' "${fingerprint%$'\r'}" | sha256sum | cut -c1-16
+      .ruleId, (.locations[0].physicalLocation.region.startLine // 0 | tostring)] | join(":") + "\u0000"' "${report}" |
+        while IFS= read -r -d '' fingerprint; do
+            printf '%s' "${fingerprint}" | sha256sum | cut -c1-16
         done | jq -R . | jq -s . >"${report}.hashes"
+    if [ "$(jq length "${report}.hashes")" -ne "$(jq '[.runs[].results[]?] | length' "${report}")" ]; then
+        echo "::error::Could not fingerprint every gitleaks finding; the code scanning upload is skipped."
+        exit 1
+    fi
     jq --slurpfile hashes "${report}.hashes" '
       # Same result order as above: runs in order, results in order.
       ([.runs | to_entries[] | .key as $run | (.value.results // []) | keys[] | [$run, .]]) as $index
