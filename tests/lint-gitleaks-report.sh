@@ -190,10 +190,18 @@ make_repo public
     printf 'token = "%s"\n' "${odd_token}" >"my dir/café [1].txt"
     echo not-a-key >id.fakekey
     git add -A
+    # A newline in a file name must not split its fingerprint record. Git
+    # stores one fine, so it goes straight into the index: not every
+    # filesystem (Windows) can create it, and gitleaks only reads history.
+    blob="$(echo not-a-key | git hash-object -w --stdin)"
+    name=$'multi\nline.fakekey'
+    # Git for Windows rejects such a path unless protectNTFS is off; it is never checked out.
+    git -c core.protectNTFS=false update-index --add --cacheinfo "100644,${blob},${name}"
     git commit -qm odd
     # gitleaks logs invalid ignore entries verbatim; this one names a file.
     echo "withheld-ignore-entry.txt" >.gitleaksignore
 )
+expected=5
 CONFIG_DIR="${tmp_dir}/public-config"
 mkdir -p "${CONFIG_DIR}"
 cat >"${CONFIG_DIR}/.gitleaks.toml" <<'EOF'
@@ -211,11 +219,11 @@ for visibility in public internal error; do
     [ "${status}" -eq 0 ] || fail "a history scan must only report (got ${status}): ${out}"
     grep -Fqx mode=history-public <<<"${outputs}" || fail "expected mode=history-public; got: ${outputs}"
     grep -Fqx sarif=true <<<"${outputs}" || fail "expected sarif=true; got: ${outputs}"
-    grep -Fqx '::warning::gitleaks found 4 finding(s) in the git history. They are in code scanning (category gitleaks/history), visible only with write access.' <<<"${out}" ||
+    grep -Fqx "::warning::gitleaks found ${expected} finding(s) in the git history. They are in code scanning (category gitleaks/history), visible only with write access." <<<"${out}" ||
         fail "expected a count-only warning; got: ${out}"
-    unexpected="$(grep -v '^::warning::gitleaks found 4 finding' <<<"${out}" || true)"
+    unexpected="$(grep -v "^::warning::gitleaks found ${expected} finding" <<<"${out}" || true)"
     [ -z "${unexpected}" ] || fail "the public log may hold only the count; got: ${unexpected}"
-    for detail in old.txt fake,token github-pat gitleaks-history withheld-ignore-entry 'my dir' café id.fakekey "$(git -C "${tmp_dir}/public" rev-parse --short=7 HEAD)" '::error' 'file='; do
+    for detail in old.txt fake,token github-pat gitleaks-history line.fakekey withheld-ignore-entry 'my dir' café id.fakekey "$(git -C "${tmp_dir}/public" rev-parse --short=7 HEAD)" '::error' 'file='; do
         if grep -Fq -- "${detail}" <<<"${out}"; then
             fail "the public log must show a count only, but it contains '${detail}': ${out}"
         fi
@@ -223,7 +231,7 @@ for visibility in public internal error; do
     [ -z "${summary}" ] || fail "a public history scan must not write a summary; got: ${summary}"
     [ ! -e "${tmp_dir}/public-runner-temp/gitleaks-findings.json" ] || fail "a public history scan must not upload findings"
     sarif="${tmp_dir}/public-runner-temp/gitleaks-history.sarif"
-    [ "$(jq '[.runs[].results[]] | length' "${sarif}")" -eq 4 ] || fail "the SARIF report must hold all four findings"
+    [ "$(jq '[.runs[].results[]] | length' "${sarif}")" -eq "${expected}" ] || fail "the SARIF report must hold all ${expected} findings"
     jq -e '[.. | objects | .tags? | arrays | length == (unique | length)] | all' "${sarif}" >/dev/null ||
         fail "the SARIF report must not repeat tags, which the upload rejects"
     # Leaked secrets must land as high-severity security alerts, not warnings.
@@ -233,12 +241,31 @@ for visibility in public internal error; do
             and (.properties.tags | index("security") and index("secret"))))
         and ([.runs[].results[].level] | all(. == "error"))' "${sarif}" >/dev/null ||
         fail "the SARIF report must mark findings as high-severity security errors"
-    # Valid URI references and 1-based regions, so the upload neither logs
-    # a path nor rejects the file.
+    # Valid URI references and no regions: the upload neither logs a path
+    # nor hashes the current checkout's line into the alert's fingerprint.
     jq -e '[.runs[].results[].locations[].physicalLocation]
         | all(.artifactLocation.uri | test("^[A-Za-z0-9._~%!$&'"'"'()*+,;=:@/-]+$"))
-        and all(.region // {} | [.[] | numbers] | all(. >= 1))' "${sarif}" >/dev/null ||
-        fail "the SARIF report must hold valid URIs and regions: $(jq -c '[.runs[].results[].locations]' "${sarif}")"
+        and all(has("region") | not)' "${sarif}" >/dev/null ||
+        fail "the SARIF report must hold valid URIs and no regions: $(jq -c '[.runs[].results[].locations]' "${sarif}")"
+    # Alerts match across runs on gitleaks' own fingerprint
+    # (commit:file:rule:line): code scanning matches only on
+    # primaryLocationLineHash, so it holds that fingerprint's hash, and editing
+    # a cited line can't re-open a dismissed history finding (#624). Each
+    # result carries only that key, the line stays in the message, and
+    # gitleaks' commit metadata is gone.
+    jq -r '.runs[].results[].partialFingerprints.primaryLocationLineHash' "${sarif}" | tr -d '\r' | sort >"${tmp_dir}/fp-sarif"
+    gitleaks git "${tmp_dir}/public" --no-banner --redact --exit-code 0 --config "${CONFIG_DIR}/.gitleaks.toml" \
+        --report-format json --report-path "${tmp_dir}/fp-report.json" >/dev/null 2>&1
+    # NUL-delimited, like the script: a fingerprint may contain a newline.
+    jq -j '.[] | .Fingerprint + "\u0000"' "${tmp_dir}/fp-report.json" | while IFS= read -r -d '' fingerprint; do
+        printf '%s:1\n' "$(printf '%s' "${fingerprint}" | sha256sum | cut -c1-16)"
+    done | sort >"${tmp_dir}/fp-gitleaks"
+    diff "${tmp_dir}/fp-gitleaks" "${tmp_dir}/fp-sarif" >&2 ||
+        fail "each SARIF result's primaryLocationLineHash must be the hash of gitleaks' fingerprint"
+    jq -e '[.runs[].results[]]
+        | all(.partialFingerprints | keys == ["primaryLocationLineHash"])
+        and ([.[] | select(.message.text | test(" Line [0-9]+[.]$"))] | length) == 3' "${sarif}" >/dev/null ||
+        fail "SARIF results must carry only the stable fingerprint, and their line in the message"
     assert_redacted public
 done
 UPLOAD_SARIF=false scan public

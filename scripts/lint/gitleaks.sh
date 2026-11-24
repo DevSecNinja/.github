@@ -71,15 +71,47 @@ if [ "${mode}" = history-private ]; then
     count="$(jq length "${report}")"
     where="See the job summary."
 else
-    # Make the SARIF valid for code scanning, whose upload would
-    # otherwise log invalid URIs (file paths) or reject path-only
-    # findings (line 0): percent-encode paths, drop empty regions.
-    # Without a security-severity, code scanning files the findings as
-    # non-security warnings.
-    jq '(.runs[].results[].locations[]?.physicalLocation) |= (
+    # Make the SARIF fit code scanning:
+    # - Match alerts across runs on gitleaks' own fingerprint
+    #   (commit:file:rule:line, the .gitleaksignore format), which never
+    #   changes for a history finding. Code scanning matches only on
+    #   primaryLocationLineHash, which the upload would otherwise compute
+    #   from the cited line of the current checkout, so any later edit to
+    #   that line re-opened a dismissed finding as a new alert (#624). The
+    #   key holds a hash of gitleaks' fingerprint instead, in the upload's
+    #   "<hash>:<n>" shape.
+    # - Drop the region: the upload then leaves that key alone and hashes
+    #   no line (a disagreeing line hash would log the path). Alerts are
+    #   file-level; the line is kept in the alert message.
+    # - Percent-encode paths, which the upload would otherwise log as
+    #   invalid URIs.
+    # - Without a security-severity, code scanning files the findings as
+    #   non-security warnings.
+    # Hash each result's gitleaks fingerprint (jq has no hash function),
+    # in result order, into a JSON array the next jq call reads. The
+    # fingerprints are NUL-terminated: a file name may contain a newline.
+    jq -j '.runs[].results[]? | [
+      .partialFingerprints.commitSha // "",
+      .locations[0].physicalLocation.artifactLocation.uri // "",
+      .ruleId, (.locations[0].physicalLocation.region.startLine // 0 | tostring)] | join(":") + "\u0000"' "${report}" |
+        while IFS= read -r -d '' fingerprint; do
+            printf '%s' "${fingerprint}" | sha256sum | cut -c1-16
+        done | jq -R . | jq -s . >"${report}.hashes"
+    if [ "$(jq length "${report}.hashes")" -ne "$(jq '[.runs[].results[]?] | length' "${report}")" ]; then
+        echo "::error::Could not fingerprint every gitleaks finding; the code scanning upload is skipped."
+        exit 1
+    fi
+    jq --slurpfile hashes "${report}.hashes" '
+      # Same result order as above: runs in order, results in order.
+      ([.runs | to_entries[] | .key as $run | (.value.results // []) | keys[] | [$run, .]]) as $index
+      | reduce range(0; $index | length) as $i (.;
+        .runs[$index[$i][0]].results[$index[$i][1]] |= (
+          (.locations[0].physicalLocation.region.startLine // 0) as $line
+          | .partialFingerprints = {"primaryLocationLineHash": "\($hashes[0][$i]):1"}
+          | .message.text += (if $line > 0 then " Line \($line)." else "" end)))
+    | (.runs[].results[].locations[]?.physicalLocation) |= (
       .artifactLocation.uri |= (split("/") | map(@uri) | join("/"))
-      | if .region then .region |= with_entries(select(.value | type != "number" or . >= 1)) else . end
-      | if (.region.startLine // 0) < 1 then del(.region) else . end
+      | del(.region)
     )
     # Leaked secrets are security alerts: high severity, error level.
     | (.runs[].tool.driver.rules[]?.properties) |= ((. // {}) + {"security-severity": "8.0"}
@@ -89,6 +121,7 @@ else
     | walk(if type == "object" then (if (.tags | type) == "array" then .tags |= unique else . end) else . end)
   ' "${report}" >"${report}.tmp"
     mv "${report}.tmp" "${report}"
+    rm -f "${report}.hashes"
     count="$(jq '[.runs[].results[]] | length' "${report}")"
     where="They are in code scanning (category gitleaks/history), visible only with write access."
     if [ "${UPLOAD_SARIF}" != true ]; then

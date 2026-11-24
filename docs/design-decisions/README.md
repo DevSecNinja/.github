@@ -27,3 +27,4 @@ that supersedes the old one.
 | [0012](0012-pages-build-github-token.md)                       | Build with the read-only workflow token in the Pages test job          | Accepted |
 | [0013](0013-rebase-automerge-branches-when-behind.md)          | Rebase automerge branches when they fall behind                        | Accepted |
 | [0014](0014-own-test-report-action.md)                         | Report test results with our own JUnit summary action                  | Accepted |
+| [0015](0015-stable-gitleaks-history-fingerprints.md)           | Match gitleaks history alerts on gitleaks' own fingerprint             | Accepted |
