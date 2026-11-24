@@ -61,9 +61,11 @@ a lot of incidental events
   `pages.yml` does.
 - Guard `issues: edited` handlers against `renovate[bot]`, which edits
   its Dependency Dashboard issue on nearly every run.
-- Skip post-merge work that dependency bumps can't affect (e.g. release
-  notes or docs builds) with `if: github.actor != 'renovate[bot]'` on the
-  calling job.
+- Skip post-merge work that dependency bumps can't affect with
+  `if: github.actor != 'renovate[bot]'` on the calling job. Release
+  notes and docs builds are not such work: release-please must run on
+  every `main` commit (above), and docs builds filter on their inputs,
+  generator and theme dependencies included, rather than on the actor.
 - Put such guards on the first job in the `needs:` chain (or on the
   calling job): a skipped job is free, and every job that needs it is
   skipped too — unless that job's `if:` calls a status function such as
