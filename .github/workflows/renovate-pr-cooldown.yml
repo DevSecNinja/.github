@@ -57,7 +57,8 @@ jobs:
   cooldown:
     name: pr-cooldown
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    # The scheduled sweep scans every open PR, so it grows with the backlog.
+    timeout-minutes: 15
     permissions:
       contents: read
       pull-requests: read
