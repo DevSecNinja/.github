@@ -276,6 +276,21 @@ class TestReportContract(unittest.TestCase):
         self.assertNotIn("Line coverage", summary)
         self.assertNotIn("line-coverage", outputs)
         self.assertIn("::warning title=Test report::No coverage files match: missing/*.xml", result.stdout)
+        # Malformed counters skip the report with a warning instead of counting as zero or crashing.
+        (self.work / "bad.info").write_text("SF:a.js\nLF:10\nLH:bad\n", "utf-8")
+        (self.work / "inf.info").write_text("SF:b.js\nLF:10\nLH:inf\n", "utf-8")
+        (self.work / "good.info").write_text("SF:c.js\nLF:4\nLH:2\n", "utf-8")
+        result, summary, outputs = self.run_action(paths="results/bats.xml", **{"coverage-paths": "*.info"})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(
+            "::warning file=bad.info,title=Test report::Could not read coverage: invalid line count 'bad'",
+            result.stdout,
+        )
+        self.assertIn(
+            "::warning file=inf.info,title=Test report::Could not read coverage: invalid line count 'inf'",
+            result.stdout,
+        )
+        self.assertEqual((outputs["total"], outputs["line-coverage"]), ("3", "50.0"))
         # Each pattern that matches nothing warns, even when others match.
         (self.work / "coverage.xml").write_text('<coverage lines-valid="2" lines-covered="1"/>', "utf-8")
         result, summary, outputs = self.run_action(

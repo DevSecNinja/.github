@@ -88,8 +88,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # Set up Python and install the pinned test requirements here.
-      - run: python -m pytest --junitxml=test-results.xml
+      # Set up Python and install the pinned test requirements here,
+      # pytest-cov included for the coverage report.
+      - run: python -m pytest --junitxml=test-results.xml --cov --cov-report=xml
       - uses: DevSecNinja/.github/actions/test-report@<release-commit-sha> # vX.Y.Z
         if: ${{ !cancelled() }}
         with:

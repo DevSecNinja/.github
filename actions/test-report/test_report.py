@@ -175,6 +175,15 @@ class Coverage:
         return 100.0 * self.covered / self.valid if self.valid else None
 
 
+def counter(value: str | None) -> int:
+    """A coverage line count: a non-negative integer, else ValueError (so the
+    report is skipped with a warning instead of counting as zero)."""
+    text = (value or "").strip()
+    if not text.isdigit():
+        raise ValueError(f"invalid line count {text!r}")
+    return int(text)
+
+
 def parse_coverage(path: str, coverage: Coverage) -> None:
     """Add the line counts of a Cobertura XML (coverage.py, jest, ...) or
     lcov report. Cobertura's `lines-valid`/`lines-covered` totals are used
@@ -187,7 +196,7 @@ def parse_coverage(path: str, coverage: Coverage) -> None:
         if root.tag != "coverage":
             raise ValueError(f"not a Cobertura report (root element <{root.tag}>)")
         if root.get("lines-valid") is not None and root.get("lines-covered") is not None:
-            valid, covered = int(number(root.get("lines-valid"))), int(number(root.get("lines-covered")))
+            valid, covered = counter(root.get("lines-valid")), counter(root.get("lines-covered"))
         else:
             hits = [number(line.get("hits")) for cls in root.iter("class") for line in cls.findall("lines/line")]
             valid, covered = len(hits), sum(1 for hit in hits if hit > 0)
@@ -197,10 +206,10 @@ def parse_coverage(path: str, coverage: Coverage) -> None:
         with open(path, encoding="utf-8-sig") as handle:
             for line in handle:
                 if line.startswith("LF:"):
-                    valid += int(number(line[3:]))
+                    valid += counter(line[3:])
                     found = True
                 elif line.startswith("LH:"):
-                    covered += int(number(line[3:]))
+                    covered += counter(line[3:])
         if not found:
             raise ValueError("neither Cobertura XML nor an lcov report with LF/LH lines")
     coverage.valid += valid
