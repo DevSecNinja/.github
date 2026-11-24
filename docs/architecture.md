@@ -903,27 +903,6 @@ shell scripts. Docs, config, CI and infrastructure files never get it.
 `tests/pr-labeler-config.py` runs changed-file lists from the fleet's layouts
 through the rules.
 
-### TODO to Issue (`todo-to-issue.yml`)
-
-Converts `TODO` comments in code to GitHub Issues on push to the default
-branch.
-
-**Example caller:**
-
-```yaml
-jobs:
-  run:
-    # Dependency bumps never add TODO comments; skip Renovate's automerge pushes.
-    if: github.actor != 'renovate[bot]'
-    uses: DevSecNinja/.github/.github/workflows/todo-to-issue.yml@<sha> # v1.0.0
-    permissions:
-      contents: read
-      issues: write
-    with:
-      auto_assign: false
-      label: "todo-to-issue"
-```
-
 ### Assign Issue to CODEOWNERS (`assign-issue-to-codeowners.yml`)
 
 Assigns newly-opened issues (or a specific issue when triggered manually) to
@@ -1097,7 +1076,6 @@ provides the display name, description, and category shown in the picker.
 | `config-sync.yml`                | Weekly config drift sync               |
 | `label-sync.yml`                 | Sync labels from `.github/labels.yaml` |
 | `labeler.yml`                    | Auto-label PRs and issues              |
-| `todo-to-issue.yml`              | Convert TODO comments to issues        |
 | `assign-issue-to-codeowners.yml` | Assign issues to CODEOWNERS            |
 
 ---

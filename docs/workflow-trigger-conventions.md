@@ -39,8 +39,6 @@ post-merge-only work to do:
   re-scans the full git history with the current gitleaks rules).
 - **Label / repo config workflows** where the PR run validates and the
   `main` run applies (e.g. `label-sync.yml`).
-- **TODO-to-issue conversion** (`todo-to-issue.yml`) — only meaningful
-  on the integrated `main` history.
 
 **Avoid `pull_request_target`** unless absolutely required. It runs the
 target-branch workflow with write tokens against PR-author code, and
@@ -63,9 +61,11 @@ a lot of incidental events
   `pages.yml` does.
 - Guard `issues: edited` handlers against `renovate[bot]`, which edits
   its Dependency Dashboard issue on nearly every run.
-- Skip post-merge work that dependency bumps can't affect (e.g.
-  TODO-to-issue) with `if: github.actor != 'renovate[bot]'` on the
-  calling job.
+- Skip post-merge work that dependency bumps can't affect with
+  `if: github.actor != 'renovate[bot]'` on the calling job. Release
+  notes and docs builds are not such work: release-please must run on
+  every `main` commit (above), and docs builds filter on their inputs,
+  generator and theme dependencies included, rather than on the actor.
 - Put such guards on the first job in the `needs:` chain (or on the
   calling job): a skipped job is free, and every job that needs it is
   skipped too — unless that job's `if:` calls a status function such as
@@ -269,7 +269,6 @@ to make this automatic.
 | Release publish             | `push: tags ["v*"]`                                         | cancel=false   | yes        |
 | Image security scan         | `schedule`, `workflow_dispatch`, `pull_request`             | cancel=false   | yes        |
 | Label sync                  | `push: main` (apply), `pull_request` (validate), `schedule` | cancel=false   | optional   |
-| TODO-to-issue               | `push: main`                                                | n/a            | optional   |
 | Reusable workflow           | `workflow_call`                                             | none (caller)  | n/a        |
 
 ---
