@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.0.1](https://github.com/DevSecNinja/.github/compare/v5.0.0...v5.0.1) (2026-11-24)
+
+
+### 🐛 Bug Fixes
+
+* **lint:** drop checkov checks skipped with inline comments from SARIF ([#634](https://github.com/DevSecNinja/.github/issues/634)) ([57346b7](https://github.com/DevSecNinja/.github/commit/57346b7d23a0048139729906126c76611f9ff3c6))
+* **workflows:** set timeout-minutes on every job ([#640](https://github.com/DevSecNinja/.github/issues/640)) ([c6f0522](https://github.com/DevSecNinja/.github/commit/c6f05225cf9e25a017bcd57a32d67ebcf156df65))
+
 ## [5.0.0](https://github.com/DevSecNinja/.github/compare/v4.12.2...v5.0.0) (2026-11-24)
 
 
