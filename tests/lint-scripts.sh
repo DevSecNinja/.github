@@ -593,7 +593,7 @@ printf '{\n  "name": "dev", /* block */\n  "image":\n    "ghcr.io/devsecninja/ne
     >"${att}/layouts/a/devcontainer.json"
 printf 'x-base: &base\n  image: ghcr.io/devsecninja/anchored:v1\nservices: {flow: {image: ghcr.io/devsecninja/flow:1}, merged: {<<: *base}}\n' \
     >"${att}/layouts/b/compose.yaml"
-printf 'services:\n  tagged:\n    image: !override ghcr.io/devsecninja/override:v1\n    ports: !reset []\n' \
+printf 'services:\n  tagged:\n    image: !override ghcr.io/devsecninja/override:v1\n    ports: !reset []\n  bad:\n    image: "ghcr.io/devsecninja/bad\\n::error::injected"\n' \
     >"${att}/layouts/b/compose.override.yml"
 printf 'services:\n  tabbed:\n    image: ghcr.io/devsecninja/tabbed:v1\n' >"${att}/tab"$'\t'"dir/compose.yaml"
 printf 'services: [\n' >"${att}/broken/compose.yaml"
@@ -612,6 +612,10 @@ expect_out '::warning file=compose.extra.yaml,title=Unresolved image::ghcr.io/de
 expect_out "::warning file=broken/compose.yaml,title=Unreadable file::broken/compose.yaml can't be parsed" "a broken file"
 expect_out "::warning file=layouts/b/compose.yaml,title=Unreadable image::ghcr.io/devsecninja/flow:1 can't be read" \
     "a registry read failure is not a missing attestation"
+expect_out "title=Invalid image::ghcr.io/devsecninja/bad%0A::error::injected is not a valid image reference." \
+    "a value with a newline"
+! grep -q '^::error::injected' <<<"${out}" || fail "an image value must not inject a workflow command: ${out}"
+! grep -Fq "devsecninja/bad" <<<"${gh_calls}" || fail "an invalid value must not be verified: ${gh_calls}"
 git -C "${att}" rm -q -r --cached compose.extra.yaml .devcontainer.json layouts broken "tab"$'\t'"dir"
 attest FAKE_UNATTESTED="ghcr.io/devsecninja/apps/app@${digest}"
 expect_status 0 "an unattested image without blocking"

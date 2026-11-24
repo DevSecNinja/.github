@@ -105,6 +105,13 @@ done
 declare -A verified=()
 for value in "${values[@]}"; do
     path="${first_file[${value}]}"
+    # Values come from repository files: one with whitespace or a control
+    # character isn't an image reference, and must not reach a log command.
+    if [[ "${value}" == *[[:space:][:cntrl:]]* ]]; then
+        failed=$((failed + 1))
+        echo "::${level} file=$(escape_property "${path}"),title=Invalid image::$(escape_data "${value}") is not a valid image reference."
+        continue
+    fi
     ref="$(resolve "${value}")"
     if [ -z "${ref}" ]; then
         failed=$((failed + 1))
@@ -118,7 +125,7 @@ for value in "${values[@]}"; do
         continue
     fi
     failed=$((failed + 1))
-    echo "::group::gh attestation verify oci://${ref}"
+    echo "::group::gh attestation verify oci://$(escape_data "${ref}")"
     cat "${output}"
     echo "::endgroup::"
     # The job has no registry login (it would need packages: read from every
