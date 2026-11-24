@@ -19,6 +19,7 @@ repositories.
 | APM Sync onboarding          | [`docs/apm-sync-onboarding.md`](docs/apm-sync-onboarding.md)                              |
 | Copilot model policy         | [`copilot-models.json`](copilot-models.json) ([onboarding](docs/copilot-model-policy.md)) |
 | Workflow trigger conventions | [`docs/workflow-trigger-conventions.md`](docs/workflow-trigger-conventions.md)            |
+| Artifact attestations        | [`docs/artifact-attestations.md`](docs/artifact-attestations.md)                          |
 
 ## Development
 
