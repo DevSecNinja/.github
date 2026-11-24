@@ -129,8 +129,8 @@ on the event (v4.1.0+):
   code scanning (SARIF, category `gitleaks/history`), whose alerts need write
   access. They're filed as high-severity security alerts (`security-severity
   8.0`, tags `security` and `secret`, level `error`), not quality warnings.
-  They're file-level alerts matched across runs on gitleaks' own fingerprint
-  (`commit:file:rule:line`), with the line in the alert message, so editing a
+  They're file-level alerts matched across runs on a hash of gitleaks' own
+  fingerprint (`commit:file:rule:line`), with the line in the alert message, so editing a
   cited line on the default branch can't re-open a dismissed finding
   ([ADR 0015](design-decisions/0015-stable-gitleaks-history-fingerprints.md)).
   The log shows the count only: gitleaks' own log is withheld, since its

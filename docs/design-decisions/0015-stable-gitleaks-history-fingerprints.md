@@ -8,30 +8,31 @@ Accepted.
 
 The full-history gitleaks scan (#520) uploads its findings to code scanning
 under the `gitleaks/history` category. Code scanning matches results across
-runs on the SARIF `partialFingerprints`. gitleaks' SARIF has none that identify
-a finding, so `github/codeql-action/upload-sarif` adds
-`primaryLocationLineHash`: a hash of the cited line in the current checkout.
+runs only on `partialFingerprints.primaryLocationLineHash`. gitleaks' SARIF
+doesn't set it, so `github/codeql-action/upload-sarif` computes it from the
+cited line in the current checkout.
 
 A history finding belongs to an old commit, but that hash comes from whatever
 the default branch has on the same line today. When that line is edited, the
 next scan gives the same finding a new fingerprint, and code scanning opens it
 as a new alert, even after the old one was dismissed (#624).
 
-Pre-setting `primaryLocationLineHash` doesn't help. When it disagrees with the
-hash the upload computes, codeql-action logs a warning with the file path and
-line, and the job log of a public repository is public.
+A pre-set `primaryLocationLineHash` alone doesn't help either. When it disagrees
+with the hash the upload computes, codeql-action logs a warning with the file
+path and line, and the job log of a public repository is public.
 
 ## Decision
 
 In the history SARIF post-processing (`scripts/lint/gitleaks.sh`):
 
-- Each result's `partialFingerprints` holds only
-  `gitleaksFingerprint/v1`: gitleaks' own fingerprint, `commit:file:rule:line`.
-  That's the `.gitleaksignore` format, and it never changes for a history
-  finding. gitleaks' other fields (commit SHA, author, e-mail, date and commit
-  message) are dropped.
-- Each result's `region` is dropped. Without a start line the upload skips its
-  line hashing silently, so no path reaches the log.
+- Each result's `partialFingerprints` holds only `primaryLocationLineHash`,
+  set to a hash of gitleaks' own fingerprint (`commit:file:rule:line`, the
+  `.gitleaksignore` format) in the upload's `<16 hex>:1` shape. That
+  fingerprint never changes for a history finding. gitleaks' other fields
+  (commit SHA, author, e-mail, date and commit message) are dropped.
+- Each result's `region` is dropped. Without a start line the upload skips the
+  result before computing or comparing any line hash, so it keeps the pre-set
+  value and no path reaches the log.
 - The line is appended to the alert message (`Line N.`).
 
 ## Consequences

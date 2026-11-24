@@ -240,19 +240,22 @@ for visibility in public internal error; do
         and all(has("region") | not)' "${sarif}" >/dev/null ||
         fail "the SARIF report must hold valid URIs and no regions: $(jq -c '[.runs[].results[].locations]' "${sarif}")"
     # Alerts match across runs on gitleaks' own fingerprint
-    # (commit:file:rule:line), so editing a cited line can't re-open a
-    # dismissed history finding (#624). Each result carries only that key,
-    # the line stays in the message, and gitleaks' commit metadata is gone.
-    jq -r '.runs[].results[].partialFingerprints["gitleaksFingerprint/v1"]' "${sarif}" | sort >"${tmp_dir}/fp-sarif"
+    # (commit:file:rule:line): code scanning matches only on
+    # primaryLocationLineHash, so it holds that fingerprint's hash, and editing
+    # a cited line can't re-open a dismissed history finding (#624). Each
+    # result carries only that key, the line stays in the message, and
+    # gitleaks' commit metadata is gone.
+    jq -r '.runs[].results[].partialFingerprints.primaryLocationLineHash' "${sarif}" | tr -d '\r' | sort >"${tmp_dir}/fp-sarif"
     gitleaks git "${tmp_dir}/public" --no-banner --redact --exit-code 0 --config "${CONFIG_DIR}/.gitleaks.toml" \
         --report-format json --report-path "${tmp_dir}/fp-report.json" >/dev/null 2>&1
-    jq -r '.[].Fingerprint' "${tmp_dir}/fp-report.json" | sort >"${tmp_dir}/fp-gitleaks"
+    jq -r '.[].Fingerprint' "${tmp_dir}/fp-report.json" | tr -d '\r' | while IFS= read -r fingerprint; do
+        printf '%s:1\n' "$(printf '%s' "${fingerprint}" | sha256sum | cut -c1-16)"
+    done | sort >"${tmp_dir}/fp-gitleaks"
     diff "${tmp_dir}/fp-gitleaks" "${tmp_dir}/fp-sarif" >&2 ||
-        fail "each SARIF result must carry gitleaks' fingerprint as partialFingerprints[gitleaksFingerprint/v1]"
+        fail "each SARIF result's primaryLocationLineHash must be the hash of gitleaks' fingerprint"
     jq -e '[.runs[].results[]]
-        | all(.partialFingerprints | keys == ["gitleaksFingerprint/v1"])
-        and ([.[] | select(.partialFingerprints["gitleaksFingerprint/v1"] | endswith(":0") | not)]
-            | all(.message.text | test(" Line [0-9]+[.]$")))' "${sarif}" >/dev/null ||
+        | all(.partialFingerprints | keys == ["primaryLocationLineHash"])
+        and ([.[] | select(.message.text | test(" Line [0-9]+[.]$"))] | length) == 3' "${sarif}" >/dev/null ||
         fail "SARIF results must carry only the stable fingerprint, and their line in the message"
     assert_redacted public
 done
