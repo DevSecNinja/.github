@@ -46,18 +46,17 @@ escape_property() {
 # A file, not a process substitution: `set -e` then stops on a failing
 # `git ls-files` instead of passing with nothing to check.
 listing="$(mktemp)"
+pins="$(mktemp)"
 output="$(mktemp)"
-trap 'rm -f "${listing}" "${output}"' EXIT
+trap 'rm -f "${listing}" "${pins}" "${output}"' EXIT
 git ls-files -z -- ':(glob)**/devcontainer.json' ':(glob)**/.devcontainer.json' \
     ':(glob)**/compose*.yml' ':(glob)**/compose*.yaml' \
     ':(glob)**/docker-compose*.yml' ':(glob)**/docker-compose*.yaml' >"${listing}"
 
-# Only active `image` values count: a YAML `image:` key or a JSON(C) "image"
-# key, never a comment or another substring. Captures the whole value, so a
-# variable in it can't silently truncate the reference.
-image_values() {
-    sed -nE 's/^[[:space:]{,]*"?image"?[[:space:]]*:[[:space:]]*["'\'']?([^"'\''[:space:],]+).*/\1/p' -- "$1"
-}
+# The image values the files pin, parsed (JSONC and YAML, any layout, anchors
+# resolved; comments never count): "<path>\t<image>", or "<path>\t!<reason>"
+# for a file that can't be parsed.
+/usr/bin/python3 "$(dirname "${BASH_SOURCE[0]}")/attestation-images.py" <"${listing}" >"${pins}"
 
 # The reference to verify for an image value; empty when a variable leaves it
 # unresolved. With a digest the tag is informational: verify the digest itself.
@@ -77,21 +76,28 @@ resolve() {
 # The first file that pins each value, in a stable order.
 declare -A first_file=()
 values=()
-while IFS= read -r -d '' path; do
-    while IFS= read -r value; do
-        [[ "$(tr '[:upper:]' '[:lower:]' <<<"${value}")" == "${namespace}/"* ]] || continue
-        [ -z "${first_file[${value}]+set}" ] || continue
-        first_file["${value}"]="${path}"
-        values+=("${value}")
-    done < <(image_values "${path}")
-done <"${listing}"
+unreadable=()
+while IFS=$'\t' read -r path value; do
+    if [[ "${value}" == '!'* ]]; then
+        unreadable+=("${path}"$'\t'"${value#!}")
+        continue
+    fi
+    [[ "$(tr '[:upper:]' '[:lower:]' <<<"${value}")" == "${namespace}/"* ]] || continue
+    [ -z "${first_file[${value}]+set}" ] || continue
+    first_file["${value}"]="${path}"
+    values+=("${value}")
+done <"${pins}"
 
-if [ "${#values[@]}" -eq 0 ]; then
+if [ "${#values[@]}" -eq 0 ] && [ "${#unreadable[@]}" -eq 0 ]; then
     echo "✓ No ${namespace}/ image is pinned in a dev container or Compose file."
     exit 0
 fi
 
 failed=0
+for entry in "${unreadable[@]}"; do
+    failed=$((failed + 1))
+    echo "::${level} file=$(escape_property "${entry%%$'\t'*}"),title=Unreadable file::$(escape_data "${entry%%$'\t'*}") can't be parsed ($(escape_data "${entry#*$'\t'}")), so its images can't be checked."
+done
 declare -A verified=()
 for value in "${values[@]}"; do
     path="${first_file[${value}]}"
@@ -115,5 +121,5 @@ for value in "${values[@]}"; do
 done
 
 [ "${failed}" -gt 0 ] || exit 0
-echo "::${level} title=Unattested image::${failed} of ${#values[@]} pinned ${namespace}/ image(s) failed attestation verification. Pin a literal digest that the publishing workflow attested with actions/attest and push-to-registry: true (docs/artifact-attestations.md in DevSecNinja/.github)."
+echo "::${level} title=Unattested image::${failed} of $((${#values[@]} + ${#unreadable[@]})) pinned ${namespace}/ image(s) or file(s) failed attestation verification. Pin a literal digest that the publishing workflow attested with actions/attest and push-to-registry: true (docs/artifact-attestations.md in DevSecNinja/.github)."
 [ "${blocking}" = false ] || exit 1

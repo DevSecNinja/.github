@@ -274,9 +274,11 @@ that fail the linter (and the workflow only with `lint-fail-on-error: true`);
 
 The `attestations` linter (`scripts/lint/attestations.sh`) verifies the
 [artifact attestation](artifact-attestations.md) of every image the repository
-pins from its owner's own GHCR namespace (`ghcr.io/<owner>/...`) as an active
-`image` value in a tracked `devcontainer.json` or Compose file (comments don't
-count). It runs `gh attestation verify oci://<ref> --owner <owner>
+pins from its owner's own GHCR namespace (`ghcr.io/<owner>/...`) as the
+`image` of a tracked `devcontainer.json` or of a Compose service. It parses the
+files with the runner's system Python and PyYAML (JSONC, any YAML layout,
+anchors resolved; comments don't count; a file it can't parse is reported).
+It runs `gh attestation verify oci://<ref> --owner <owner>
 --bundle-from-oci` once per reference (the digest when one is pinned), so it
 needs no permission beyond `contents: read`, and it only passes images
 attested with `push-to-registry: true`. A reference with a variable is
