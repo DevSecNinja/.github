@@ -75,10 +75,11 @@ List paths explicitly, the same way `release-publish` takes its
 `assets`. Don't attest the `.sha256` sidecars; they're derived from the
 files that are attested.
 
-Verify:
+Verify, naming the workflow that publishes the asset:
 
 ```sh
-gh attestation verify tool-v1.2.3-linux-x64.tar.gz --repo DevSecNinja/<repo>
+gh attestation verify tool-v1.2.3-linux-x64.tar.gz --repo DevSecNinja/<repo> \
+    --signer-workflow DevSecNinja/<repo>/.github/workflows/release.yml
 ```
 
 ## Container images
@@ -87,6 +88,13 @@ Attest the digest that was pushed, and push the attestation to the
 registry so it travels with the image:
 
 ```yaml
+- name: Log in to GHCR
+  uses: docker/login-action@<sha> # vX.Y.Z
+  with:
+    registry: ghcr.io
+    username: ${{ github.actor }}
+    password: ${{ secrets.GITHUB_TOKEN }}
+
 - name: Build and push
   id: push
   uses: docker/build-push-action@<sha> # vX.Y.Z
@@ -115,7 +123,8 @@ registry so it travels with the image:
 Verify:
 
 ```sh
-gh attestation verify oci://ghcr.io/devsecninja/<image>@sha256:<digest> --owner DevSecNinja
+gh attestation verify oci://ghcr.io/devsecninja/<image>@sha256:<digest> --owner DevSecNinja \
+    --signer-workflow DevSecNinja/<repo>/.github/workflows/<workflow>.yml
 ```
 
 ## SBOMs
@@ -135,14 +144,17 @@ Verify with the predicate type of the SBOM format:
 
 ```sh
 gh attestation verify tool-v1.2.3-windows-x64.zip --repo DevSecNinja/<repo> \
+    --signer-workflow DevSecNinja/<repo>/.github/workflows/release.yml \
     --predicate-type https://cyclonedx.org/bom   # or https://spdx.dev/Document/v2.3
 ```
 
-## Tighter verification
+## Why `--signer-workflow`
 
-`--owner DevSecNinja` or `--repo DevSecNinja/<repo>` proves the artifact
-was built by a workflow in that owner or repo. To also pin the workflow
-that built it, add `--signer-workflow`:
+`--owner DevSecNinja` or `--repo DevSecNinja/<repo>` alone accepts an
+attestation from any workflow in that owner or repo.
+`--signer-workflow` also pins the workflow that built the artifact, so a
+compromised unrelated workflow can't vouch for it. Use it whenever you
+know the publishing workflow, as in the examples above:
 
 ```sh
 gh attestation verify oci://ghcr.io/devsecninja/dotfiles-devcontainer:v0.6.0 \
@@ -154,7 +166,8 @@ gh attestation verify oci://ghcr.io/devsecninja/dotfiles-devcontainer:v0.6.0 \
 
 - `DevSecNinja/note-iq` `release.yml`: release zips with provenance and
   CycloneDX SBOM attestations.
-- `DevSecNinja/dotfiles` `release.yml`: script assets, then
-  `release-publish` with `extra-notes: log-sh`.
+- `DevSecNinja/dotfiles` `release.yml`: attests the script assets in the
+  caller, uploads them to the release-please draft and publishes it with
+  `gh release`.
 - `DevSecNinja/dotfiles` `devcontainer-prebuild.yaml`: multi-arch image
   with `push-to-registry: true`.
