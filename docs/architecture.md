@@ -1310,6 +1310,12 @@ can still assign Code Owners if an automerge PR cannot merge cleanly.
   so they get `minimumReleaseAge: "0"`, their own PR (`groupName: null`, outside
   the weekly batch) and automerge. Non-Docker-Hub image pins still wait for the
   `pr-cooldown` check (ADR 0005).
+- **Lock file maintenance skips the soak** — a lock refresh has no release
+  timestamp, so any release-age soak would keep its `renovate/stability-days`
+  check pending forever. The last rule in `packageRules.json5` sets
+  `minimumReleaseAge: null` for `lockFileMaintenance`, so manager rules such as
+  the mise 14-day soak can't hold the monthly branch. npm still enforces its own
+  3-day minimum release age during the refresh.
 - **Abandonment exemptions** — Renovate flags packages without a release for a
   year as abandoned. Known-stable packages that trip this (for example
   `@testing-library/user-event`) are exempted by name in
