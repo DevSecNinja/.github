@@ -90,6 +90,7 @@ jobs:
           CONCLUSION: ${{ github.event.workflow_run.conclusion }}
           WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
           WORKFLOW_PATH: ${{ github.event.workflow_run.path }}
+          WORKFLOW_ID: ${{ github.event.workflow_run.workflow_id }}
           RUN_EVENT: ${{ github.event.workflow_run.event }}
           HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}

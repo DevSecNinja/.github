@@ -21,6 +21,8 @@ on:
 permissions: {}
 
 # One run at a time per watched workflow, so two failures can't open two issues.
+# A newer pending run replaces an older one; that's fine, because the script
+# lets only the workflow's newest run decide.
 concurrency:
   group: ci-failure-issue-${{ github.event.workflow_run.workflow_id }}
   cancel-in-progress: false

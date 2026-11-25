@@ -3,8 +3,8 @@
 # Opens, updates or closes the CI failure issue of one workflow, for
 # .github/workflows/ci-failure-issue.yml. Inputs (env, all data from the
 # workflow_run event): GH_REPO, LABEL, RUN_ID, RUN_URL, CONCLUSION,
-# WORKFLOW_NAME, WORKFLOW_PATH, RUN_EVENT, HEAD_BRANCH, HEAD_SHA; GH_TOKEN for
-# gh.
+# WORKFLOW_NAME, WORKFLOW_PATH, WORKFLOW_ID, RUN_EVENT, HEAD_BRANCH, HEAD_SHA;
+# GH_TOKEN for gh.
 #
 # The issue is the open issue with label $LABEL whose body holds the marker
 # `<!-- ci-failure workflow=$WORKFLOW_PATH -->`; repo-steward finds it the
@@ -69,11 +69,36 @@ describe_failure() {
 
 ensure_label() {
     if ! gh api "repos/${GH_REPO}/labels/${LABEL}" >/dev/null 2>&1; then
-        gh label create "${LABEL}" --color d73a4a \
-            --description "A workflow on the default branch is failing" >/dev/null
-        echo "Created label ${LABEL}."
+        # Another workflow's handler may create it at the same moment: accept that, fail if it's still missing.
+        if gh label create "${LABEL}" --color d73a4a \
+            --description "A workflow on the default branch is failing" >/dev/null 2>&1; then
+            echo "Created label ${LABEL}."
+        else
+            gh api "repos/${GH_REPO}/labels/${LABEL}" >/dev/null
+        fi
     fi
 }
+
+# The id of this workflow's newest decisive run on the branch (cancelled or skipped runs say nothing), or
+# nothing. Handlers can run out of order (overlapping runs, re-runs): an older run must not open, comment on
+# or close the issue after a newer one decided it.
+newest_run() {
+    local branch
+    branch="$(jq -rn --arg b "${HEAD_BRANCH}" '$b | @uri')"
+    gh api "repos/${GH_REPO}/actions/workflows/${WORKFLOW_ID}/runs?branch=${branch}&status=completed&exclude_pull_requests=true&per_page=20" |
+        jq -r '[.workflow_runs[]
+            | select(.event != "pull_request" and .event != "pull_request_target")
+            | select(.conclusion as $c | ["cancelled", "skipped", "neutral", "action_required", "stale"] | index($c) | not)
+            ][0].id // empty'
+}
+
+if [[ -n "${WORKFLOW_ID:-}" && -n "${HEAD_BRANCH:-}" ]]; then
+    newest="$(newest_run || true)"
+    if [[ -n "${newest}" && "${newest}" != "${RUN_ID}" ]]; then
+        echo "Run ${RUN_ID} was superseded by run ${newest} of ${WORKFLOW_PATH}; nothing to do."
+        exit 0
+    fi
+fi
 
 issue="$(find_issue)"
 

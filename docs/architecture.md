@@ -911,6 +911,9 @@ jobs:
 ```
 
 The caller's `name:` must match its `!` pattern, so it never watches itself.
+Handlers can run out of order (overlapping runs, re-runs), so the script acts
+only when the triggering run is still the workflow's newest decisive run on the
+branch: an older green run never closes a newer failure's issue.
 
 ### Labeler (`labeler.yml`)
 
