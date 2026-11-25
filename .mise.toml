@@ -29,6 +29,7 @@ run = [
   "bash ./tests/pages-test-report-contract.sh",
   "bash ./tests/pages-scripts.sh",
   "bash ./tests/label-sync-scripts.sh",
+  "bash ./tests/ci-failure-issue-scripts.sh",
   "bash ./tests/apm-scripts.sh",
   "bash ./tests/autofix-scripts.sh",
   "bash ./tests/config-sync-scripts.sh",

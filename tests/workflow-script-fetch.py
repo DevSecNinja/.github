@@ -43,6 +43,7 @@ HARDEN_RUNNER = re.compile(r"^DevSecNinja/\.github/actions/harden-runner@[0-9a-f
 EXPECTED = {
     "apm-sync.yml",
     "autofix.yml",
+    "ci-failure-issue.yml",
     "config-sync.yml",
     "label-sync.yml",
     "lint.yml",

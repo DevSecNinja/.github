@@ -1,0 +1,96 @@
+---
+name: Reusable — CI failure issue
+
+# Opens one issue per failing workflow, comments on it when the workflow fails
+# again and closes it when the workflow passes. A thin caller in each repo runs
+# this on `workflow_run` for every other workflow (see
+# workflow-templates/ci-failure-issue.yml in DevSecNinja/repo-steward, which
+# ships it to the fleet).
+#
+# One issue per repository and workflow: the issue carries the label
+# `ci-failure` (input `label`) and the marker
+# `<!-- ci-failure workflow=<workflow path> -->` in its body. repo-steward's
+# health domain uses the same marker for the failures a workflow can't report
+# itself (a run that never starts, a schedule GitHub stops delivering), so the
+# two never open a second issue for the same workflow.
+#
+# Cost: the job is skipped (free) unless it has something to do. It runs when a
+# watched run failed, timed out or failed to start, and, on public repos only,
+# when one passed (to close an open issue). Private repos never start a runner
+# for a green run; repo-steward closes their recovered issues. Pull request
+# runs are ignored (failed PRs can't merge, and Renovate PRs are triaged
+# separately), and so are GitHub's own agent runs (`dynamic/agents/*`).
+#
+# This complements `notify-irm` (paging on deploy and release workflows): the
+# issue is the durable record, IRM the page.
+#
+# Caller permissions: `issues: write` (find, open, comment on and close the
+# issue, create the label) and `actions: read` (the failed jobs and steps of a
+# run in a private repo). A caller that grants less fails with
+# `startup_failure`.
+
+on:
+  workflow_call:
+    inputs:
+      label:
+        description: "Label of the CI failure issues (lowercase letters, digits and hyphens)."
+        required: false
+        type: string
+        default: ci-failure
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    name: Sync CI failure issue
+    # One condition decides whether a runner starts at all (every started job
+    # bills at least a minute on private repos). The workflow_ref check stops a
+    # caller from reporting on itself if its `!` workflow filter is dropped.
+    if: >-
+      github.event_name == 'workflow_run'
+      && github.event.repository.has_issues
+      && github.event.workflow_run.event != 'pull_request'
+      && github.event.workflow_run.event != 'pull_request_target'
+      && !startsWith(github.event.workflow_run.path, 'dynamic/agents/')
+      && !contains(github.workflow_ref, format('/{0}@', github.event.workflow_run.path))
+      && (contains(fromJSON('["failure", "timed_out", "startup_failure"]'), github.event.workflow_run.conclusion)
+          || (github.event.workflow_run.conclusion == 'success' && !github.event.repository.private))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      issues: write
+    steps:
+      - name: Checkout ci-failure-issue scripts
+        # The script ships with this reusable workflow: fetch it from the same
+        # commit of DevSecNinja/.github that the caller pinned.
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .devsecninja-ci-failure-issue
+          sparse-checkout: |-
+            scripts/ci-failure-issue/
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Move ci-failure-issue scripts out of the workspace
+        run: mv .devsecninja-ci-failure-issue "${RUNNER_TEMP}/devsecninja-ci-failure-issue"
+
+      - name: Open, update or close the issue
+        # Every value comes from the event through env: (no template
+        # injection); the script treats them as data.
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          LABEL: ${{ inputs.label }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          WORKFLOW_PATH: ${{ github.event.workflow_run.path }}
+          RUN_EVENT: ${{ github.event.workflow_run.event }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: bash "${RUNNER_TEMP}/devsecninja-ci-failure-issue/scripts/ci-failure-issue/sync.sh"

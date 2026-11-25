@@ -217,6 +217,15 @@ Conventions:
    page (otherwise a stuck deploy that an operator cancels looks like
    a green run from IRM's point of view).
 
+### CI failure issues
+
+Every repo also runs the `ci-failure-issue.yml` caller (see
+[`architecture.md`](architecture.md)), which keeps one `ci-failure` issue per
+failing default-branch workflow. It doesn't replace `notify-irm`: IRM pages
+and auto-resolves for the workflows above, and the issue is the durable record
+for every workflow, so both fire on the same failure. Don't add a
+`notify-irm` job just to get an issue.
+
 ---
 
 ## Release flow with release-please
