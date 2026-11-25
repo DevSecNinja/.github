@@ -597,6 +597,8 @@ printf 'services:\n  tagged:\n    image: !override ghcr.io/devsecninja/override:
     >"${att}/layouts/b/compose.override.yml"
 printf 'services:\n  tabbed:\n    image: ghcr.io/devsecninja/tabbed:v1\n' >"${att}/tab"$'\t'"dir/compose.yaml"
 printf 'services: [\n' >"${att}/broken/compose.yaml"
+mkdir -p "${att}/layouts/c"
+printf 'services:\n  nul:\n    image: "ghcr.io/devsecninja/nul:v1\\0ignored"\n' >"${att}/layouts/c/compose.yaml"
 git -C "${att}" add compose.extra.yaml .devcontainer.json layouts broken "tab"$'\t'"dir"
 attest FAKE_PRIVATE="ghcr.io/devsecninja/flow:1"
 expect_status 0 "variables and comments without blocking"
@@ -610,6 +612,9 @@ done
 expect_out '::warning file=compose.extra.yaml,title=Unresolved image::ghcr.io/devsecninja/open:v1@${DIGEST} uses a variable' \
     "an unresolved digest"
 expect_out "::warning file=broken/compose.yaml,title=Unreadable file::broken/compose.yaml can't be parsed" "a broken file"
+expect_out "::warning file=layouts/c/compose.yaml,title=Unreadable file::layouts/c/compose.yaml can't be parsed (image value contains a NUL character)" \
+    "a NUL in an image value"
+! grep -Fq "devsecninja/nul" <<<"${gh_calls}" || fail "a value with a NUL must not be verified: ${gh_calls}"
 expect_out "::warning file=layouts/b/compose.yaml,title=Unreadable image::ghcr.io/devsecninja/flow:1 can't be read" \
     "a registry read failure is not a missing attestation"
 expect_out "title=Invalid image::ghcr.io/devsecninja/bad%0A::error::injected is not a valid image reference." \

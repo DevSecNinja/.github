@@ -89,6 +89,8 @@ def main() -> int:
     for path in filter(None, sys.stdin.read().split("\0")):
         try:
             for value in images(path):
+                if "\0" in value:  # it would split one record into two and shift every later pair
+                    raise ValueError("image value contains a NUL character")
                 out.write(f"{path}\0{value}\0")
         except (OSError, ValueError, yaml.YAMLError) as exc:
             reason = " ".join(str(exc).split())
