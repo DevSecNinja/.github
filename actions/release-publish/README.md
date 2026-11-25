@@ -48,6 +48,8 @@ in two or more repos.
   `actions/attest-build-provenance` in the same job.
 - Build any artifacts and call `attest-build-provenance` _before_ this
   action so the attestation is bound to the caller's OIDC.
+- See [Artifact attestations](../../docs/artifact-attestations.md) for
+  the standard snippets for release assets, images and SBOMs.
 
 ## Example — notes-only release
 
