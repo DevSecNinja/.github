@@ -89,10 +89,9 @@
     {
       // `runs-on: ubuntu-26.04` runs, but actionlint 1.7.12 (the latest
       // release) rejects the label as unknown, so every ubuntu v26 PR fails
-      // `lint / actionlint` (rhysd/actionlint#682). Docker's apt repository
-      // has no 26.04 packages yet either (DevSecNinja/docker#195). Only 26 is
-      // held: a later runner release is proposed as usual. Drop this rule once
-      // a Renovate bump of actionlint knows the label.
+      // `lint / actionlint` (rhysd/actionlint#682). Only 26 is held: a later
+      // runner release is proposed as usual. Remove this rule once a Renovate
+      // bump of actionlint knows the label (DevSecNinja/.github#650).
       description: "Hold ubuntu-26.04 runners until actionlint accepts the label",
       matchDatasources: ["github-runners"],
       matchPackageNames: ["ubuntu"],
