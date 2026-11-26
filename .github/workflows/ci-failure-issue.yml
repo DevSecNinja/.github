@@ -56,7 +56,7 @@ jobs:
       && !contains(github.workflow_ref, format('/{0}@', github.event.workflow_run.path))
       && (contains(fromJSON('["failure", "timed_out", "startup_failure"]'), github.event.workflow_run.conclusion)
           || (github.event.workflow_run.conclusion == 'success' && !github.event.repository.private))
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     permissions:
       actions: read

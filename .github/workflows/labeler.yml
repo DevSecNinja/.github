@@ -21,7 +21,7 @@ permissions:
 jobs:
   pr-labeler:
     name: PR Labeler
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
     permissions:
@@ -41,7 +41,7 @@ jobs:
 
   issue-labeler:
     name: Issue Labeler
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     # Renovate rewrites its Dependency Dashboard issue on nearly every run, and
     # each `issues: edited` event would otherwise bill a labeler run for an

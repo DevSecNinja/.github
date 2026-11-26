@@ -231,7 +231,7 @@ jobs:
       != 'closed' || (inputs.cloudflare-preview && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login
       != 'renovate[bot]' && github.event.pull_request.user.login != 'dependabot[bot]' && github.actor != 'renovate[bot]' &&
       github.actor != 'dependabot[bot]')))
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
       - name: Checkout pages scripts
@@ -280,7 +280,7 @@ jobs:
     if: >-
       github.event_name != 'pull_request' || github.event.action == 'closed' || (github.event.pull_request.user.login != 'renovate[bot]'
       && github.event.pull_request.user.login != 'dependabot[bot]' && github.actor != 'renovate[bot]' && github.actor != 'dependabot[bot]')
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     outputs:
       enabled: ${{ steps.detect.outputs.enabled }}
@@ -329,7 +329,7 @@ jobs:
     needs:
       - validate-inputs
     if: ${{ github.event_name != 'pull_request' || github.event.action != 'closed' }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 15
     steps:
       - name: Checkout test-report action
@@ -420,7 +420,7 @@ jobs:
       - test
     if: >-
       inputs.github-pages && github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', inputs.production-branch)
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     concurrency:
       # Concurrency groups are already scoped to the repository, so naming the
@@ -542,7 +542,7 @@ jobs:
       # detect-cloudflare job decides which targets run for this event.
       matrix:
         include: ${{ fromJSON(needs.detect-cloudflare.outputs.targets) }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     concurrency:
       # Scoped per Cloudflare project: a repository may call this workflow once
@@ -645,7 +645,7 @@ jobs:
     if: >-
       needs.detect-cloudflare.outputs.deploy-production == 'true' && inputs.cloudflare-custom-domain != '' && needs.deploy-cloudflare.result
       == 'success'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     concurrency:
       group: >-
@@ -697,7 +697,7 @@ jobs:
       == github.repository && github.event.pull_request.user.login != 'renovate[bot]' && github.event.pull_request.user.login
       != 'dependabot[bot]' && github.actor != 'renovate[bot]' && github.actor != 'dependabot[bot]' && needs.detect-cloudflare.outputs.enabled
       == 'true'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     concurrency:
       # Scoped per Cloudflare project, as above. Without the project name two
@@ -832,7 +832,7 @@ jobs:
       == github.repository && github.event.pull_request.user.login != 'renovate[bot]' && github.event.pull_request.user.login
       != 'dependabot[bot]' && github.actor != 'renovate[bot]' && github.actor != 'dependabot[bot]' && needs.detect-cloudflare.outputs.enabled
       == 'true'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     permissions:
       deployments: write
