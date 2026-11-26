@@ -46,6 +46,7 @@ run = [
   "bash ./tests/renovate-dprint-plugins.sh",
   "bash ./tests/renovate-batching-contract.sh",
   "bash ./tests/renovate-engines-range.sh",
+  "bash ./tests/renovate-npm-allow-remote.sh",
   "bash ./tests/renovate-branch-pin-digests.sh",
   "bash ./tests/renovate-pin-no-soak.sh",
   "bash ./tests/renovate-lock-file-maintenance-no-soak.sh",
