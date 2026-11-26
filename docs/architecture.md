@@ -867,6 +867,54 @@ jobs:
       issues: write
 ```
 
+### CI failure issue (`ci-failure-issue.yml`)
+
+Keeps one issue per failing workflow. Called on `workflow_run` (completed) for
+every other workflow on the default branch, it opens an issue labelled
+`ci-failure` when a run fails, times out or fails to start, comments on it on
+every further failure (run link, failed jobs and their first failed step) and
+closes it when the workflow passes again. The issue is found by the marker
+`<!-- ci-failure workflow=<workflow path> -->` in its body, through the REST
+issue list (no search index lag). repo-steward's health domain uses the same
+marker for failures a workflow can't report itself (a run that never starts, a
+schedule GitHub stopped delivering), so the two never duplicate an issue.
+
+`scripts/ci-failure-issue/sync.sh` does the work with `gh` and `jq` (no
+third-party action). The job's `if:` keeps it free unless there is something
+to do: it skips pull request runs, GitHub's agent runs (`dynamic/agents/*`),
+repos with issues off, and green runs on private repos (repo-steward closes
+their recovered issues). Public repos run it for green runs too, to close the
+issue (standard runners are free there).
+
+| Input   | Description                                 |
+| ------- | ------------------------------------------- |
+| `label` | Label of the issues. Default: `ci-failure`. |
+
+**Example caller** (repo-steward ships it to the fleet):
+
+```yaml
+on:
+  workflow_run:
+    workflows: ["**", "!CI failure issue"]
+    types: [completed]
+    branches: [main]
+permissions: {}
+concurrency:
+  group: ci-failure-issue-${{ github.event.workflow_run.workflow_id }}
+  cancel-in-progress: false
+jobs:
+  sync:
+    uses: DevSecNinja/.github/.github/workflows/ci-failure-issue.yml@<sha> # vX.Y.Z
+    permissions:
+      actions: read
+      issues: write
+```
+
+The caller's `name:` must match its `!` pattern, so it never watches itself.
+Handlers can run out of order (overlapping runs, re-runs), so the script acts
+only when the triggering run is still the workflow's newest decisive run on the
+branch: an older green run never closes a newer failure's issue.
+
 ### Labeler (`labeler.yml`)
 
 Auto-labels pull requests and issues based on path patterns

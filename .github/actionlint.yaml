@@ -7,6 +7,9 @@ paths:
   .github/workflows/autofix.yml:
     ignore:
       - 'property "workflow_(repository|sha)" is not defined in object type'
+  .github/workflows/ci-failure-issue.yml:
+    ignore:
+      - 'property "workflow_(repository|sha)" is not defined in object type'
   .github/workflows/config-sync.yml:
     ignore:
       - 'property "workflow_(repository|sha)" is not defined in object type'

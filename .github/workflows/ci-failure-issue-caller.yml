@@ -1,0 +1,35 @@
+---
+# Opens an issue when a workflow fails on the default branch, comments on it
+# when it fails again and closes it when it passes (reusable
+# ci-failure-issue.yml). `**` watches every workflow; the `!` pattern keeps
+# this caller from watching itself. A local reference validates changes to the
+# reusable workflow in this repository.
+name: CI failure issue
+
+on:
+  # Safe: nothing from the triggering run is checked out, downloaded or
+  # executed; only its event metadata is read, through env:.
+  workflow_run: # zizmor: ignore[dangerous-triggers]
+    workflows:
+      - "**"
+      - "!CI failure issue"
+    types:
+      - completed
+    branches:
+      - main
+
+permissions: {}
+
+# One run at a time per watched workflow, so two failures can't open two issues.
+# A newer pending run replaces an older one; that's fine, because the script
+# lets only the workflow's newest run decide.
+concurrency:
+  group: ci-failure-issue-${{ github.event.workflow_run.workflow_id }}
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    uses: ./.github/workflows/ci-failure-issue.yml
+    permissions:
+      actions: read
+      issues: write

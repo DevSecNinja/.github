@@ -51,6 +51,9 @@
   description: Automated APM materialize PR
 - name: todo-to-issue
   color: "0075ca"
+- name: ci-failure
+  color: "d73a4a"
+  description: A workflow on the default branch is failing
 
 # Uncategorized
 - name: bug
