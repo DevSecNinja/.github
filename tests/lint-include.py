@@ -40,6 +40,7 @@ NOT_LINTERS = {
     "lint-inline-scripts-blocking",
     "lint-biome-with-eslint",
     "lint-line-endings-blocking",
+    "lint-attestations-blocking",
 }
 LEVELS = {"none": 0, "read": 1, "write": 2}
 

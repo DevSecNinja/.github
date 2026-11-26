@@ -545,4 +545,96 @@ run_in "${tmp_dir}/not-a-repo" line-endings GIT_CEILING_DIRECTORIES="${tmp_dir}"
 expect_failure "outside a git repository"
 ! grep -Fq "No text file is committed" <<<"${out}" || fail "a failed scan must not report success: ${out}"
 
+# attestations verifies each ghcr.io/<owner>/ image pinned in a tracked dev
+# container or Compose file once, by digest when one is pinned, from the
+# registry bundle. A stand-in gh records its calls and fails for the
+# references in $FAKE_UNATTESTED.
+cat >"${tmp_dir}/bin/gh" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >>"${GH_LOG}"
+[[ " ${FAKE_PRIVATE:-} " != *" ${3#oci://} "* ]] || { echo "GET https://ghcr.io/token: UNAUTHORIZED: authentication required"; exit 1; }
+[[ " ${FAKE_UNATTESTED:-} " != *" ${3#oci://} "* ]] || { echo "no attestations found"; exit 1; }
+EOF
+chmod +x "${tmp_dir}/bin/gh"
+export GH_LOG="${tmp_dir}/gh.log"
+digest="sha256:$(printf '%064d' 7)"
+att="${tmp_dir}/att"
+mkdir -p "${att}/.devcontainer" "${att}/services/app"
+git -C "${att}" init -q
+printf '{ "image": "ghcr.io/devsecninja/dev-image:v1.2.3" }\n' >"${att}/.devcontainer/devcontainer.json"
+printf 'services:\n  app:\n    image: ghcr.io/devsecninja/apps/app:abc123@%s\n  db:\n    image: ghcr.io/other/db:1\n' \
+    "${digest}" >"${att}/services/app/compose.yaml"
+printf 'services:\n  again:\n    image: ghcr.io/devsecninja/dev-image:v1.2.3\n' >"${att}/docker-compose.yml"
+printf 'image: ghcr.io/devsecninja/untracked:1\n' >"${att}/compose.override.yaml"
+git -C "${att}" add .devcontainer services docker-compose.yml
+attest() {
+    : >"${GH_LOG}"
+    run_in "${att}" attestations GITHUB_REPOSITORY_OWNER=DevSecNinja "$@"
+    gh_calls="$(cat "${GH_LOG}")"
+}
+attest
+expect_status 0 "attested images"
+expect_out "✓ ghcr.io/devsecninja/dev-image:v1.2.3 is attested by a DevSecNinja workflow." "attested images"
+grep -Fxq "attestation verify oci://ghcr.io/devsecninja/apps/app@${digest} --owner DevSecNinja --bundle-from-oci" \
+    <<<"${gh_calls}" || fail "a pinned digest must be verified without its tag: ${gh_calls}"
+[ "$(wc -l <<<"${gh_calls}")" -eq 2 ] || fail "each reference must be verified once, tracked files only: ${gh_calls}"
+! grep -Fq "ghcr.io/other/" <<<"${gh_calls}" || fail "third-party images must be skipped: ${gh_calls}"
+# Only active image values count; a variable tag keeps its literal digest, and
+# a variable digest can't be verified, so it is reported, never truncated.
+# shellcheck disable=SC2016 # literal Compose variables
+printf '# image: ghcr.io/devsecninja/retired:v1\nservices:\n  var:\n    image: ghcr.io/devsecninja/var:${TAG:-v1}@%s\n  open:\n    image: "ghcr.io/devsecninja/open:v1@${DIGEST}" # pinned at deploy\n' \
+    "${digest}" >"${att}/compose.extra.yaml"
+printf '{\n  // "image": "ghcr.io/devsecninja/old-dev:1",\n  "name": "x"\n}\n' >"${att}/.devcontainer.json"
+# Any JSON(C) or YAML layout counts: a value on the line after its key with a
+# trailing comma, flow mappings, anchors merged into a service, Compose's
+# !reset and !override tags, and a tab in a tracked path.
+mkdir -p "${att}/layouts/a" "${att}/layouts/b" "${att}/broken" "${att}/tab"$'\t'"dir"
+printf '{\n  "name": "dev", /* block */\n  "image":\n    "ghcr.io/devsecninja/next-line:v1",\n}\n' \
+    >"${att}/layouts/a/devcontainer.json"
+printf 'x-base: &base\n  image: ghcr.io/devsecninja/anchored:v1\nservices: {flow: {image: ghcr.io/devsecninja/flow:1}, merged: {<<: *base}}\n' \
+    >"${att}/layouts/b/compose.yaml"
+printf 'services:\n  tagged:\n    image: !override ghcr.io/devsecninja/override:v1\n    ports: !reset []\n  bad:\n    image: "ghcr.io/devsecninja/bad\\n::error::injected"\n' \
+    >"${att}/layouts/b/compose.override.yml"
+printf 'services:\n  tabbed:\n    image: ghcr.io/devsecninja/tabbed:v1\n' >"${att}/tab"$'\t'"dir/compose.yaml"
+printf 'services: [\n' >"${att}/broken/compose.yaml"
+mkdir -p "${att}/layouts/c"
+printf 'services:\n  nul:\n    image: "ghcr.io/devsecninja/nul:v1\\0ignored"\n' >"${att}/layouts/c/compose.yaml"
+git -C "${att}" add compose.extra.yaml .devcontainer.json layouts broken "tab"$'\t'"dir"
+attest FAKE_PRIVATE="ghcr.io/devsecninja/flow:1"
+expect_status 0 "variables and comments without blocking"
+grep -Fxq "attestation verify oci://ghcr.io/devsecninja/var@${digest} --owner DevSecNinja --bundle-from-oci" \
+    <<<"${gh_calls}" || fail "a variable tag must keep the literal digest: ${gh_calls}"
+! grep -Eq "retired|old-dev|open" <<<"${gh_calls}" || fail "comments and unresolved values must not be verified: ${gh_calls}"
+for image in next-line:v1 flow:1 anchored:v1 override:v1 tabbed:v1; do
+    grep -Fq "oci://ghcr.io/devsecninja/${image} " <<<"${gh_calls}" || fail "${image} must be found in any layout: ${gh_calls}"
+done
+# shellcheck disable=SC2016 # literal Compose variable
+expect_out '::warning file=compose.extra.yaml,title=Unresolved image::ghcr.io/devsecninja/open:v1@${DIGEST} uses a variable' \
+    "an unresolved digest"
+expect_out "::warning file=broken/compose.yaml,title=Unreadable file::broken/compose.yaml can't be parsed" "a broken file"
+expect_out "::warning file=layouts/c/compose.yaml,title=Unreadable file::layouts/c/compose.yaml can't be parsed (image value contains a NUL character)" \
+    "a NUL in an image value"
+! grep -Fq "devsecninja/nul" <<<"${gh_calls}" || fail "a value with a NUL must not be verified: ${gh_calls}"
+expect_out "::warning file=layouts/b/compose.yaml,title=Unreadable image::ghcr.io/devsecninja/flow:1 can't be read" \
+    "a registry read failure is not a missing attestation"
+expect_out "title=Invalid image::ghcr.io/devsecninja/bad%0A::error::injected is not a valid image reference." \
+    "a value with a newline"
+! grep -q '^::error::injected' <<<"${out}" || fail "an image value must not inject a workflow command: ${out}"
+! grep -Fq "devsecninja/bad" <<<"${gh_calls}" || fail "an invalid value must not be verified: ${gh_calls}"
+git -C "${att}" rm -q -r --cached compose.extra.yaml .devcontainer.json layouts broken "tab"$'\t'"dir"
+attest FAKE_UNATTESTED="ghcr.io/devsecninja/apps/app@${digest}"
+expect_status 0 "an unattested image without blocking"
+expect_out "::warning file=services/app/compose.yaml,title=Unattested image::ghcr.io/devsecninja/apps/app@${digest} has no" \
+    "an unattested image without blocking"
+expect_out "no attestations found" "the gh output"
+expect_out "1 of 2 pinned ghcr.io/devsecninja/ image(s) or file(s) failed" "the summary"
+attest FAKE_UNATTESTED="ghcr.io/devsecninja/apps/app@${digest}" LINT_ATTESTATIONS_BLOCKING=true
+expect_status 1 "an unattested image with blocking"
+expect_out "::error file=services/app/compose.yaml,title=Unattested image::" "an unattested image with blocking"
+attest LINT_ATTESTATIONS_BLOCKING=bogus
+expect_status 2 "an invalid blocking value"
+run_in "${eol}" attestations GITHUB_REPOSITORY_OWNER=DevSecNinja
+expect_status 0 "no pinned images"
+expect_out "✓ No ghcr.io/devsecninja/ image is pinned" "no pinned images"
+
 echo "lint scripts: OK"

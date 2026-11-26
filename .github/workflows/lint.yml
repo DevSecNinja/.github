@@ -159,6 +159,19 @@ on:
         required: false
         type: boolean
         default: true
+      lint-attestations:
+        description: >-
+          Verify the GitHub artifact attestation of every ghcr.io/<owner>/ image pinned in a tracked dev container or
+          Compose file (scripts/lint/attestations.sh, gh attestation verify --bundle-from-oci). Warnings only, unless
+          `lint-attestations-blocking` is true.
+        required: false
+        type: boolean
+        default: true
+      lint-attestations-blocking:
+        description: "Report unattested images as errors and fail the attestations linter; false reports warnings only"
+        required: false
+        type: boolean
+        default: false
       upload-sarif:
         description: "Upload checkov/trivy/zizmor/ruff/biome/psscriptanalyzer results to GitHub code scanning (requires GitHub
           Advanced Security). Set false for private repos without GHAS to gate on exit codes with console output instead."
@@ -1012,6 +1025,44 @@ jobs:
           LINT_LINE_ENDINGS_BLOCKING: ${{ inputs.lint-line-endings-blocking }}
         run: bash "${RUNNER_TEMP}/devsecninja-lint/scripts/lint/line-endings.sh"
 
+  attestations:
+    name: attestations
+    if: ${{ inputs.lint-attestations && (inputs.lint-job-mode == 'parallel' || (inputs.lint-job-mode == 'auto' && !github.event.repository.private))
+      }}
+    continue-on-error: ${{ ! inputs.lint-fail-on-error }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout lint scripts
+        # The linter scripts ship with this reusable workflow: fetch them from
+        # the same commit of DevSecNinja/.github that the caller pinned.
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .devsecninja-lint
+          sparse-checkout: |-
+            scripts/lint/
+            scripts/lint-inline-scripts.py
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Move lint scripts out of the workspace
+        # Outside the workspace the caller's linters don't scan them, and the
+        # code checkout doesn't delete them.
+        run: mv .devsecninja-lint "${RUNNER_TEMP}/devsecninja-lint"
+
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Verify image attestations
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LINT_ATTESTATIONS_BLOCKING: ${{ inputs.lint-attestations-blocking }}
+        run: bash "${RUNNER_TEMP}/devsecninja-lint/scripts/lint/attestations.sh"
+
   all-linters:
     # Single-job mode (`lint-job-mode: single`, or `auto` on a private
     # repository). Every enabled linter runs as a step of this one job, so a
@@ -1072,6 +1123,16 @@ jobs:
         env:
           LINT_LINE_ENDINGS_BLOCKING: ${{ inputs.lint-line-endings-blocking }}
         run: bash "${RUNNER_TEMP}/devsecninja-lint/scripts/lint/line-endings.sh"
+
+      - name: Verify image attestations
+        # Needs only git and gh, both on the runner: runs before the tool setup.
+        id: attestations
+        if: ${{ inputs.lint-attestations }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LINT_ATTESTATIONS_BLOCKING: ${{ inputs.lint-attestations-blocking }}
+        run: bash "${RUNNER_TEMP}/devsecninja-lint/scripts/lint/attestations.sh"
 
       - name: Find Python files
         # Repositories without Python skip ruff (and its mise install).
