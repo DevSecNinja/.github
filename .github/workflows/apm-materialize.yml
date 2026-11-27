@@ -50,7 +50,7 @@ jobs:
     steps:
       - name: Harden runner
         # renovate: datasource=github-tags depName=DevSecNinja/.github
-        uses: DevSecNinja/.github/actions/harden-runner@0d0f448de257f354c89dc3a128871235d6ba8c11 # v2.5.0
+        uses: DevSecNinja/.github/actions/harden-runner@eadb4f166f27d0864147189741c7596560be39dd # v3.6.0
 
       - name: Generate App token
         id: app-token
