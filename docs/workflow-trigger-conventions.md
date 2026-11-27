@@ -37,6 +37,11 @@ post-merge-only work to do:
   `image-security.yml` runs weekly and on push to `main` so the latest
   shipped image set is always represented, and the secret-scan caller
   re-scans the full git history with the current gitleaks rules).
+- **Lint callers that upload SARIF to code scanning** (`upload-sarif: true`,
+  the default in public repos). Code scanning needs a default-branch
+  analysis: without a `main` run, alerts fixed on `main` never close and PR
+  alerts have no baseline. `workflow-templates/lint.yml` does this; drop the
+  push only when results aren't uploaded.
 - **Label / repo config workflows** where the PR run validates and the
   `main` run applies (e.g. `label-sync.yml`).
 
@@ -289,6 +294,7 @@ to make this automatic.
 | Workflow type               | Triggers                                                    | Concurrency    | Notify IRM |
 | --------------------------- | ----------------------------------------------------------- | -------------- | ---------- |
 | Lint / test (PR-validation) | `pull_request`                                              | cancel=true    | no         |
+| Lint with SARIF upload      | `pull_request`, `push: main`                                | cancel=PR only | no         |
 | Docs publish                | `push: main`, `pull_request` (preview-only)                 | cancel=PR only | yes        |
 | release-please              | `push: main`, `workflow_dispatch`                           | cancel=false   | yes        |
 | Release publish             | `push: tags ["v*"]`                                         | cancel=false   | yes        |
