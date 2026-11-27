@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.1.0](https://github.com/DevSecNinja/.github/compare/v5.0.1...v5.1.0) (2026-11-27)
+
+
+### 🚀 Features
+
+* **ci:** add reusable ci-failure-issue workflow ([#652](https://github.com/DevSecNinja/.github/issues/652)) ([914c161](https://github.com/DevSecNinja/.github/commit/914c1610c356c53c67cc0e4606604f6960cae814))
+* **lint:** verify attestations of DevSecNinja-built images ([#645](https://github.com/DevSecNinja/.github/issues/645)) ([790468d](https://github.com/DevSecNinja/.github/commit/790468d9697fc3fd331f59e1b401a8f4a8d553ac))
+
+
+### 🐛 Bug Fixes
+
+* **ci:** grant contents read to the ci-failure-issue caller ([#655](https://github.com/DevSecNinja/.github/issues/655)) ([74b6b4e](https://github.com/DevSecNinja/.github/commit/74b6b4e887309f3523b0602d7f5296198ec340e8))
+* **lint:** run the lint caller on push to main so code scanning alerts refresh ([#641](https://github.com/DevSecNinja/.github/issues/641)) ([0604dc0](https://github.com/DevSecNinja/.github/commit/0604dc0b5dc0f8f81837d41faafc91fe51bf7a3e))
+
 ## [5.0.1](https://github.com/DevSecNinja/.github/compare/v5.0.0...v5.0.1) (2026-11-24)
 
 
