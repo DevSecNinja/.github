@@ -1370,6 +1370,12 @@ can still assign Code Owners if an automerge PR cannot merge cleanly.
   dependencies, but `engines` declare the supported range (`node: "^24.0.0"`)
   and use `rangeStrategy: "replace"`. The exact Node.js version for
   development and CI is pinned in `.mise.toml`.
+- **Version holds** — updates the fleet can't take yet are held centrally
+  rather than closed in every repository: the `ubuntu-26.04` runner
+  (actionlint rejects the label until rhysd/actionlint#682 ships; removal is
+  tracked in #650), and digest pins of `apm.yml` refs (Renovate's `apm` manager
+  can't refresh `apm.lock.yaml`, which already records each tag's commit).
+  `tests/renovate-version-holds.sh` keeps both in place.
 
 ### Version annotations
 

@@ -87,6 +87,17 @@
       minimumReleaseAge: "14 days",
     },
     {
+      // `runs-on: ubuntu-26.04` runs, but actionlint 1.7.12 (the latest
+      // release) rejects the label as unknown, so every ubuntu v26 PR fails
+      // `lint / actionlint` (rhysd/actionlint#682). Only 26 is held: a later
+      // runner release is proposed as usual. Remove this rule once a Renovate
+      // bump of actionlint knows the label (DevSecNinja/.github#650).
+      description: "Hold ubuntu-26.04 runners until actionlint accepts the label",
+      matchDatasources: ["github-runners"],
+      matchPackageNames: ["ubuntu"],
+      allowedVersions: "!/^26\\./",
+    },
+    {
       matchManagers: ["mise"],
       minimumReleaseAge: "14 days",
       pinDigests: false,
@@ -113,6 +124,17 @@
       description: "Regex custom managers track bare versions (e.g. 2026.10.19) against v-prefixed github-releases tags. A digest cannot be resolved for the non-existent bare tag (\"Could not determine new digest\"), so disable digest pinning for them.",
       matchManagers: ["custom.regex"],
       matchDatasources: ["github-releases"],
+      pinDigests: false,
+    },
+    {
+      // Renovate's apm manager reads apm.yml refs (`owner/repo/path#v0.9.1`)
+      // and, with the global pinDigests, opened one "pin tag ... to <sha>" PR
+      // per file. Mend-hosted Renovate can't run `apm install`, so
+      // apm.lock.yaml is never refreshed and every pin PR fails
+      // renovate/artifacts (DevSecNinja/az-vm-start-stop#158). apm.lock.yaml
+      // already records the resolved commit of each tag.
+      description: "APM refs in apm.yml stay on tags: apm.lock.yaml records the commit, and a digest pin can't refresh the lock",
+      matchManagers: ["apm"],
       pinDigests: false,
     },
     {

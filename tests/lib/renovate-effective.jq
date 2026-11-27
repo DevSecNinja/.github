@@ -41,5 +41,5 @@ def matches:
 
 reduce (.[] | select(matches)) as $r ({enabled: true, labels: []} + $base;
     . + ($r | with_entries(select(.key | IN("enabled", "automerge", "groupName", "minimumGroupSize", "minimumReleaseAge",
-        "minimumReleaseAgeBehaviour", "additionalBranchPrefix"))))
+        "minimumReleaseAgeBehaviour", "additionalBranchPrefix", "pinDigests", "allowedVersions"))))
     | .labels += ($r.addLabels // []))
