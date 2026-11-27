@@ -35,6 +35,7 @@ run = [
   "bash ./tests/config-sync-scripts.sh",
   "bash ./tests/vendored-file-sync-scripts.sh",
   "uv run --script ./tests/workflow-script-fetch.py",
+  "uv run --script ./tests/workflow-caller-permissions.py",
   "uv run --script ./tests/renovate-pr-cooldown.py",
   "bash ./tests/renovate-custom-manager-coverage.sh",
   "bash ./tests/renovate-apm-manager.sh",

@@ -25,9 +25,11 @@ name: Reusable — CI failure issue
 # issue is the durable record, IRM the page.
 #
 # Caller permissions: `issues: write` (find, open, comment on and close the
-# issue, create the label) and `actions: read` (the failed jobs and steps of a
-# run in a private repo). A caller that grants less fails with
-# `startup_failure`.
+# issue, create the label), `actions: read` (the failed jobs and steps of a
+# run in a private repo) and `contents: read` (this workflow's own permissions,
+# and the checkout of its script). A caller that grants less fails with
+# `startup_failure` before any job starts; tests/workflow-caller-permissions.py
+# checks this repository's callers.
 
 on:
   workflow_call:
@@ -60,6 +62,7 @@ jobs:
     timeout-minutes: 5
     permissions:
       actions: read
+      contents: read
       issues: write
     steps:
       - name: Checkout ci-failure-issue scripts

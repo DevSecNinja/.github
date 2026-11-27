@@ -32,4 +32,5 @@ jobs:
     uses: ./.github/workflows/ci-failure-issue.yml
     permissions:
       actions: read
+      contents: read
       issues: write

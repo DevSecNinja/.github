@@ -1,0 +1,111 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.9"
+# dependencies = ["pyyaml==6.0.3"]
+# ///
+"""Every caller grants the permissions the reusable workflow it calls requests.
+
+GitHub refuses to start a run whose reusable workflow requests more than its
+calling job grants: the whole run ends in `startup_failure` ("The workflow is
+requesting 'contents: read', but is only allowed 'contents: none'"), before
+any job or step, so no lint, test or log of the workflow itself shows it. The
+reusable workflow's top-level `permissions` count as requested even when each
+of its jobs sets its own.
+
+For each job in .github/workflows/ that calls a reusable workflow of this
+repository (`./.github/workflows/x.yml`, `$/.github/workflows/x.yml` or
+`DevSecNinja/.github/.github/workflows/x.yml@<ref>`), this compares what the
+job grants (its `permissions`, else the workflow's) with the most the called
+workflow requests (its top-level `permissions` and every job's). A caller that
+sets no permissions anywhere gets the repository's default token and is
+skipped.
+"""
+
+from __future__ import annotations
+
+import re
+import sys
+from pathlib import Path
+
+import yaml
+
+ROOT = Path(__file__).resolve().parent.parent
+WORKFLOWS = ROOT / ".github" / "workflows"
+USES = re.compile(r"^(?:\./|\$/|DevSecNinja/\.github/)\.github/workflows/([\w.-]+\.ya?ml)(?:@\S+)?$")
+LEVELS = {"none": 0, "read": 1, "write": 2}
+NAMES = {level: name for name, level in LEVELS.items()}
+SCOPES = (
+    "actions", "artifact-metadata", "attestations", "checks", "contents", "deployments", "discussions",
+    "id-token", "issues", "models", "packages", "pages", "pull-requests", "repository-projects",
+    "security-events", "statuses",
+)  # fmt: skip
+# Callers that must keep being checked, so the test cannot pass vacuously.
+EXPECTED = {"ci-failure-issue-caller.yml", "lint-caller.yml", "renovate-pr-cooldown-caller.yml"}
+
+
+def levels(value) -> dict[str, int]:
+    """A `permissions` value as scope -> level; a mapping leaves unlisted scopes at none."""
+    if value in ("read-all", "write-all"):
+        return dict.fromkeys(SCOPES, LEVELS[value.split("-")[0]])
+    if not isinstance(value, dict):
+        raise TypeError(f"unexpected permissions value {value!r}")
+    return {scope: LEVELS[str(level)] for scope, level in value.items()}
+
+
+def load(path: Path) -> dict:
+    return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+
+
+def requested(doc: dict) -> dict[str, int]:
+    """The most the reusable workflow asks for, top level and per job."""
+    out: dict[str, int] = {}
+    blocks = [doc["permissions"]] if "permissions" in doc else []
+    blocks += [
+        job["permissions"] for job in (doc.get("jobs") or {}).values() if isinstance(job, dict) and "permissions" in job
+    ]
+    for block in blocks:
+        for scope, level in levels(block).items():
+            out[scope] = max(out.get(scope, 0), level)
+    return out
+
+
+def main() -> int:
+    errors: list[str] = []
+    checked: set[str] = set()
+    for file in sorted(WORKFLOWS.glob("*.y*ml")):
+        doc = load(file)
+        for job_id, job in (doc.get("jobs") or {}).items():
+            match = USES.match(str(job.get("uses") or "")) if isinstance(job, dict) else None
+            if not match:
+                continue
+            target = WORKFLOWS / match.group(1)
+            if not target.is_file():
+                errors.append(f"{file.name} job {job_id}: calls {match.group(1)}, which does not exist")
+                continue
+            if "permissions" in job:
+                granted = levels(job["permissions"])
+            elif "permissions" in doc:
+                granted = levels(doc["permissions"])
+            else:
+                continue  # the repository's default token
+            checked.add(file.name)
+            for scope, level in sorted(requested(load(target)).items()):
+                have = granted.get(scope, 0)
+                if have < level:
+                    errors.append(
+                        f"{file.name} job {job_id}: {target.name} requests '{scope}: {NAMES[level]}', but the "
+                        f"job grants '{scope}: {NAMES[have]}' (the run would end in startup_failure)"
+                    )
+    for name in sorted(EXPECTED - checked):
+        errors.append(f"{name}: expected a caller with permissions to check, found none")
+    if errors:
+        print(f"✖ {len(errors)} caller permission problem(s):", file=sys.stderr)
+        for error in errors:
+            print(f"  - {error}", file=sys.stderr)
+        return 1
+    print(f"✓ Caller permissions: {len(checked)} workflows grant what the reusable workflows they call request.")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

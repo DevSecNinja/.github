@@ -927,6 +927,7 @@ jobs:
     uses: DevSecNinja/.github/.github/workflows/ci-failure-issue.yml@<sha> # vX.Y.Z
     permissions:
       actions: read
+      contents: read
       issues: write
 ```
 
