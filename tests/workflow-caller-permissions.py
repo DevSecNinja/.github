@@ -35,22 +35,25 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 USES = re.compile(r"^(?:\./|\$/)\.github/workflows/([\w.-]+\.ya?ml)$")
 LEVELS = {"none": 0, "read": 1, "write": 2}
 NAMES = {level: name for name, level in LEVELS.items()}
-SCOPES = (
-    "actions", "artifact-metadata", "attestations", "checks", "contents", "deployments", "discussions",
-    "id-token", "issues", "models", "packages", "pages", "pull-requests", "repository-projects",
-    "security-events", "statuses",
-)  # fmt: skip
+# The level a `read-all`/`write-all` grants every scope not listed, so new scopes need no list here.
+ANY = "*"
 # Callers that must keep being checked, so the test cannot pass vacuously.
 EXPECTED = {"ci-failure-issue-caller.yml", "lint-caller.yml", "renovate-pr-cooldown-caller.yml"}
 
 
 def levels(value) -> dict[str, int]:
-    """A `permissions` value as scope -> level; a mapping leaves unlisted scopes at none."""
-    if value in ("read-all", "write-all"):
-        return dict.fromkeys(SCOPES, LEVELS[value.split("-")[0]])
+    """A `permissions` value as scope -> level; ANY holds the level of unlisted scopes (none for a mapping)."""
+    if value == "read-all":
+        return {ANY: LEVELS["read"], "id-token": LEVELS["none"]}  # id-token has no read level
+    if value == "write-all":
+        return {ANY: LEVELS["write"]}
     if not isinstance(value, dict):
         raise TypeError(f"unexpected permissions value {value!r}")
     return {scope: LEVELS[str(level)] for scope, level in value.items()}
+
+
+def grant(block: dict[str, int], scope: str) -> int:
+    return block.get(scope, block.get(ANY, 0))
 
 
 def load(path: Path) -> dict:
@@ -58,16 +61,15 @@ def load(path: Path) -> dict:
 
 
 def requested(doc: dict) -> dict[str, int]:
-    """The most the reusable workflow asks for, top level and per job."""
-    out: dict[str, int] = {}
-    blocks = [doc["permissions"]] if "permissions" in doc else []
+    """The most the reusable workflow asks for, top level and per job (ANY: what every other scope needs)."""
+    blocks = [levels(doc["permissions"])] if "permissions" in doc else []
     blocks += [
-        job["permissions"] for job in (doc.get("jobs") or {}).values() if isinstance(job, dict) and "permissions" in job
+        levels(job["permissions"])
+        for job in (doc.get("jobs") or {}).values()
+        if isinstance(job, dict) and "permissions" in job
     ]
-    for block in blocks:
-        for scope, level in levels(block).items():
-            out[scope] = max(out.get(scope, 0), level)
-    return out
+    scopes = {scope for block in blocks for scope in block}
+    return {scope: max(grant(block, scope) for block in blocks) for scope in scopes}
 
 
 def main() -> int:
@@ -91,11 +93,12 @@ def main() -> int:
                 continue  # the repository's default token
             checked.add(file.name)
             for scope, level in sorted(requested(load(target)).items()):
-                have = granted.get(scope, 0)
+                have = grant(granted, scope)
                 if have < level:
+                    what = "every scope" if scope == ANY else f"'{scope}"
                     errors.append(
-                        f"{file.name} job {job_id}: {target.name} requests '{scope}: {NAMES[level]}', but the "
-                        f"job grants '{scope}: {NAMES[have]}' (the run would end in startup_failure)"
+                        f"{file.name} job {job_id}: {target.name} requests {what}: {NAMES[level]}', but the "
+                        f"job grants {what}: {NAMES[have]}' (the run would end in startup_failure)"
                     )
     for name in sorted(EXPECTED - checked):
         errors.append(f"{name}: expected a caller with permissions to check, found none")
