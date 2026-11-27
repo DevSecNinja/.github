@@ -1,4 +1,3 @@
-#!/usr/bin/env -S uv run --script
 # /// script
 # requires-python = ">=3.9"
 # dependencies = ["pyyaml==6.0.3"]
@@ -13,12 +12,14 @@ reusable workflow's top-level `permissions` count as requested even when each
 of its jobs sets its own.
 
 For each job in .github/workflows/ that calls a reusable workflow of this
-repository (`./.github/workflows/x.yml`, `$/.github/workflows/x.yml` or
-`DevSecNinja/.github/.github/workflows/x.yml@<ref>`), this compares what the
-job grants (its `permissions`, else the workflow's) with the most the called
-workflow requests (its top-level `permissions` and every job's). A caller that
-sets no permissions anywhere gets the repository's default token and is
-skipped.
+repository by local reference (`./.github/workflows/x.yml` or
+`$/.github/workflows/x.yml`, which run at the same commit), this compares what
+the job grants (its `permissions`, else the workflow's) with the most the
+called workflow requests (its top-level `permissions` and every job's). A
+caller that sets no permissions anywhere gets the repository's default token
+and is skipped. Calls pinned to another revision
+(`DevSecNinja/.github/.github/workflows/x.yml@<ref>`) are left out: this
+checkout may not match what they run.
 """
 
 from __future__ import annotations
@@ -31,7 +32,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 WORKFLOWS = ROOT / ".github" / "workflows"
-USES = re.compile(r"^(?:\./|\$/|DevSecNinja/\.github/)\.github/workflows/([\w.-]+\.ya?ml)(?:@\S+)?$")
+USES = re.compile(r"^(?:\./|\$/)\.github/workflows/([\w.-]+\.ya?ml)$")
 LEVELS = {"none": 0, "read": 1, "write": 2}
 NAMES = {level: name for name, level in LEVELS.items()}
 SCOPES = (
