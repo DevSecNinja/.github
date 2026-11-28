@@ -81,7 +81,7 @@ jobs:
         if: steps.precheck.outputs.skip != 'true'
         env:
           # renovate: datasource=pypi depName=apm-cli
-          apm_cli_version: "0.35.0"
+          apm_cli_version: "0.35.1"
         run: bash scripts/apm-materialize/install-apm.sh
 
       - name: Materialize primitives (apm install)

@@ -28,7 +28,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   pages:
-    uses: DevSecNinja/.github/.github/workflows/pages.yml@a9e3a11178ccd6e76115d3d7b31616631305991f # v3.4.0
+    uses: DevSecNinja/.github/.github/workflows/pages.yml@eadb4f166f27d0864147189741c7596560be39dd # v3.6.0
     permissions:
       contents: read
       deployments: write
@@ -40,7 +40,7 @@ jobs:
       # renovate: datasource=node-version depName=node
       node-version: "24"
       # renovate: datasource=npm depName=wrangler
-      wrangler-version: "4.162.0"
+      wrangler-version: "4.168.0"
       artifact-path: "."
       test-setup-command: npx playwright install webkit --with-deps
       test-command: |-

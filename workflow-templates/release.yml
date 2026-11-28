@@ -11,10 +11,10 @@ permissions:
 
 jobs:
   release:
-    uses: DevSecNinja/.github/.github/workflows/release.yml@a9e3a11178ccd6e76115d3d7b31616631305991f # v3.4.0
+    uses: DevSecNinja/.github/.github/workflows/release.yml@eadb4f166f27d0864147189741c7596560be39dd # v3.6.0
     permissions:
       contents: write
     with:
       # renovate: datasource=github-releases depName=jdx/mise
-      mise-version: "2026.11.1"
+      mise-version: "2026.11.8"
       tag: ${{ github.ref_name }}

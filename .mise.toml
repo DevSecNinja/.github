@@ -1,5 +1,5 @@
 # renovate: datasource=github-releases depName=jdx/mise
-min_version = "2026.11.1"
+min_version = "2026.11.8"
 
 [tools]
 actionlint = "1.7.12"
@@ -8,7 +8,7 @@ cocogitto = "7.0.0"
 dprint = "0.64.3"
 gitleaks = "8.30.1"
 git-cliff = "2.14.2"
-"pipx:checkov" = "3.4.3"
+"pipx:checkov" = "3.4.5"
 "pipx:json5" = "0.17.3"
 "pipx:yamllint" = "1.38.0"
 # tests/renovate-pr-cooldown.py runs the pr-cooldown github-script under Node.
@@ -16,8 +16,8 @@ node = "26.13.1"
 ruff = "0.17.5"
 shellcheck = "0.11.0"
 shfmt = "3.14.1"
-trivy = "0.76.1"
-uv = "0.13.7"
+trivy = "0.76.2"
+uv = "0.13.8"
 yamlfmt = "0.21.0"
 zizmor = "1.32.0"
 

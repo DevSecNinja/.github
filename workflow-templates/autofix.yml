@@ -9,12 +9,12 @@ permissions:
 
 jobs:
   autofix:
-    uses: DevSecNinja/.github/.github/workflows/autofix.yml@a9e3a11178ccd6e76115d3d7b31616631305991f # v3.4.0
+    uses: DevSecNinja/.github/.github/workflows/autofix.yml@eadb4f166f27d0864147189741c7596560be39dd # v3.6.0
     permissions:
       contents: write
     with:
       # renovate: datasource=github-releases depName=jdx/mise
-      mise-version: "2026.11.1"
+      mise-version: "2026.11.8"
       # Optional: use formatter configs from a non-root directory.
       # autofix-config-dir: config-sync/files
       # Toggle formatters on/off (all default to true):
